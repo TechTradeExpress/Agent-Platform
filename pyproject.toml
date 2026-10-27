@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agent-platform"
 version = "0.1.0"
-description = "Read-only inspection of local GitHub working trees"
+description = "Repository inspection and explicit, safe task preparation"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

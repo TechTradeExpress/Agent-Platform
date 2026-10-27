@@ -1,1 +1,1 @@
-"""Standalone, read-only repository inspection."""
+"""Standalone repository inspection and explicitly authorized task preparation."""

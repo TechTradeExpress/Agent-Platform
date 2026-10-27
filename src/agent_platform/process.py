@@ -2,6 +2,7 @@
 
 import os
 import selectors
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -23,11 +24,14 @@ def read_command(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            start_new_session=True,
+            umask=0o077,
         )
     except OSError:
         raise CommandError("unavailable") from None
     buffers = {"stdout": bytearray(), "stderr": bytearray()}
     deadline = time.monotonic() + timeout
+    completed = False
     try:
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ, "stdout")
@@ -50,10 +54,14 @@ def read_command(
                 raise CommandError("timeout") from None
         if status:
             raise CommandError("failed")
+        completed = True
         return bytes(buffers["stdout"])
     finally:
-        if process.poll() is None:
-            process.kill()
+        if not completed:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         process.wait()
         process.stdout.close()
         process.stderr.close()

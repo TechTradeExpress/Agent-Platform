@@ -316,12 +316,13 @@ def safe_title(title: str) -> str:
     return "".join(c if c.isprintable() else " " for c in title)[:200]
 
 
-def candidate(api: GitHub, repository: str, number: int, trusted: set[str]) -> dict:
+def validate_candidate(api: GitHub, repository: str, number: int, trusted: set[str]):
     suffix = f"/issues/{number}"
     data, _ = api.get(suffix)
     issue = issue_snapshot(data, number, repository)
     reason = exclusion(issue)
     actor = None
+    verified = None
     if reason is None:
         verified = provenance(api.pages(suffix + "/events"), trusted)
         actor, reason, _ = verified
@@ -330,6 +331,11 @@ def candidate(api: GitHub, repository: str, number: int, trusted: set[str]) -> d
         require(provenance(api.pages(suffix + "/events"), trusted) == verified)
     current, _ = api.get(suffix)
     require(issue_snapshot(current, number, repository) == issue)
+    return issue, actor, reason, verified
+
+
+def candidate(api: GitHub, repository: str, number: int, trusted: set[str]) -> dict:
+    issue, actor, reason, _ = validate_candidate(api, repository, number, trusted)
     return {
         "number": number,
         "title": safe_title(issue["title"]),
