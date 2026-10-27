@@ -1,14 +1,14 @@
-"""Small CLI with fixed local Git queries and no network operations."""
+"""Read-only local repository inspection and authorized GitHub Issue discovery."""
 
 import argparse
 import json
 import os
 import re
-import selectors
-import subprocess
 import sys
-import time
 from pathlib import Path
+
+from agent_platform.issues import LOGIN, AdmissionError, discover, positive_int
+from agent_platform.process import CommandError, read_command
 
 TIMEOUT = 5
 OUTPUT_LIMIT = 8192
@@ -32,65 +32,27 @@ def git(cwd: Path, *args: str, failure_code: int = 6) -> str:
         "GIT_OPTIONAL_LOCKS": "0",
     }
     try:
-        process = subprocess.Popen(
-            ["git", *args],
-            cwd=cwd,
-            env=env,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        raw = read_command(
+            ["git", *args], cwd, env, timeout=TIMEOUT, limit=OUTPUT_LIMIT
         )
-    except OSError:
-        raise InspectionError(
-            6, "Cannot execute Git; check the Git installation."
-        ) from None
-    buffers = {"stdout": bytearray(), "stderr": bytearray()}
-    deadline = time.monotonic() + TIMEOUT
+    except CommandError as exc:
+        reason = str(exc)
+        code, message = {
+            "unavailable": (6, "Cannot execute Git; check the Git installation."),
+            "timeout": (5, "Git inspection timed out (5 seconds)."),
+            "output_limit": (6, "Git output exceeded the inspection limit."),
+            "failed": (failure_code, "Git query failed; check repository and origin."),
+        }[reason]
+        raise InspectionError(code, message) from None
     try:
-        with selectors.DefaultSelector() as selector:
-            selector.register(process.stdout, selectors.EVENT_READ, "stdout")
-            selector.register(process.stderr, selectors.EVENT_READ, "stderr")
-            while selector.get_map():
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise InspectionError(5, "Git inspection timed out (5 seconds).")
-                for key, _ in selector.select(remaining):
-                    chunk = os.read(key.fileobj.fileno(), OUTPUT_LIMIT + 1)
-                    if not chunk:
-                        selector.unregister(key.fileobj)
-                        continue
-                    buffers[key.data].extend(chunk)
-                    if len(buffers[key.data]) > OUTPUT_LIMIT:
-                        raise InspectionError(
-                            6, "Git output exceeded the inspection limit."
-                        )
-            try:
-                status = process.wait(timeout=max(0.001, deadline - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                raise InspectionError(
-                    5, "Git inspection timed out (5 seconds)."
-                ) from None
-        if status:
-            raise InspectionError(
-                failure_code, "Git query failed; check repository and origin."
-            )
-        raw = buffers["stdout"]
-        try:
-            value = raw.decode("utf-8").removesuffix("\n")
-        except UnicodeError:
-            raise InspectionError(
-                7, "Git returned an unsupported path or value encoding."
-            ) from None
-        if any(ord(c) < 32 or ord(c) == 127 for c in value):
-            raise InspectionError(7, "Git returned an unsafe path or value.")
-        return value
-    finally:
-        if process.poll() is None:
-            process.kill()
-        process.wait()
-        process.stdout.close()
-        process.stderr.close()
+        value = raw.decode("utf-8").removesuffix("\n")
+    except UnicodeError:
+        raise InspectionError(
+            7, "Git returned an unsupported path or value encoding."
+        ) from None
+    if any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise InspectionError(7, "Git returned an unsafe path or value.")
+    return value
 
 
 def parse_origin(value: str) -> str:
@@ -149,9 +111,47 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("inspect", help="Inspect the current Git working-tree root")
-    parser.parse_args()
+    issues = commands.add_parser(
+        "issues", help="Report eligible GitHub Issues (read-only)"
+    )
+    issues.add_argument(
+        "--issue", type=int, metavar="N", help="Validate this exact Issue"
+    )
+    issues.add_argument(
+        "--trusted-actor",
+        action="append",
+        default=[],
+        metavar="LOGIN",
+        help="Operator-asserted trusted maintainer (repeatable)",
+    )
+    args = parser.parse_args()
+    if args.command == "issues":
+        if args.issue is not None and not positive_int(args.issue):
+            parser.error("--issue must be a positive Issue number")
+        if any(LOGIN.fullmatch(actor) is None for actor in args.trusted_actor):
+            parser.error("--trusted-actor must be a GitHub user login")
+    code = 0
     try:
         result = inspect(Path.cwd())
+        if args.command == "issues":
+            repository = result["repository"]
+            try:
+                result, code = discover(repository, args.trusted_actor, args.issue)
+            except (AdmissionError, ValueError) as exc:
+                # ValueError also covers malformed pagination URLs. Never echo it.
+                message = (
+                    str(exc)
+                    if isinstance(exc, AdmissionError)
+                    else ("GitHub returned malformed pagination metadata.")
+                )
+                print(f"agent-platform: {message}", file=sys.stderr)
+                result = {
+                    "repository": repository,
+                    "candidates": [],
+                    "status": "unavailable",
+                    "reason": "api_unavailable_or_ambiguous",
+                }
+                code = 8
     except InspectionError as exc:
         print(f"agent-platform: {exc}", file=sys.stderr)
         return exc.code
@@ -159,4 +159,4 @@ def main() -> int:
         print("agent-platform: Cannot access the current directory.", file=sys.stderr)
         return 7
     print(json.dumps(result, sort_keys=True))
-    return 0
+    return code
