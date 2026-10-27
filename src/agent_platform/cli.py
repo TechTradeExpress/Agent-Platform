@@ -1,4 +1,4 @@
-"""Read-only local repository inspection and authorized GitHub Issue discovery."""
+"""Repository inspection, authorized Issue discovery and explicit task preparation."""
 
 import argparse
 import json
@@ -124,8 +124,15 @@ def main() -> int:
         metavar="LOGIN",
         help="Operator-asserted trusted maintainer (repeatable)",
     )
+    preparing = commands.add_parser(
+        "prepare", help="Prepare one authorized task locally"
+    )
+    preparing.add_argument("--issue", required=True, type=int, metavar="N")
+    preparing.add_argument(
+        "--trusted-actor", action="append", default=[], metavar="LOGIN"
+    )
     args = parser.parse_args()
-    if args.command == "issues":
+    if args.command in ("issues", "prepare"):
         if args.issue is not None and not positive_int(args.issue):
             parser.error("--issue must be a positive Issue number")
         if any(LOGIN.fullmatch(actor) is None for actor in args.trusted_actor):
@@ -133,6 +140,24 @@ def main() -> int:
     code = 0
     try:
         result = inspect(Path.cwd())
+        if args.command == "prepare":
+            from agent_platform.prepare import prepare
+            from agent_platform.state import PrepareError
+
+            try:
+                result = prepare(result, args.issue, args.trusted_actor)
+            except PrepareError as exc:
+                result = {
+                    "status": exc.reason,
+                    "state": "NEEDS_HUMAN" if exc.code == 12 else None,
+                }
+                code = exc.code
+            except (AdmissionError, ValueError):
+                result = {"status": "api_unavailable_or_ambiguous", "state": None}
+                code = 8
+            except (OSError, KeyboardInterrupt):
+                result = {"status": "interrupted_transaction", "state": "NEEDS_HUMAN"}
+                code = 12
         if args.command == "issues":
             repository = result["repository"]
             try:
@@ -153,9 +178,33 @@ def main() -> int:
                 }
                 code = 8
     except InspectionError as exc:
+        if args.command == "prepare":
+            print(
+                json.dumps(
+                    {
+                        "status": "invalid_target",
+                        "state": None,
+                        "reason": {
+                            2: "not_git",
+                            3: "nested_invocation",
+                            4: "untrusted_origin",
+                            5: "git_timeout",
+                            6: "git_failure",
+                            7: "unsafe_path",
+                        }[exc.code],
+                    },
+                    sort_keys=True,
+                )
+            )
+            return exc.code
         print(f"agent-platform: {exc}", file=sys.stderr)
         return exc.code
     except OSError:
+        if args.command == "prepare":
+            print(
+                json.dumps({"status": "unsafe_target", "state": None}, sort_keys=True)
+            )
+            return 7
         print("agent-platform: Cannot access the current directory.", file=sys.stderr)
         return 7
     print(json.dumps(result, sort_keys=True))

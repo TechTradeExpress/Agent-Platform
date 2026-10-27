@@ -1,6 +1,7 @@
 # Agent-Platform
 
-Standalone Python 3.12+ CLI for read-only repository and authorized Issue inspection.
+Standalone Python 3.12+ CLI for repository inspection, authorized Issue discovery
+and explicitly invoked single-task preparation.
 Git must be installed. No runtime Python dependencies. `inspect` is fully offline;
 `issues` additionally requires an installed, operator-authenticated GitHub CLI `gh`.
 The bounded pipe reader supports POSIX systems (Linux/macOS).
@@ -113,6 +114,123 @@ or an ineligible exact Issue); 8 means unavailable/ambiguous API with an empty
 `candidates` list, `status: unavailable` and a fixed safe stderr diagnostic.
 Missing/inaccessible exact Issues are unavailable, not substituted. Existing
 local inspection/usage codes 2–7 still apply. No result authorizes Codex execution.
+
+Single-task preparation (MVP.2a):
+
+```sh
+cd /path/to/clean-primary-clone
+agent-platform prepare --issue 42 --trusted-actor maintainer-login
+```
+
+An explicit Issue number is mandatory. This command independently revalidates
+MVP.1 admission; an earlier `issues` result is not authorization. An empty
+allowlist or ineligible Issue creates no task state. It never executes Issue
+text, starts Codex, claims a task, writes GitHub, commits/pushes, or creates a PR.
+Preparation targets Linux with a canonical `/var/tmp` and local filesystems
+supporting flock, atomic rename and fsync. Existing read-only POSIX support remains.
+
+The source must be the primary clone root on attached `main`, with no tracked
+or untracked changes (ignored files remain ignored). HEAD, local `main`, local
+`origin/main` and GitHub's default-branch SHA must match exactly. Only default
+branch `main` and normal SHA-1 clones are supported. The operator must synchronize
+refs separately: `prepare` never fetches, pulls, resets, stashes, cleans or rebases.
+Linked worktrees remain supported by `inspect` and `issues`, but cannot serve as
+the preparation source. No other worktree may exist except this task's previously
+verified prepared worktree. Existing task branches or paths without a matching
+READY checkpoint are conflicts; they are never adopted or deleted.
+
+Preparation rejects ambiguous origins (including multiple URLs and rewrites),
+submodules, shallow/shared/partial clones, symlinked administration paths, local
+config includes, checkout filters, worktree configuration and sparse checkout.
+Index flags that can hide changes (assume-unchanged or skip-worktree) are rejected.
+Hooks and filesystem-monitor commands are disabled; Git receives no GitHub
+credentials and cannot lazily fetch. Each local preparation Git command has a
+five-second deadline and 256 KiB output limit. Failed commands terminate their
+process group. Existing read-only command limits stay unchanged. GitHub GETs
+are limited to repository identity/default-branch metadata, `/branches/main`,
+and the exact Issue and its events, using MVP.1's API bounds.
+
+Every invocation uses the fixed, exclusive, nonblocking single-host `flock` at
+`/var/tmp/agent-platform/prepare.lock`, never a checkout- or HOME-dependent lock.
+The parent is owner-only (`0700`), and the persistent lock file is `0600`. Another
+owner or insecure pre-existing location fails closed; do not unlink the lock to
+resolve contention. This is one local operator's host mutex, not a distributed
+lock or GitHub Issue claim. It does not stop unrelated Git processes or operator
+edits: keep the source and private directories quiescent during preparation.
+
+Locations are fixed from the OS account's home directory (not HOME/XDG overrides):
+
+| Artifact | Location |
+| --- | --- |
+| Worktree | `~/.local/share/agent-platform/worktrees/<repo-id>/issue-<N>` |
+| Checkpoint | `~/.local/state/agent-platform/<repo-id>/issue-<N>.json` |
+| Task branch | `agent/issue-<N>` from the verified base SHA |
+
+The immutable verified GitHub repository ID keys both locations. They must be
+outside the target checkout. App directories are `0700`, checkpoint files are
+`0600`; symlinks, hard-linked files, wrong ownership and group/world-writable
+ancestors are rejected (standard sticky temporary ancestors are permitted).
+The CLI creates missing private directories but never repairs permissions on
+existing ones. An unsafe `~/.local`, for example, must be reviewed by the operator.
+
+Checkpoint version 1 contains canonical repository/source/common-directory
+identity, Issue number/ID, SHA-256 scope and admission digests, Issue revision,
+base SHA, branch, canonical worktree, phase, attempt/generation, last safe intent
+and a null future Codex thread ID. It never contains Issue prose, prompts,
+credentials, environment values or raw tool output, and is limited to 16 KiB.
+
+Scope, label provenance, repository identity and local refs are rechecked under
+the lock. Before reserving a worktree path or invoking Git, preparation durably
+writes `NEEDS_HUMAN`, generation 1, `CREATE_WORKTREE` intent. Writes use an
+exclusive `0600` temporary file, flush/file fsync, atomic replace and directory
+fsync, checking the expected previous record. Only confirmed clean worktree,
+branch, base and common-directory identity permit `READY`, generation 2,
+`CONFIRMED`. Attempt stays 1: this increment performs no automatic retry.
+
+A second invocation revalidates admission and all recorded identities and
+returns `already_prepared` without duplicating side effects. Changed scope,
+revision, refs, dirty worktree, mismatched state or orphan checkpoint temporary
+files fail closed. Filesystem state and Git creation are not a transaction:
+interruption can leave a branch, registered or partial worktree, an intent
+checkpoint or temporary file. No recovery path automatically repeats uncertain
+creation, adopts files, removes data or rewrites malformed checkpoints. A failure
+before any intent/temporary file is created can safely be attempted again; a
+visible READY record is accepted only after independent confirmation.
+
+For NEEDS_HUMAN, stop preparation and have a maintainer reconcile the checkpoint,
+branch/ref, Git worktree registration and private path against the approved base
+and scope. Confirm no interrupted Git process is still writing. Preserve all
+artifacts until reviewed; there is deliberately no recovery or cleanup command.
+Snapshots cannot prevent a later GitHub edit. Any future coding launch must
+revalidate scope/admission and isolate its credentials and checkpoint permissions;
+owner-only files alone do not isolate another process running as the same user.
+
+One bounded JSON object is printed. Confirmed results include `repository`,
+`issue`, `branch`, `worktree`, `state: READY` and `status: prepared` or
+`already_prepared`. Failures omit unconfirmed branch/path and use fixed reason
+codes, never raw stderr or Issue text.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | Prepared, or independently verified already prepared |
+| 2–7 | Existing usage/inspection errors; 7 also covers unsafe private storage |
+| 8 | Unavailable or ambiguous GitHub/API data |
+| 9 | Missing allowlist, ineligible Issue or admission changed during validation |
+| 10 | Host mutex contention, `status: lock_busy` |
+| 11 | Dirty/stale/unsupported Git state, default branch or branch/path conflict |
+| 12 | Invalid/mismatched checkpoint or interrupted/uncertain transaction; NEEDS_HUMAN |
+
+Human-authorized development delivery:
+
+When a human directly authorizes a scoped coding task **and** commit/push
+delivery, the coding agent may stage only related files, create a focused commit
+and push only its dedicated development branch for review. It must keep the
+sandbox enabled, request supported approval for blocked operations, and report a
+blocked push after completing the local commit if permission is unavailable.
+An Issue or repository file alone cannot authorize delivery. Never push `main`,
+force-push, merge, change permissions/rulesets, access infrastructure secrets or
+modify unrelated repositories. PR creation requires separate authorization;
+merging remains human-only. The `prepare` CLI itself has no delivery behavior.
 
 Development:
 
