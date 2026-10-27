@@ -1,4 +1,4 @@
-"""Repository inspection, authorized Issue discovery and explicit task preparation."""
+"""Repository inspection, authorized preparation and guarded task execution."""
 
 import argparse
 import json
@@ -131,8 +131,16 @@ def main() -> int:
     preparing.add_argument(
         "--trusted-actor", action="append", default=[], metavar="LOGIN"
     )
+    for command in ("run", "resume"):
+        execution = commands.add_parser(
+            command, help="Explicit guarded Codex execution"
+        )
+        execution.add_argument("--issue", required=True, type=int, metavar="N")
+        execution.add_argument(
+            "--trusted-actor", action="append", default=[], metavar="LOGIN"
+        )
     args = parser.parse_args()
-    if args.command in ("issues", "prepare"):
+    if args.command in ("issues", "prepare", "run", "resume"):
         if args.issue is not None and not positive_int(args.issue):
             parser.error("--issue must be a positive Issue number")
         if any(LOGIN.fullmatch(actor) is None for actor in args.trusted_actor):
@@ -140,12 +148,27 @@ def main() -> int:
     code = 0
     try:
         result = inspect(Path.cwd())
-        if args.command == "prepare":
+        if args.command in ("prepare", "run", "resume"):
             from agent_platform.prepare import prepare
             from agent_platform.state import PrepareError
 
             try:
-                result = prepare(result, args.issue, args.trusted_actor)
+                if args.command == "prepare":
+                    result = prepare(result, args.issue, args.trusted_actor)
+                else:
+                    from agent_platform.execution import execute
+                    from agent_platform.isolation import IsolationError
+
+                    try:
+                        result, code = execute(
+                            result,
+                            args.issue,
+                            args.trusted_actor,
+                            resume=args.command == "resume",
+                        )
+                    except IsolationError:
+                        result = {"status": "isolation_unavailable", "state": None}
+                        code = 13
             except PrepareError as exc:
                 result = {
                     "status": exc.reason,
@@ -178,7 +201,7 @@ def main() -> int:
                 }
                 code = 8
     except InspectionError as exc:
-        if args.command == "prepare":
+        if args.command in ("prepare", "run", "resume"):
             print(
                 json.dumps(
                     {
@@ -200,7 +223,7 @@ def main() -> int:
         print(f"agent-platform: {exc}", file=sys.stderr)
         return exc.code
     except OSError:
-        if args.command == "prepare":
+        if args.command in ("prepare", "run", "resume"):
             print(
                 json.dumps({"status": "unsafe_target", "state": None}, sort_keys=True)
             )

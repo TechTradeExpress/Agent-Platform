@@ -220,6 +220,24 @@ codes, never raw stderr or Issue text.
 | 11 | Dirty/stale/unsupported Git state, default branch or branch/path conflict |
 | 12 | Invalid/mismatched checkpoint or interrupted/uncertain transaction; NEEDS_HUMAN |
 
+Guarded Codex execution (MVP.2b):
+
+```sh
+agent-platform run --issue 42 --trusted-actor maintainer-login
+agent-platform resume --issue 42 --trusted-actor maintainer-login
+```
+
+These manually invoked commands require a previously prepared task and repeat
+admission under the fixed host lock. First start requires READY and a clean base;
+resume accepts only the exact recorded PAUSED session and preserves code edits.
+They never invoke prepare, automatically retry, commit, push or publish a PR.
+The mandatory Linux namespace, native sandbox and credential-separated inference
+profile must already exist and pass negative probes. Otherwise execution returns
+`isolation_unavailable` without launching a coding turn. No host provisioning,
+privileged fallback or sandbox weakening is performed. Codex CLI is pinned to
+0.164.0. See [execution operations and security requirements](docs/execution.md)
+for the broker contract, checkpoint migration/states, bounds and manual recovery.
+
 Human-authorized development delivery:
 
 When a human directly authorizes a scoped coding task **and** commit/push

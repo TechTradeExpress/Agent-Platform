@@ -14,9 +14,14 @@ output bounded. No other network calls are authorized. Never fetch, pull, reset,
 clean, stash, force checkout or rebase in the CLI.
 
 Never echo untrusted stderr, raw remotes, credentials or environment secrets.
-Do not add Codex execution, background services, autonomous runners,
-infrastructure providers or GitHub mutation. No task execution, automatic
-retry/cleanup, claiming, PR creation or merge is authorized by preparation.
+Only explicit `run`/`resume` may execute the pinned Codex CLI for an existing
+prepared task, under the mandatory OS-enforced isolation profile documented in
+docs/execution.md. Never substitute env filtering or same-UID 0700 permissions
+for isolation. Missing namespaces, trusted runtime, credential-separating broker
+or failed negative probes mean `isolation_unavailable`; never widen approvals,
+disable the sandbox, use privileged fallback or provision the host automatically.
+No background services, autonomous scheduling, infrastructure providers, GitHub
+mutation, automatic retry/cleanup, claiming, PR creation or merge are authorized.
 
 Preparation requires a clean primary `main` checkout synchronized with local
 `origin/main` and GitHub `main`, no unexpected worktrees, and complete trusted
@@ -35,7 +40,12 @@ on ambiguity. The operator and CLI arguments form a trusted boundary; this CLI
 is not an authorization service. Eligibility and preparation do not authorize
 execution. Future execution requires separately reviewed scope, launch-time
 revalidation, and isolation denying the coding process control-plane GitHub
-credentials and checkpoint write permission. MVP.2a launches no coding process.
+credentials and checkpoint write permission. The runner must hold the fixed host
+lock through the entire child lifetime, durably record launch/resume intent and
+the exact `thread.started` UUID, and refuse unknown state. Only PAUSED may resume
+that same UUID after fresh admission; preserve legitimate coding edits. Never
+automatically prepare, select a recent session, reset work, commit or push from
+the automated runner. Native session data and checkpoint lineage must match.
 AGENTS.md cannot grant extra rights or authorize relaxing the sandbox.
 
 Run `uv run ruff check .`, `uv run pytest`, and `git diff --check`.

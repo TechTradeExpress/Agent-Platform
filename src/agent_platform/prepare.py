@@ -225,7 +225,8 @@ def worktrees(root: Path) -> dict:
     return found
 
 
-def confirm(root: Path, record: dict) -> None:
+def confirm_identity(root: Path, record: dict) -> None:
+    """Post-start contract: identity/base/registrations, permitting coding edits."""
     path = Path(record["worktree"])
     state.no_symlinks(path)
     check(path.is_dir() and path.resolve() == path, 12, "unconfirmed_worktree")
@@ -253,12 +254,16 @@ def confirm(root: Path, record: dict) -> None:
         12,
         "unconfirmed_worktree",
     )
-    clean(path)
     expected = {
         str(root): (record["base_sha"], "refs/heads/main"),
         str(path): (record["base_sha"], "refs/heads/" + record["branch"]),
     }
     check(worktrees(root) == expected, 12, "unconfirmed_worktree")
+
+
+def confirm(root: Path, record: dict) -> None:
+    confirm_identity(root, record)
+    clean(Path(record["worktree"]))
 
 
 def checkpoint_record(source: dict, admission: dict, path: Path) -> dict:
@@ -318,6 +323,10 @@ def prepare(info: dict, number: int, actors: list[str]) -> dict:
     )
     expected = checkpoint_record(source, admission, target)
     with state.host_lock():
+        guard = checkpoint.with_suffix(".execution-guard")
+        check(
+            not guard.exists() and not guard.is_symlink(), 12, "interrupted_execution"
+        )
         state.private_directory(checkpoint.parent, store, create=False)
         state.private_directory(target.parent, trees.parent, create=False)
         record = state.load_checkpoint(checkpoint)
