@@ -288,7 +288,6 @@ class Profile:
                     "-c",
                     'sandbox_mode="workspace-write"',
                     "sandbox",
-                    "linux",
                     "--",
                     *probe,
                     "native",

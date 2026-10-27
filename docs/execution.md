@@ -109,6 +109,13 @@ workspace edits. The pinned CLI version is also checked without a coding turn.
 A missing native sandbox or failed probe is fatal; no profile is weakened.
 The runner installation itself must be outside the writable task worktree.
 
+The installed `codex-cli 0.164.0` help declares
+`codex sandbox [OPTIONS] [COMMAND]... [COMMAND]`; there is no `linux` subcommand.
+The native preflight therefore uses
+`codex --no-daemon -c sandbox_mode="workspace-write" sandbox -- /usr/bin/python3 -I /agent-platform-sandbox.py probe <policy-json> native`.
+The OS-specific namespace profile remains outside this command. A failing native
+command or an unverified probe still returns `isolation_unavailable`.
+
 At execution, only the prepared worktree is mounted writable as `/workspace`;
 its `.git` pointer is read-only and the host Git common directory is not mounted.
 Codex uses `--skip-git-repo-check` because Git operations requiring that hidden

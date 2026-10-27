@@ -1,5 +1,6 @@
 """Fake namespace probes and root-owned broker contract, never live Codex/inference."""
 
+import argparse
 import hashlib
 import json
 import os
@@ -9,6 +10,21 @@ from pathlib import Path
 import pytest
 
 from agent_platform import isolation
+
+
+def sandbox_command(argv):
+    """0.164.0 help: codex sandbox [OPTIONS] [COMMAND]... (no OS subcommand)."""
+    parser = argparse.ArgumentParser(exit_on_error=False)
+    parser.add_argument("--no-daemon", action="store_true")
+    parser.add_argument("-c", "--config", action="append")
+    parser.add_argument("subcommand", choices=["sandbox"])
+    parser.add_argument("command", nargs=argparse.REMAINDER)
+    assert argv[0] == "/usr/bin/codex"
+    parsed = parser.parse_args(argv[1:])
+    assert parsed.no_daemon
+    assert parsed.config == ['sandbox_mode="workspace-write"']
+    command = parsed.command
+    return command[1:] if command[:1] == ["--"] else command
 
 
 @pytest.fixture
@@ -65,6 +81,20 @@ def profile(tmp_path, monkeypatch):
         assert "--unshare-net" in argv and "--share-net" not in argv
         assert argv[argv.index("--sync-fd") + 1] == str(fd)
         reads.append(argv)
+        inner = argv[argv.index("--") + 1 :]
+        if inner[0] == "/usr/bin/codex" and "--version" not in inner:
+            command = sandbox_command(inner)
+            # Match the real CLI's command-vector contract, rather than accepting
+            # any array containing an OS name and claiming the probe succeeded.
+            if command[:4] != [
+                "/usr/bin/python3",
+                "-I",
+                "/agent-platform-sandbox.py",
+                "probe",
+            ]:
+                raise isolation.process.CommandError("failed")
+            assert len(command) == 6 and command[-1] == "native"
+            assert isinstance(json.loads(command[4]), dict)
         return b"codex-cli 0.164.0\n" if "--version" in argv else b"isolated\n"
 
     def fake_broker(method, endpoint):
@@ -101,7 +131,18 @@ def test_profile_requires_outer_native_and_version_probes(profile):
     current, metadata, reads = profile
     assert len(current.preflight().digest) == 64
     assert len(reads) == 3
-    assert any("linux" in command for command in reads)
+    outer_probe = reads[0][reads[0].index("--") + 1 :]
+    native = reads[1][reads[1].index("--") + 1 :]
+    assert native[:6] == [
+        "/usr/bin/codex",
+        "--no-daemon",
+        "-c",
+        'sandbox_mode="workspace-write"',
+        "sandbox",
+        "--",
+    ]
+    assert sandbox_command(native) == [*outer_probe, "native"]
+    assert reads[0][: reads[0].index("--")] == reads[1][: reads[1].index("--")]
     command = current.launch(["/usr/bin/codex", "exec", "--json"])
     assert command[:2] == [str(isolation.BWRAP), "--die-with-parent"]
     assert "--clearenv" in command and "--cap-drop" in command
@@ -163,7 +204,7 @@ def test_profile_failure_never_launches(profile, monkeypatch, fault):
 
         def bad_probe(argv, *args, **kwargs):
             if fault == "forbidden_access" or (
-                fault == "native_not_enforced" and "linux" in argv
+                fault == "native_not_enforced" and "sandbox" in argv
             ):
                 return b"forbidden access unexpectedly succeeded\n"
             if fault == "wrong_cli_version" and "--version" in argv:
@@ -173,6 +214,26 @@ def test_profile_failure_never_launches(profile, monkeypatch, fault):
         monkeypatch.setattr(isolation.process, "read_command", bad_probe)
     with pytest.raises(isolation.IsolationError):
         current.preflight()
+    assert current.digest is None
+    with pytest.raises(isolation.IsolationError):
+        current.launch(["/usr/bin/codex", "exec"])
+
+
+def test_legacy_os_argument_is_a_command_not_a_subcommand(profile, monkeypatch):
+    current, _, reads = profile
+    original = current.command
+
+    def legacy(command, *, probe=False):
+        command = list(command)
+        if command[0] == "/usr/bin/codex" and "sandbox" in command:
+            command.insert(command.index("sandbox") + 1, "linux")
+            assert sandbox_command(command)[0] == "linux"
+        return original(command, probe=probe)
+
+    monkeypatch.setattr(current, "command", legacy)
+    with pytest.raises(isolation.IsolationError):
+        current.preflight()
+    assert len(reads) == 2  # The native command failed; no version or launch follows.
     assert current.digest is None
     with pytest.raises(isolation.IsolationError):
         current.launch(["/usr/bin/codex", "exec"])
