@@ -115,3 +115,11 @@ the API broker or relax existing isolation/caps. Subscription auth, refresh and
 trusted-Codex/untrusted-tool separation require a separately scoped design and
 independent review; docs/subscription-auth.md records the outstanding gates.
 Static/offline PASS cannot authorize authentication, execution or deployment.
+
+Issue #17 ends at SUBSCRIPTION_ISOLATION_BLOCKED until a supported complete
+trusted-Codex/untrusted-tool boundary is independently demonstrated. The
+subscription command is non-launching: never read real login stores/tokens,
+forward OAuth, enable API fallback, execute tools or migrate checkpoints from
+synthetic evidence. Stop presentation is not quota authority or auto-resume.
+Follow docs/subscription-architecture.md and the deferred smoke checklist; do
+not reinterpret this spike as login, deployment or inference authorization.

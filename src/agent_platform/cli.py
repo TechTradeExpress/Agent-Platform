@@ -111,6 +111,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("inspect", help="Inspect the current Git working-tree root")
+    commands.add_parser(
+        "subscription", help="Report blocked subscription readiness; never execute"
+    )
     issues = commands.add_parser(
         "issues", help="Report eligible GitHub Issues (read-only)"
     )
@@ -162,6 +165,11 @@ def main() -> int:
         )
         print(json.dumps(result, sort_keys=True))
         return code
+    if args.command == "subscription":
+        from agent_platform.subscription import readiness
+
+        print(json.dumps(readiness(), sort_keys=True))
+        return 13
     code = 0
     try:
         result = inspect(Path.cwd())

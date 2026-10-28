@@ -307,3 +307,17 @@ interfaces. They do not implement subscription authentication. Do not deploy the
 API broker as the next product step, copy auth.json into the coding sandbox or
 forward OAuth tokens through it. Authenticated execution, safe refresh and OS-
 enforced credential separation remain blocked pending a separate reviewed design.
+
+## Subscription architecture spike (Issue #17)
+
+`agent-platform subscription` returns **SUBSCRIPTION_ISOLATION_BLOCKED** (exit 13)
+without reading login state, starting Codex/tools, accessing credentials or
+changing checkpoints. [ADR 001](docs/subscription-architecture.md) compares a
+trusted CLI parent and supported invocation-service design. Neither currently
+proves complete OS-enforced tool/credential separation; API billing/broker
+fallbacks and raw auth-cache mounts are prohibited.
+
+Offline auth/session/stop-presentation tests do not prove real tool isolation.
+The safe next milestone is a no-account, pinned-protocol external-tool mediation
+proof with real-kernel canaries, before independently authorized subscription
+login/refresh/smoke testing. Existing commands/security gates remain unchanged.
