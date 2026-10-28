@@ -90,7 +90,7 @@ def host_lock():
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise PrepareError(10, "lock_busy") from None
-        yield
+        yield fd
     finally:
         os.close(fd)  # Never unlink: all invocations must lock the same inode.
 
