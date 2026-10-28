@@ -354,3 +354,8 @@ for the exact pinned native Codex release. Its native-only 384 MiB ceiling does
 not change either legacy 256 MiB gate. Static inspection never installs or admits
 a runtime and never enables subscription execution. See the
 [artifact policy, provenance and blockers](docs/native-artifact.md).
+
+Issue #30 adds an [offline trusted Publisher plan API](docs/publisher.md).
+It validates completed-task identity, exact changes and trusted test receipts
+under the existing lock. Its immutable candidate is never publication authority;
+there is no publisher CLI, authentication or runtime Git/GitHub-write operation.

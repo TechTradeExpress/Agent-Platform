@@ -167,3 +167,13 @@ full-runtime and subscription/tool isolation gates remain independent. Never
 execute a candidate to inspect it, touch auth stores, install/repair artifacts,
 or bypass unsafe metadata/mounts to obtain PASS. Keep native/subscription execution
 unconditionally disabled. Follow docs/native-artifact.md for evidence limits.
+
+Issue #30 adds only the offline publisher.plan API. Admission and exact-change
+PASS receipts must come from the trusted control plane, never Issue/model text or
+target files. INSPECTED_PUBLISH_CANDIDATE always has publish_authorized=false;
+no saved plan or idempotency key grants commit/push/PR authority. Preserve the
+existing host lock, terminal checkpoint, execution guard, source/common/worktree
+and all-ref checks. Missing/stale evidence or ambiguous state blocks; never repair
+or publish automatically. No GitHub token, client or writer enters the runtime
+coding child. Real publisher authentication/actions require a separately approved
+Issue. Follow docs/publisher.md; notification/console work is out of scope.
