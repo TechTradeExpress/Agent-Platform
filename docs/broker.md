@@ -1,5 +1,9 @@
 # Credential-isolated reference inference broker (MVP.2d)
 
+**Deferred legacy API transport.** Deploying this broker is not an approved next
+step for the selected ChatGPT-subscription path. The checklist below is retained
+as reference, not current deployment authorization.
+
 `agent-platform-broker` (also `python -m agent_platform.broker`) is a separate,
 foreground Linux process. Nothing in `prepare`, `doctor`, `run` or `resume` starts,
 installs or configures it. The code is a reference implementation with offline
@@ -240,3 +244,7 @@ users, policy, credentials, firewall rules or privileged filesystem state.
 The absence of the curated runtime, audited broker deployment or any negative
 probe is still `isolation_unavailable`. This implementation does not change the
 runner's namespace, lock, checkpoint, authorization or GitHub-write restrictions.
+
+MVP.2e [read-only diagnostics](deployment.md) no longer propose broker deployment.
+The [subscription-auth design gates](subscription-auth.md) prohibit OAuth token
+forwarding through this API broker and require separate security review.

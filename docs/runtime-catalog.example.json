@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "source_sha": "ca4809abb10b28794a8548a6fc5aa7f9123cbbcc",
+  "files": {
+    "usr/bin/python3": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "kind": "elf"
+    },
+    "bin/sh": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "kind": "elf"
+    }
+  },
+  "libraries": {},
+  "executables": [
+    "usr/bin/python3",
+    "bin/sh"
+  ]
+}

@@ -1,5 +1,9 @@
 # Guarded execution (MVP.2b)
 
+**Legacy API-backed contract; deployment is deferred.** The selected subscription
+path requires the separately reviewed [authentication design](subscription-auth.md).
+The interfaces below are preserved, not promoted as subscription readiness.
+
 `run` and `resume` are explicit operator commands, invoked from the same clean
 primary `main` repository root used for `prepare`:
 
@@ -245,3 +249,11 @@ Readiness is neither a launch reservation nor an attestation of the audited
 broker's internals. Run/resume always repeat validation. Offline CI cannot prove
 kernel isolation or inference deployment security. Follow [the manual E2E
 procedure](e2e.md) to collect distinct live evidence.
+
+## Static diagnostics and subscription direction
+
+[Read-only diagnostics](deployment.md) now exclude API deployment/rehearsal.
+[Subscription-auth gates](subscription-auth.md) describe the selected product
+path and why the existing custom-provider/empty-home runner does not implement
+it. Existing runtime security checks remain unchanged. API broker deployment is
+deferred; do not mount authentication caches or forward OAuth tokens as a bypass.

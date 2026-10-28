@@ -106,3 +106,12 @@ in offline tests. Do not auto-start it from the runtime, provision root services
 change host permissions or infer per-turn identity from client data. Follow
 docs/broker.md; offline contract PASS does not establish independent audit,
 production readiness or live E2E PASS.
+
+MVP.2e is limited to backend-independent read-only manifest/host-policy hints.
+The selected product path is ChatGPT-subscription-authenticated Codex. API broker
+deployment and privileged socket/runtime promotion are deferred, not next steps.
+Do not copy/mount auth.json into a coding sandbox, forward OAuth tokens through
+the API broker or relax existing isolation/caps. Subscription auth, refresh and
+trusted-Codex/untrusted-tool separation require a separately scoped design and
+independent review; docs/subscription-auth.md records the outstanding gates.
+Static/offline PASS cannot authorize authentication, execution or deployment.
