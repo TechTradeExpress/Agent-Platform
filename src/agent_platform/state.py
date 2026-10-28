@@ -77,11 +77,13 @@ def private_file(info: os.stat_result) -> None:
 
 
 @contextmanager
-def host_lock():
-    private_directory(LOCK_DIR, LOCK_DIR, create=True)
+def host_lock(*, create=True):
+    check(private_directory(LOCK_DIR, LOCK_DIR, create=create), 12, "missing_lock")
     fd = os.open(
         LOCK_DIR / "prepare.lock",
-        os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+        (os.O_RDWR | os.O_CREAT if create else os.O_RDONLY)
+        | os.O_NOFOLLOW
+        | os.O_NONBLOCK,
         0o600,
     )
     try:

@@ -131,20 +131,37 @@ def main() -> int:
     preparing.add_argument(
         "--trusted-actor", action="append", default=[], metavar="LOGIN"
     )
-    for command in ("run", "resume"):
+    for command in ("run", "resume", "doctor"):
         execution = commands.add_parser(
-            command, help="Explicit guarded Codex execution"
+            command,
+            help=(
+                "Check prepared task readiness"
+                if command == "doctor"
+                else "Explicit guarded Codex execution"
+            ),
         )
         execution.add_argument("--issue", required=True, type=int, metavar="N")
         execution.add_argument(
             "--trusted-actor", action="append", default=[], metavar="LOGIN"
         )
+        if command == "doctor":
+            execution.add_argument(
+                "--resume", action="store_true", help="Check PAUSED readiness"
+            )
     args = parser.parse_args()
-    if args.command in ("issues", "prepare", "run", "resume"):
+    if args.command in ("issues", "prepare", "run", "resume", "doctor"):
         if args.issue is not None and not positive_int(args.issue):
             parser.error("--issue must be a positive Issue number")
         if any(LOGIN.fullmatch(actor) is None for actor in args.trusted_actor):
             parser.error("--trusted-actor must be a GitHub user login")
+    if args.command == "doctor":
+        from agent_platform.doctor import diagnose
+
+        result, code = diagnose(
+            None, args.issue, args.trusted_actor, resume=args.resume
+        )
+        print(json.dumps(result, sort_keys=True))
+        return code
     code = 0
     try:
         result = inspect(Path.cwd())

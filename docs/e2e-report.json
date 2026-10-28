@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "agent_platform_head": "",
+  "codex_version": "0.164.0",
+  "codex_sha256": "",
+  "profile_sha256": "",
+  "broker_id": "",
+  "observed_at_utc": "",
+  "operator": "",
+  "reviewer": "",
+  "ci_status": "NOT_RUN",
+  "e2e_status": "NOT_RUN",
+  "real_live_turn_ran": false,
+  "checks": [
+    {
+      "id": "namespace_mount_proc_caps",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "codex_contract",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "host_files_and_workspace",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "network_denied",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "broker_enforcement",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "inference_path",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "completed_turn",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "paused_same_session",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "missing_profile",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "missing_broker",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "broker_identity",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "malformed_health",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "changed_scope_label",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "stale_refs",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "untrusted_actor",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "lock_contention",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    },
+    {
+      "id": "diagnostic_nonmutation",
+      "outcome": "NOT_RUN",
+      "redacted_evidence": ""
+    }
+  ],
+  "blockers": []
+}

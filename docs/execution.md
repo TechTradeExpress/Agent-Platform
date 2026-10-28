@@ -13,7 +13,7 @@ turn automatically. `run` requires an existing version-1 READY checkpoint and a
 clean task worktree exactly at the verified base. `resume` requires a version-2
 PAUSED checkpoint and its exact UUID. COMPLETED is terminal; STARTING, RUNNING,
 NEEDS_HUMAN, missing identity, orphan checkpoint files or execution guards require
-human reconciliation. There is no dry-run flag in this increment.
+human reconciliation. Use the separate `doctor` diagnostic below to check readiness without a coding turn.
 
 Both commands reauthenticate the exact open Issue, current labels and applicable
 ready-label actor, and compare scope digest/revision, immutable repository ID,
@@ -199,3 +199,48 @@ Do not edit a checkpoint to bypass an unknown state. Reconcile manually under
 maintainer review. Host/profile setup and production kernel/broker validation
 remain separate operator responsibilities; this implementation uses only fake
 Codex/GitHub and synthetic repositories in its automated acceptance tests.
+
+
+## Readiness diagnostics (MVP.2c)
+
+From the prepared fixture's primary main checkout, invoke:
+
+```sh
+agent-platform doctor --issue 42 --trusted-actor maintainer-login
+agent-platform doctor --issue 42 --trusted-actor maintainer-login --resume
+```
+
+The default requires version-1 READY; `--resume` explicitly requires version-2
+PAUSED and its recorded session/runtime lineage, preserving coding edits. Both
+use the exact execution admission, host mutex, source/ref/worktree/checkpoint
+validation and `Profile.preflight`, including a final admission/source re-read.
+They return before guard creation, checkpoint migration, runtime-directory
+creation or a coding turn. Probes use ephemeral namespace mounts. Doctor opens
+only the existing fixed mutex, without creating it or its parent. An absent
+mutex fails closed; `prepare` is the existing explicit initialization path.
+Doctor never calls prepare, repairs state, writes native files or changes GitHub.
+Read-only filesystem inspection may update filesystem access times; it does not
+promise bit-for-bit filesystem metadata immutability or zero broker audit logs.
+
+The JSON contract contains only `status` and `reason`:
+
+| Status | Reason | Exit |
+| --- | --- | --- |
+| ready | checks_passed | 0 |
+| unavailable | isolation_unavailable | 13 |
+| unavailable | admission_unavailable | 8 |
+| unavailable | local_unavailable | 12 |
+| ambiguous | invalid_target | 7 |
+| ambiguous | admission_rejected | 9 |
+| ambiguous | lock_busy | 10 |
+| ambiguous | source_mismatch | 11 |
+| ambiguous | checkpoint_or_task_invalid | 12 |
+| ambiguous | unsafe_storage | underlying storage error (normally 7) |
+
+Only exit 0 means all checks passed at that instant. Reasons are deliberately
+coarse and never contain stderr, paths, Issue text or provider diagnostics.
+Invalid operator arguments use argparse's existing usage errors (exit 2).
+Readiness is neither a launch reservation nor an attestation of the audited
+broker's internals. Run/resume always repeat validation. Offline CI cannot prove
+kernel isolation or inference deployment security. Follow [the manual E2E
+procedure](e2e.md) to collect distinct live evidence.
