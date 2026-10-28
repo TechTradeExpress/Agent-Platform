@@ -340,3 +340,11 @@ native entrypoint is unconditionally disabled; no user flag enables it. A VM
 protecting the homelab does not itself hide CODEX_HOME from tools inside that VM.
 Credential isolation and artifact admission remain distinct deployment gates;
 `agent-platform subscription` still exits 13. No real login or inference occurred.
+
+[Executable native Linux canaries](docs/native-canary.md) are a separate,
+non-authenticating experiment: `agent-platform-native-canary` reports without
+probes or fixture creation;
+`--run-synthetic` explicitly opts into fixed fabricated probes only after trusted
+runtime validation. Missing/untrusted prerequisites return BLOCKED, never a
+privileged or unsandboxed fallback. Host containment and same-domain CODEX_HOME
+exposure are reported separately; native subscription execution remains disabled.

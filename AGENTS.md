@@ -147,3 +147,14 @@ around Codex protects the host but does not itself isolate tokens inside its
 CODEX_HOME from tools. No credentials, inference, cap increase or host provisioning
 is authorized. Engine selection does not activate subscription runtime or imply
 safe unattended login; future risk acceptance requires explicit separate review.
+
+Issue #26 adds only the separate agent-platform-native-canary helper. Default is
+an inert report; explicit --run-synthetic permits fixed fabricated-only probes
+with a pre-existing reviewed immutable runtime, not Codex execution. Enforce
+mandatory namespaces and verify them inside; no unshare-all/-try success, host
+home/library mounts, real credential reads, public network or privileged fallback.
+Keep fixture-owned sentinels/children bounded and reaped; retain unknown/existing
+paths. Report offline mocks, real kernel results and auth NOT_RUN separately.
+Host containment is not same-domain CODEX_HOME protection or complete native tool
+mediation. All native/subscription, checkpoint, admission and publisher gates stay.
+Follow docs/native-canary.md; the helper cannot provision or admit its prerequisites.
