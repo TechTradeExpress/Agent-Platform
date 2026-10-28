@@ -186,3 +186,14 @@ recovery files, stale guards, bad identity or corrupt/changing checkpoints canno
 justify launch, repair, cleanup, resume or publication. Preserve coding edits and
 all runtime/subscription/artifact/publisher gates. Follow docs/task-status.md;
 Telegram, scheduling and automatic recovery remain separate work.
+
+Issue #37 adds only offline trusted notification events, fixed safe presentation
+and a separate private bounded outbox with scripted fake Telegram transport.
+No model/Issue/chat text can supply authority, message bodies, links, tokens or
+chat destinations. Only trusted controller/collector evidence may construct facts;
+recorded RUNNING is never live-process proof. Default disabled; explicit fake
+attempts persist unknown before I/O and never replay unknown sends automatically.
+Never evict dedup history, repair lost queue/mutex state, touch task checkpoints
+or change runner gates to notify. No real Telegram credentials/HTTP, bot setup,
+service, inbound control, scheduling or publishing is authorized. Follow
+docs/telegram-notifier.md; live enablement and Issue #38 require separate scope.
