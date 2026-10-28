@@ -182,6 +182,18 @@ def interrupt_handlers():
 
 
 def execute(info, number, actors, *, resume=False, diagnostic=False):
+    return _execute(
+        info,
+        number,
+        actors,
+        argument_builder=codex.arguments,
+        resume=resume,
+        diagnostic=diagnostic,
+    )
+
+
+def _execute(info, number, actors, *, argument_builder, resume=False, diagnostic=False):
+    # Internal seam only. Public native entrypoint must reject before reaching it.
     check(
         actors and all(issues.LOGIN.fullmatch(a) for a in actors),
         9,
@@ -350,7 +362,7 @@ def execute(info, number, actors, *, resume=False, diagnostic=False):
                 started, record["codex_thread_id"] if resume else None
             )
             argv = profile.launch(
-                codex.arguments(record["codex_thread_id"] if resume else None)
+                argument_builder(record["codex_thread_id"] if resume else None)
             )
             code = process.stream_jsonl(
                 argv, target, isolation.ENV, text, events.accept, pass_fds=(lock_fd,)

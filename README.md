@@ -328,8 +328,15 @@ Complete credential-safe tool mediation remains unproven; subscription execution
 stays `SUBSCRIPTION_ISOLATION_BLOCKED`. Offline CI is not real Linux isolation or
 authenticated E2E evidence.
 
-[ADR 003: subscription transport decision](docs/subscription-transport.md)
-compares native Codex, SIWC app-server and a minimal custom agent. Its custom-agent
-recommendation requires explicit maintainer approval; neither SIWC eligibility
-nor execution is enabled. Subscription-funded Responses transport is distinct
-from separately billed Platform API usage.
+[ADR 003](docs/subscription-transport.md) now records the binding Issue #24 choice:
+**A — native Codex CLI SELECTED**, funded by the operator's ChatGPT subscription.
+Agent Platform orchestrates Codex; it is not a replacement coding agent. B (SIWC
+app-server) and C (custom Responses agent) are deferred/not approved. The earlier
+conditional C recommendation is superseded, with research retained for provenance.
+
+The [native adapter and supervised offline dry-run](docs/native-codex.md) reuse the
+existing execution lifecycle with real fake-executable subprocess tests. The
+native entrypoint is unconditionally disabled; no user flag enables it. A VM
+protecting the homelab does not itself hide CODEX_HOME from tools inside that VM.
+Credential isolation and artifact admission remain distinct deployment gates;
+`agent-platform subscription` still exits 13. No real login or inference occurred.
