@@ -134,6 +134,10 @@ def main() -> int:
     preparing.add_argument(
         "--trusted-actor", action="append", default=[], metavar="LOGIN"
     )
+    status = commands.add_parser(
+        "status", help="Report recorded local task state offline"
+    )
+    status.add_argument("--issue", required=True, type=int, metavar="N")
     for command in ("run", "resume", "doctor"):
         execution = commands.add_parser(
             command,
@@ -152,6 +156,14 @@ def main() -> int:
                 "--resume", action="store_true", help="Check PAUSED readiness"
             )
     args = parser.parse_args()
+    if args.command == "status":
+        if not positive_int(args.issue):
+            parser.error("--issue must be a positive Issue number")
+        from agent_platform.task_status import diagnose
+
+        result, code = diagnose(None, args.issue)
+        print(json.dumps(result, sort_keys=True))
+        return code
     if args.command in ("issues", "prepare", "run", "resume", "doctor"):
         if args.issue is not None and not positive_int(args.issue):
             parser.error("--issue must be a positive Issue number")
