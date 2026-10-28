@@ -67,8 +67,9 @@ A maintainer must separately supply and audit these trusted components:
   `/run/agent-platform/inference.sock`. Its parent must be root-owned and not
   group/world writable; its socket must be root-owned, not world accessible,
   and grant the operator connection permission (for example through its group).
-  SO_PEERCRED must identify the serving peer as UID 0. This implementation
-  provides a socket client/relay, not a broker service or installation workflow.
+  SO_PEERCRED must identify the serving peer as UID 0. The separately runnable
+  [reference broker](broker.md) provides offline-tested protocol code, not an
+  audited deployment or installation workflow. The runner never starts it.
 
 The broker is part of the trusted computing base, alongside the kernel,
 Bubblewrap, curated image and pinned Codex. It must keep inference credentials

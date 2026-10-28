@@ -283,3 +283,13 @@ check a recorded PAUSED session. See [diagnostic statuses](docs/execution.md) an
 the [operator E2E runbook](docs/e2e.md). Offline CI success does not establish
 real isolation or inference success; live E2E requires separately audited host
 prerequisites, a disposable fixture and explicit paid-turn consent.
+
+## Reference inference broker (MVP.2d)
+
+`agent-platform-broker` is a separately invoked Linux Unix-socket server with
+SO_PEERCRED admission, explicit inference policy, fixed-origin verified TLS and
+bounded streaming/budgets. See [broker configuration, limits and manual audit
+checklist](docs/broker.md). It never starts from `run`, `resume` or `doctor`.
+Offline fake-upstream tests are not independent security audit or live E2E
+evidence. No broker/runtime is provisioned, no account is selected and no
+credential is discovered automatically. Production readiness remains unverified.
