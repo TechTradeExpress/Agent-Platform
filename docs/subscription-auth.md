@@ -1,6 +1,10 @@
 # Subscription-authenticated Codex: validation gates
 
 The maintainer-selected product path is Codex CLI using a ChatGPT subscription.
+See [ADR 001](subscription-architecture.md) for the Issue #17 decision, threat
+model, offline prototype and exact blockers. `agent-platform subscription` only
+reports SUBSCRIPTION_ISOLATION_BLOCKED; it never authenticates or executes.
+
 This document records evidence and blockers; it is **not** an authentication
 implementation, approved security architecture or authorization to log in/run.
 The existing API runner and reference broker are retained for compatibility,
@@ -75,3 +79,9 @@ explicit scope and security review before implementation or authenticated tests.
 Status: CLI_HELP_CONTRACT_PASS; authenticated execution, refresh/re-auth,
 credential isolation and live E2E are NOT_RUN/BLOCKED. No production readiness or
 privileged deployment approval follows from the diagnostic extraction.
+
+Issue #17 rechecked pinned help (including login status, sandbox and app-server
+help) and attempted only a fabricated-canary native probe. The probe was BLOCKED
+inside the existing sandbox; actual login status, refresh, tool credential
+isolation and live inference were not tested. See the [deferred operator smoke
+checklist](subscription-smoke.md); there is no account-consuming invocation yet.

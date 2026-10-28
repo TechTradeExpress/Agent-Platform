@@ -257,3 +257,8 @@ procedure](e2e.md) to collect distinct live evidence.
 path and why the existing custom-provider/empty-home runner does not implement
 it. Existing runtime security checks remain unchanged. API broker deployment is
 deferred; do not mount authentication caches or forward OAuth tokens as a bypass.
+
+Issue #17 adds only a [blocked subscription gate and architecture spike](subscription-architecture.md).
+The legacy runner's admission, host lock, UUID, resume, checkpoint and isolation
+behavior is unchanged; it is not an API fallback for the subscription command.
+No authenticated execution or complete tool credential separation is claimed.
