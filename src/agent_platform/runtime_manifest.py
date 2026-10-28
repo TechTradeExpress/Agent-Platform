@@ -9,12 +9,9 @@ import stat
 import struct
 from pathlib import Path
 
-from agent_platform.broker_policy import decode
-
 MAX_FILES = 2048
 MAX_BYTES = 512 * 1024 * 1024
-BINARY_LIMIT = 256 * 1024 * 1024  # Same bound as isolation.Profile.
-REQUIRED = ("usr/bin/codex", "usr/bin/python3", "bin/sh")
+BINARY_LIMIT = 256 * 1024 * 1024  # Inspection bound; does not change runtime gates.
 
 
 class InvalidRuntime(Exception):
@@ -26,6 +23,25 @@ class InvalidRuntime(Exception):
 def need(value, reason):
     if not value:
         raise InvalidRuntime(reason)
+
+
+def decode(raw):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            need(key not in result, "invalid_catalog")
+            result[key] = value
+        return result
+
+    def invalid(value):
+        raise InvalidRuntime("invalid_catalog")
+
+    try:
+        return json.loads(
+            raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=invalid
+        )
+    except (ValueError, RecursionError):
+        raise InvalidRuntime("invalid_catalog") from None
 
 
 def sha(value):
@@ -96,24 +112,20 @@ def catalog(path):
         == {
             "schema_version",
             "source_sha",
-            "codex_version",
-            "broker_id",
+            "executables",
             "files",
             "libraries",
         },
         "invalid_catalog",
     )
     need(
-        type(data["schema_version"]) is int and data["schema_version"] == 1,
+        type(data["schema_version"]) is int and data["schema_version"] == 2,
         "invalid_catalog",
     )
     need(
         isinstance(data["source_sha"], str)
         and re.fullmatch("[a-f0-9]{40}", data["source_sha"]),
         "invalid_catalog",
-    )
-    need(
-        data["codex_version"] == "0.164.0" and sha(data["broker_id"]), "invalid_catalog"
     )
     files, libraries = data["files"], data["libraries"]
     need(isinstance(files, dict) and 1 <= len(files) <= MAX_FILES, "invalid_catalog")
@@ -128,10 +140,20 @@ def catalog(path):
             sha(entry["sha256"]) and entry["kind"] in ("elf", "script", "data"),
             "invalid_catalog",
         )
+    executables = data["executables"]
     need(
-        all(name in files and files[name]["kind"] == "elf" for name in REQUIRED),
+        isinstance(executables, list) and 1 <= len(executables) <= 64, "invalid_catalog"
+    )
+    need(
+        all(
+            relative(name)
+            and name in files
+            and files[name]["kind"] in ("elf", "script")
+            for name in executables
+        ),
         "missing_binary",
     )
+    need(len(set(executables)) == len(executables), "invalid_catalog")
     need(isinstance(libraries, dict) and len(libraries) <= 256, "invalid_catalog")
     for soname, name in libraries.items():
         need(
@@ -326,7 +348,7 @@ def inspect_runtime(root, expected, *, require_root=False):
         raw = bounded_file(Path(relative_name).name, BINARY_LIMIT, dir_fd=parent_fd)
         entry = expected["files"][relative_name]
         need(hashlib.sha256(raw).hexdigest() == entry["sha256"], "hash_mismatch")
-        if relative_name in REQUIRED:
+        if relative_name in expected["executables"]:
             need(info.st_mode & 0o111, "binary_not_executable")
         if entry["kind"] == "elf":
             interpreter, needed, soname = elf_dependencies(raw)
@@ -357,12 +379,11 @@ def inspect_runtime(root, expected, *, require_root=False):
         )
     for soname, name in expected["libraries"].items():
         need(sonames[name] in (None, soname), "library_identity_mismatch")
-    # Profile also validates the root directory itself as trusted.
+    # Numeric ownership is only visible in the current user namespace.
     need(not require_root or root.stat().st_uid == 0, "root_ownership_required")
     return {
         "files": len(names),
         "bytes": total,
-        "codex_sha256": expected["files"]["usr/bin/codex"]["sha256"],
         "catalog_sha256": hashlib.sha256(
             json.dumps(expected, sort_keys=True).encode()
         ).hexdigest(),

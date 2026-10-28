@@ -1,5 +1,9 @@
 # Opt-in operator E2E smoke procedure
 
+**Deferred legacy API workflow.** Do not execute this runbook as subscription
+validation. The selected path first needs the separately scoped
+[subscription-auth design](subscription-auth.md); no API deployment is requested.
+
 This is a manual runbook, not an unattended harness. CI runs only synthetic Git,
 fake GitHub and fake Codex tests. `CI_PASS` never implies `E2E_PASS`. No command
 below installs privileges, credentials, services or host policy. Stop at the first
@@ -163,7 +167,6 @@ only after explicit reconciliation and retention review, separately from this
 workflow. Never automatically reset, remove artifacts, commit, push, close Issues,
 label, publish PRs or merge from the runtime runner.
 
-Before attempting this runbook, review the [deployment blueprint and gap
-report](deployment.md). Its read-only host audit and no-credential kernel
-rehearsal are separate evidence levels; neither establishes audited broker
-deployment, live compatibility or paid E2E PASS.
+The [read-only diagnostics](deployment.md) and [subscription-auth gates](subscription-auth.md)
+replace the API deployment trajectory. A future subscription exercise requires
+its own independently reviewed trust boundary and explicit operator authorization.

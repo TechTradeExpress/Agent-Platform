@@ -1,20 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Nonsecret deployment readiness evidence (not launch authorization)",
+  "title": "Backend-independent static diagnostic evidence",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "scope",
     "source_sha",
     "source_sha_origin",
     "ownership_scope",
-    "operator",
-    "codex_version",
-    "codex_sha256",
     "catalog_sha256",
-    "profile_sha256",
-    "broker_id",
-    "bubblewrap_requirement",
     "bubblewrap_version",
     "checks",
     "evidence",
@@ -22,7 +17,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "source_sha": {
       "type": "string",
@@ -34,57 +29,12 @@
     "ownership_scope": {
       "const": "current_user_namespace_only"
     },
-    "operator": {
-      "type": "object",
-      "required": [
-        "uid",
-        "primary_gid"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "uid": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "primary_gid": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
-    "codex_version": {
-      "const": "0.164.0"
-    },
-    "codex_sha256": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "pattern": "^[a-f0-9]{64}$"
-    },
     "catalog_sha256": {
       "type": [
         "string",
         "null"
       ],
       "pattern": "^[a-f0-9]{64}$"
-    },
-    "profile_sha256": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "pattern": "^[a-f0-9]{64}$"
-    },
-    "broker_id": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "pattern": "^[a-f0-9]{64}$"
-    },
-    "bubblewrap_requirement": {
-      "const": "unprivileged_namespaces_caps_drop_sync_fd"
     },
     "bubblewrap_version": {
       "type": [
@@ -123,7 +73,8 @@
       "required": [
         "offline_ci",
         "real_kernel",
-        "audited_broker",
+        "authenticated_execution",
+        "credential_isolation",
         "live_inference"
       ],
       "properties": {
@@ -133,7 +84,10 @@
         "real_kernel": {
           "$ref": "#/$defs/outcome"
         },
-        "audited_broker": {
+        "authenticated_execution": {
+          "$ref": "#/$defs/outcome"
+        },
+        "credential_isolation": {
           "$ref": "#/$defs/outcome"
         },
         "live_inference": {
@@ -146,8 +100,8 @@
     },
     "host_status": {
       "enum": [
-        "host_audit_pass",
-        "host_audit_blocked"
+        "host_hints_pass",
+        "host_hints_blocked"
       ]
     },
     "files": {
@@ -162,6 +116,9 @@
     },
     "visible_root_owned": {
       "type": "boolean"
+    },
+    "scope": {
+      "const": "static_diagnostics_only"
     }
   },
   "$defs": {

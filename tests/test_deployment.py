@@ -1,4 +1,4 @@
-"""Synthetic ELF/files/socket metadata and fake tools only; no real kernel in CI."""
+"""Backend-independent static inspection and fake host diagnostics only."""
 
 import hashlib
 import json
@@ -15,7 +15,6 @@ import pytest
 from agent_platform import deployment as dep
 from agent_platform import isolation
 from agent_platform import runtime_manifest as runtime
-from agent_platform.broker_policy import Rejected
 
 SOURCE = "a" * 40
 
@@ -72,7 +71,7 @@ def elf(*, needed=False, rpath=False):
 def image(tmp_path):
     root = tmp_path / "rootfs"
     files = {}
-    for name in runtime.REQUIRED:
+    for name in ("usr/bin/tool", "usr/bin/python3", "bin/sh"):
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(elf())
@@ -82,10 +81,9 @@ def image(tmp_path):
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         }
     data = {
-        "schema_version": 1,
+        "schema_version": 2,
         "source_sha": SOURCE,
-        "codex_version": "0.164.0",
-        "broker_id": "b" * 64,
+        "executables": ["usr/bin/tool", "usr/bin/python3", "bin/sh"],
         "files": files,
         "libraries": {},
     }
@@ -131,7 +129,7 @@ def test_manifest_deterministic_readonly_redacted(image):
 
 def test_elf_loader_and_library_closure(image):
     root, data, _ = image
-    update(root, data, "usr/bin/codex", elf(needed=True))
+    update(root, data, "usr/bin/tool", elf(needed=True))
     with pytest.raises(runtime.InvalidRuntime, match="missing_library"):
         runtime.inspect_runtime(root, data)
     update(root, data, "lib/libc.so.6", elf())
@@ -163,7 +161,7 @@ def test_elf_loader_and_library_closure(image):
 )
 def test_unsafe_runtime_rejected(image, tmp_path, fault):
     root, data, _ = image
-    target = root / "usr/bin/codex"
+    target = root / "usr/bin/tool"
     sock = None
     if fault == "symlink":
         target.unlink()
@@ -181,9 +179,9 @@ def test_unsafe_runtime_rejected(image, tmp_path, fault):
     elif fault == "unknown":
         (root / "unexpected").write_bytes(b"preserve")
     elif fault == "binary":
-        update(root, data, "usr/bin/codex", b"MZunknown")
+        update(root, data, "usr/bin/tool", b"MZunknown")
     elif fault == "rpath":
-        update(root, data, "usr/bin/codex", elf(needed=True, rpath=True))
+        update(root, data, "usr/bin/tool", elf(needed=True, rpath=True))
     elif fault == "special":
         sock = socket.socket(socket.AF_UNIX)
         sock.bind(str(root / "socket"))
@@ -211,7 +209,7 @@ def test_foreign_ownership_fails_without_privileged_changes(image, monkeypatch):
     root, data, _ = image
     bad = SimpleNamespace(st_uid=123456789, st_mode=stat.S_IFREG | 0o755)
     monkeypatch.setattr(
-        runtime, "walk", lambda root: iter([(Path("usr/bin/codex"), bad, -1)])
+        runtime, "walk", lambda root: iter([(Path("usr/bin/tool"), bad, -1)])
     )
     with pytest.raises(runtime.InvalidRuntime, match="unsafe_mode_or_owner"):
         runtime.inspect_runtime(root, data)
@@ -264,7 +262,7 @@ def test_hostile_catalog_rejected(image, tmp_path, fault):
         alias = tmp_path / "catalog-alias"
         alias.symlink_to(path)
         path = alias
-    with pytest.raises((runtime.InvalidRuntime, Rejected, OSError)):
+    with pytest.raises((runtime.InvalidRuntime, OSError)):
         runtime.catalog(path)
 
 
@@ -288,177 +286,6 @@ def test_many_entries_bounded(image, monkeypatch):
     monkeypatch.setattr(runtime, "MAX_FILES", 2)
     with pytest.raises(runtime.InvalidRuntime, match="size_limit"):
         runtime.inspect_runtime(root, data)
-
-
-def test_probe_matches_existing_profile_command(image, monkeypatch):
-    root, _, _ = image
-    monkeypatch.setattr(isolation, "PROFILE", root.parent)
-    current = isolation.Profile({"worktree": "/unused"}, 123)
-    argv = ["/usr/bin/python3", "-I", "/agent-platform-sandbox.py", "probe", "{}"]
-    assert dep.probe_command(root, 123, argv) == current.command(argv, probe=True)
-
-
-def test_opt_in_fake_rehearsal_has_no_credentials_or_production_mounts(
-    image, tmp_path, monkeypatch
-):
-    root, _, _ = image
-    monkeypatch.setattr(dep, "namespace_policy", lambda: None)
-    calls = []
-
-    def read(argv, cwd, env, **kwargs):
-        assert (
-            env == isolation.ENV and kwargs["timeout"] == 10 and kwargs["limit"] == 4096
-        )
-        assert kwargs["pass_fds"] == (int(argv[argv.index("--sync-fd") + 1]),)
-        assert "--unshare-net" in argv and "--clearenv" in argv
-        assert str(isolation.BROKER) not in argv
-        calls.append(argv)
-        return b"codex-cli 0.164.0\n" if "--version" in argv else b"isolated\n"
-
-    monkeypatch.setattr(dep.process, "read_command", read)
-    scratch = tmp_path / "scratch"
-    dep.rehearse(root, scratch)
-    assert (
-        len(calls) == 3 and (scratch / "synthetic-private/fabricated-canary").exists()
-    )
-    with pytest.raises(runtime.InvalidRuntime, match="scratch_conflict"):
-        dep.rehearse(root, scratch)
-    assert len(calls) == 3
-
-
-def test_namespace_failure_preserves_no_scratch(image, tmp_path, monkeypatch):
-    def denied():
-        raise runtime.InvalidRuntime("namespaces_unavailable")
-
-    monkeypatch.setattr(dep, "namespace_policy", denied)
-    with pytest.raises(runtime.InvalidRuntime):
-        dep.rehearse(image[0], tmp_path / "absent")
-    assert not (tmp_path / "absent").exists()
-
-
-@pytest.mark.parametrize("fault", ["uid", "gid", "mode", "world", "type", "link"])
-def test_socket_policy_rejects_unsafe_identity(monkeypatch, fault):
-    values = {
-        "st_uid": 0,
-        "st_gid": os.getgid(),
-        "st_mode": stat.S_IFSOCK | 0o660,
-        "st_nlink": 1,
-    }
-    if fault == "uid":
-        values["st_uid"] = 123456789
-    elif fault == "gid":
-        values["st_gid"] += 1
-    elif fault == "mode":
-        values["st_mode"] = stat.S_IFSOCK | 0o600
-    elif fault == "world":
-        values["st_mode"] = stat.S_IFSOCK | 0o666
-    elif fault == "type":
-        values["st_mode"] = stat.S_IFLNK | 0o777
-    else:
-        values["st_nlink"] = 2
-
-    class FakePath:
-        parent = Path("/not-read")
-
-        def exists(self):
-            return True
-
-        def is_symlink(self):
-            return False
-
-        def lstat(self):
-            return SimpleNamespace(**values)
-
-    monkeypatch.setattr(isolation, "BROKER", FakePath())
-    monkeypatch.setattr(isolation, "trusted", lambda *a: None)
-    with pytest.raises(runtime.InvalidRuntime):
-        dep.socket_policy()
-
-
-def test_broker_health_exact_contract_and_no_inference(image, monkeypatch):
-    expected = image[1]
-    calls = []
-
-    def request(method, endpoint):
-        calls.append((method, endpoint))
-        if endpoint == "/agent-platform/health":
-            return 200, json.dumps(
-                {
-                    "protocol": 1,
-                    "broker_id": "b" * 64,
-                    "inference_only": True,
-                    "credentials_exposed": False,
-                    "network_tools": False,
-                }
-            ).encode()
-        return 403, b""
-
-    monkeypatch.setattr(isolation, "broker_request", request)
-    dep.broker_health(expected)
-    assert calls == [
-        ("GET", "/agent-platform/health"),
-        ("GET", "/auth"),
-        ("POST", "/v1/admin"),
-        ("GET", "/v1/models"),
-    ]
-    monkeypatch.setattr(
-        isolation, "broker_request", lambda *a: (200, b'{"secret":"token host path"}')
-    )
-    with pytest.raises(runtime.InvalidRuntime):
-        dep.broker_health(expected)
-
-
-def test_audit_missing_prerequisites_never_writes_or_calls_provider(
-    tmp_path, monkeypatch
-):
-    monkeypatch.setattr(isolation, "BROKER", tmp_path / "missing/inference.sock")
-
-    def deny(*a, **kw):
-        raise PermissionError("secret token host path")
-
-    monkeypatch.setattr(dep, "namespace_policy", deny)
-    monkeypatch.setattr(dep, "bubblewrap", deny)
-    monkeypatch.setattr(
-        isolation,
-        "broker_request",
-        lambda *a: pytest.fail("no socket means no request"),
-    )
-    result = dep.audit(SOURCE)
-    assert (
-        result["host_status"] == "host_audit_blocked"
-        and result["result"] == "E2E_BLOCKED"
-    )
-    assert result["evidence"] == {
-        key: "NOT_RUN"
-        for key in ("offline_ci", "real_kernel", "audited_broker", "live_inference")
-    }
-    assert "secret" not in json.dumps(result) and str(tmp_path) not in json.dumps(
-        result
-    )
-    assert list(tmp_path.iterdir()) == []
-
-
-def test_cli_missing_manifest_and_rehearsal_are_blocked(tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "deployment",
-            "rehearse",
-            "--source-sha",
-            SOURCE,
-            "--root",
-            str(tmp_path / "missing"),
-            "--scratch",
-            str(tmp_path / "scratch"),
-            "--consent-kernel-probe",
-        ],
-    )
-    assert dep.main() == 2
-    result = json.loads(capsys.readouterr().out)
-    assert result["evidence"]["real_kernel"] == "BLOCKED"
-    assert not (tmp_path / "scratch").exists()
-    assert str(tmp_path) not in json.dumps(result)
 
 
 def test_catalog_must_use_default_loader_paths(image):
@@ -487,123 +314,6 @@ def test_script_with_explicit_approved_interpreter(image):
         kind="script",
     )
     assert runtime.inspect_runtime(root, data)["files"] == 4
-
-
-def test_rehearsal_rejects_scratch_inside_image(image, monkeypatch):
-    root, _, _ = image
-    monkeypatch.setattr(dep, "namespace_policy", lambda: None)
-    with pytest.raises(runtime.InvalidRuntime, match="scratch_conflict"):
-        dep.rehearse(root, root / "scratch")
-    assert not (root / "scratch").exists()
-
-
-def test_fake_probe_failure_is_fail_not_kernel_pass(image, tmp_path, monkeypatch):
-    monkeypatch.setattr(dep, "namespace_policy", lambda: None)
-    calls = []
-
-    def denied(argv, *a, **kw):
-        calls.append(argv)
-        return b"isolated\n" if len(calls) == 1 else b"hostile stderr token data"
-
-    monkeypatch.setattr(dep.process, "read_command", denied)
-    result = dep.report(SOURCE)
-    scratch = tmp_path / "preserve"
-    dep.record(result, "kernel_probe", lambda: dep.rehearse(image[0], scratch))
-    assert result["checks"]["kernel_probe"] == {
-        "outcome": "FAIL",
-        "reason": "kernel_probe_failed",
-    }
-    assert len(calls) == 2 and scratch.exists()
-    assert result["evidence"]["real_kernel"] == "NOT_RUN"
-    assert b"hostile" not in json.dumps(result).encode()
-
-
-def test_valid_socket_grant_requires_primary_gid(monkeypatch):
-    class SocketPath:
-        parent = Path("/metadata-only")
-
-        def exists(self):
-            return True
-
-        def is_symlink(self):
-            return False
-
-        def lstat(self):
-            return SimpleNamespace(
-                st_mode=stat.S_IFSOCK | 0o660, st_uid=0, st_gid=2001, st_nlink=1
-            )
-
-    monkeypatch.setattr(isolation, "BROKER", SocketPath())
-    monkeypatch.setattr(isolation, "trusted", lambda *a: None)
-    monkeypatch.setattr(dep.os, "getuid", lambda: 2000)
-    monkeypatch.setattr(dep.os, "getgid", lambda: 2001)
-    dep.socket_policy()
-    monkeypatch.setattr(dep.os, "getgid", lambda: 2002)
-    with pytest.raises(
-        runtime.InvalidRuntime, match="broker_primary_gid_access_required"
-    ):
-        dep.socket_policy()
-
-
-def test_broker_policy_pair_and_identity_are_exact(image, tmp_path):
-    data = {
-        "version": 1,
-        "endpoint": "https://api.openai.com/v1/responses",
-        "broker_id": "b" * 64,
-        "models": ["fixture-model"],
-        "peers": [[os.getuid(), os.getgid()]],
-    }
-    path = tmp_path / "broker-policy"
-    path.write_text(json.dumps(data))
-    path.chmod(0o600)
-    dep.broker_policy(path, image[1])
-    data["peers"][0][1] += 1
-    path.write_text(json.dumps(data))
-    with pytest.raises(runtime.InvalidRuntime, match="broker_peer_pair_mismatch"):
-        dep.broker_policy(path, image[1])
-    data["peers"] = [[os.getuid(), os.getgid()]]
-    data["broker_id"] = "c" * 64
-    path.write_text(json.dumps(data))
-    with pytest.raises(runtime.InvalidRuntime, match="broker_identity_mismatch"):
-        dep.broker_policy(path, image[1])
-
-
-def test_profile_metadata_hash_and_identity_match_catalog(image, tmp_path, monkeypatch):
-    path = tmp_path / "profile"
-    path.mkdir(mode=0o755)
-    data = {
-        "version": 1,
-        "codex_version": "0.164.0",
-        "broker_id": "b" * 64,
-        "codex_sha256": image[1]["files"]["usr/bin/codex"]["sha256"],
-    }
-    metadata = path / "profile.json"
-    metadata.write_text(json.dumps(data))
-    metadata.chmod(0o644)
-    monkeypatch.setattr(isolation, "PROFILE", path)
-    monkeypatch.setattr(isolation, "trusted", lambda *a: None)
-    result = dep.report(SOURCE)
-    dep.profile_metadata(result, image[1])
-    assert len(result["profile_sha256"]) == 64
-    data["codex_sha256"] = "f" * 64
-    metadata.write_text(json.dumps(data))
-    with pytest.raises(runtime.InvalidRuntime, match="profile_mismatch"):
-        dep.profile_metadata(result, image[1])
-
-
-def test_host_audit_pass_is_not_deployment_or_e2e_pass(image, monkeypatch):
-    monkeypatch.setattr(dep, "namespace_policy", lambda: None)
-    monkeypatch.setattr(dep, "installed_profile", lambda: None)
-    monkeypatch.setattr(dep, "bubblewrap", lambda r: None)
-    monkeypatch.setattr(dep, "manifest", lambda *a, **kw: None)
-    monkeypatch.setattr(dep, "profile_metadata", lambda *a: None)
-    monkeypatch.setattr(dep, "socket_policy", lambda: None)
-    monkeypatch.setattr(dep, "broker_policy", lambda *a: None)
-    monkeypatch.setattr(dep, "broker_health", lambda *a: None)
-    result = dep.audit(SOURCE, image[2])
-    assert result["host_status"] == "host_audit_pass"
-    assert result["result"] == "E2E_BLOCKED"
-    assert all(v == "NOT_RUN" for v in result["evidence"].values())
 
 
 def test_manifest_cli_does_not_spawn_or_write(image, monkeypatch, capsys):
@@ -660,3 +370,86 @@ def test_report_and_example_schema_never_assert_e2e():
         "NOT_RUN",
     }
     assert example["evidence"]["live_inference"] == "NOT_RUN"
+
+
+def test_host_hints_are_readonly_and_backend_independent(tmp_path, monkeypatch):
+    executable = tmp_path / "bwrap"
+    executable.write_bytes(b"root-trusted executable fixture")
+    executable.chmod(0o755)
+    monkeypatch.setattr(dep, "BWRAP", executable)
+    monkeypatch.setattr(dep, "namespace_policy", lambda: None)
+    monkeypatch.setattr(isolation, "trusted", lambda *a: None)
+    monkeypatch.setattr(
+        isolation, "broker_request", lambda *a: pytest.fail("no broker request")
+    )
+    monkeypatch.setattr(
+        isolation, "Profile", lambda *a: pytest.fail("no launch preflight")
+    )
+    monkeypatch.setattr(socket, "socket", lambda *a: pytest.fail("no socket"))
+    original = os.open
+
+    def readonly(path, flags, *a, **kw):
+        assert not flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC)
+        return original(path, flags, *a, **kw)
+
+    monkeypatch.setattr(os, "open", readonly)
+    calls = []
+
+    def read(argv, cwd, env, **limits):
+        assert argv == [str(executable), "--version"]
+        assert cwd == Path("/") and env == {"PATH": os.defpath, "LC_ALL": "C"}
+        assert limits == {"timeout": 5, "limit": 128}
+        calls.append(argv)
+        return b"bubblewrap 0.9.0\n"
+
+    monkeypatch.setattr(dep.process, "read_command", read)
+    result = dep.audit(SOURCE)
+    assert result["host_status"] == "host_hints_pass" and len(calls) == 1
+    assert result["result"] == "E2E_BLOCKED"
+    assert all(value == "NOT_RUN" for value in result["evidence"].values())
+    assert "broker" not in json.dumps(result) and str(tmp_path) not in json.dumps(
+        result
+    )
+    assert list(tmp_path.iterdir()) == [executable]
+
+
+def test_host_hint_failures_do_not_leak_or_create_files(tmp_path, monkeypatch):
+    def unavailable(*args):
+        raise PermissionError("secret token /identifying/host/path")
+
+    monkeypatch.setattr(dep, "namespace_policy", unavailable)
+    monkeypatch.setattr(dep, "bubblewrap", unavailable)
+    result = dep.audit(SOURCE)
+    assert result["host_status"] == "host_hints_blocked"
+    assert all(check["outcome"] == "BLOCKED" for check in result["checks"].values())
+    assert "secret" not in json.dumps(result) and "/identifying" not in json.dumps(
+        result
+    )
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("argument", ["rehearse", "--broker-policy"])
+def test_removed_backend_deployment_options_cannot_run(argument, monkeypatch, capsys):
+    argv = (
+        ["deployment", argument]
+        if argument == "rehearse"
+        else ["deployment", "audit", "--source-sha", SOURCE, argument, "/never-read"]
+    )
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(
+        dep.process, "read_command", lambda *a, **kw: pytest.fail("no execution")
+    )
+    with pytest.raises(SystemExit) as error:
+        dep.main()
+    assert error.value.code == 2
+    assert capsys.readouterr().out == ""
+
+
+def test_catalog_is_generic_and_rejects_legacy_broker_authority(image):
+    root, data, path = image
+    assert not any("codex" in key for key in data["files"])
+    assert runtime.inspect_runtime(root, runtime.catalog(path))["files"] == 3
+    data["broker_id"] = "b" * 64
+    path.write_text(json.dumps(data))
+    with pytest.raises(runtime.InvalidRuntime, match="invalid_catalog"):
+        runtime.catalog(path)

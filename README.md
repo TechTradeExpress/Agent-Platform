@@ -294,12 +294,16 @@ Offline fake-upstream tests are not independent security audit or live E2E
 evidence. No broker/runtime is provisioned, no account is selected and no
 credential is discovered automatically. Production readiness remains unverified.
 
-## Linux deployment readiness (MVP.2e)
+## Read-only Linux diagnostics (revised MVP.2e)
 
-See the [deployment blueprint](docs/deployment.md) for the UID/GID/socket decision,
-pinned runtime catalog, read-only `python -m agent_platform.deployment audit`,
-and explicitly opted-in no-credential kernel rehearsal. These tools do not
-install services, alter host permissions or replace `doctor`. Static/offline
-PASS, real kernel probes, independently audited root deployment and paid E2E
-are distinct evidence levels. Current size/identity/deployment gaps remain
-blocking; no production readiness is claimed.
+The selected execution path is Codex authenticated through a ChatGPT subscription.
+[Static manifest and host-policy diagnostics](docs/deployment.md) are independent
+of that backend and do not authorize execution. The earlier API broker deployment
+plan/rehearsal is deferred and removed from PR #16. See [pinned CLI help evidence
+and subscription-auth security gates](docs/subscription-auth.md).
+
+Existing run/resume/doctor and the reference API broker remain unchanged legacy
+interfaces. They do not implement subscription authentication. Do not deploy the
+API broker as the next product step, copy auth.json into the coding sandbox or
+forward OAuth tokens through it. Authenticated execution, safe refresh and OS-
+enforced credential separation remain blocked pending a separate reviewed design.
