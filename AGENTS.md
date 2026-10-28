@@ -123,3 +123,10 @@ forward OAuth, enable API fallback, execute tools or migrate checkpoints from
 synthetic evidence. Stop presentation is not quota authority or auto-resume.
 Follow docs/subscription-architecture.md and the deferred smoke checklist; do
 not reinterpret this spike as login, deployment or inference authorization.
+
+Issue #20's offline tool-dispatch proof is not a runtime adapter. Preserve
+SUBSCRIPTION_ISOLATION_BLOCKED; experimental dynamicTools do not imply mediation
+of built-in tools. Follow docs/tool-dispatch-feasibility.md and its pinned
+source/schema evidence. Unknown coverage cannot authorize login, tool execution,
+API fallback, artifact-cap changes or privileged kernel probes. Parser/mock
+success is distinct from real worker isolation and authenticated E2E evidence.
