@@ -195,3 +195,10 @@ Also resolve the oversized artifact separately without changing caps here. Nativ
 session persistence, account binding and restart/cancellation must pass before
 production consideration. This Issue can close as a scoped architecture blocker;
 a green CI or ADR approval is not deployment/live-execution authorization.
+
+## Issue #20 follow-up
+
+[ADR 002](tool-dispatch-feasibility.md) records the exact 0.164.0 schema and
+partial source audit, route coverage, fabricated protocol proof and remaining
+upstream gap. Dynamic callbacks do not replace built-in handlers. The decision
+remains SUBSCRIPTION_ISOLATION_BLOCKED; no auth, runtime or resume path is enabled.

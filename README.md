@@ -321,3 +321,9 @@ Offline auth/session/stop-presentation tests do not prove real tool isolation.
 The safe next milestone is a no-account, pinned-protocol external-tool mediation
 proof with real-kernel canaries, before independently authorized subscription
 login/refresh/smoke testing. Existing commands/security gates remain unchanged.
+
+The [pinned Codex tool-dispatch feasibility report](docs/tool-dispatch-feasibility.md)
+records Issue #20's offline schema/source audit and synthetic callback tests.
+Complete credential-safe tool mediation remains unproven; subscription execution
+stays `SUBSCRIPTION_ISOLATION_BLOCKED`. Offline CI is not real Linux isolation or
+authenticated E2E evidence.
