@@ -359,3 +359,9 @@ Issue #30 adds an [offline trusted Publisher plan API](docs/publisher.md).
 It validates completed-task identity, exact changes and trusted test receipts
 under the existing lock. Its immutable candidate is never publication authority;
 there is no publisher CLI, authentication or runtime Git/GitHub-write operation.
+
+Read-only task diagnostics: `agent-platform status --issue N` reports validated
+local checkpoint evidence, guard/lock observations and persisted session/usage
+without contacting GitHub or Codex. Recorded RUNNING never proves live activity;
+no state is repaired. See [task status](docs/task-status.md) for schema, limits
+and the bounded read-only Git subprocess exception.

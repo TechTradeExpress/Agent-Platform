@@ -177,3 +177,12 @@ and all-ref checks. Missing/stale evidence or ambiguous state blocks; never repa
 or publish automatically. No GitHub token, client or writer enters the runtime
 coding child. Real publisher authentication/actions require a separately approved
 Issue. Follow docs/publisher.md; notification/console work is out of scope.
+
+Issue #31 adds only offline status --issue N. Reuse bounded read-only Git identity
+queries and the existing non-creating host lock/checkpoint/guard checks; never
+invoke Codex, gh, auth, native session reads, probes or publisher operations.
+Report recorded_state separately from live_activity=unknown. Busy locks, orphan
+recovery files, stale guards, bad identity or corrupt/changing checkpoints cannot
+justify launch, repair, cleanup, resume or publication. Preserve coding edits and
+all runtime/subscription/artifact/publisher gates. Follow docs/task-status.md;
+Telegram, scheduling and automatic recovery remain separate work.
