@@ -16,7 +16,9 @@ An operator must independently supply and audit every item before continuing:
    profile hash and broker identity. Verify the broker's independently reviewed
    implementation enforces inference-only requests, authenticated operator access,
    request/time limits, denied admin/proxy/hosted tools and disconnect cancellation.
-   Health alone cannot prove this. This repository does not provision these pieces.
+   Health alone cannot prove this. The [reference broker](broker.md) has offline
+   contract tests only; this repository does not provision these pieces or prove
+   live provider cancellation, full Codex compatibility or deployment security.
 3. Verify Linux user/mount/PID/network/IPC/UTS/cgroup namespace policy, Bubblewrap,
    Yama and native Codex sandbox support. Never change host policy to bypass a
    failing probe. Run pinned image `codex --version` and `codex --no-daemon sandbox

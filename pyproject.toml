@@ -12,6 +12,7 @@ license = "MIT"
 
 [project.scripts]
 agent-platform = "agent_platform.cli:main"
+agent-platform-broker = "agent_platform.broker:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]

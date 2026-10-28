@@ -97,3 +97,12 @@ CI_PASS is offline evidence only. Missing audited host prerequisites mean
 E2E_BLOCKED; never provision privileges or relax isolation to obtain a PASS.
 The supervised workflow above includes Draft PR delivery when directly authorized
 by the human; the runtime CLI never publishes PRs or changes GitHub.
+
+The separately invoked MVP.2d reference broker is scoped inference transport,
+not a runner service or privilege installer. Keep exact SO_PEERCRED UID/GID
+admission, fixed verified HTTPS origin, explicit request policy and bounded
+streaming/lease budgets. Never obtain real credentials or invoke paid inference
+in offline tests. Do not auto-start it from the runtime, provision root services,
+change host permissions or infer per-turn identity from client data. Follow
+docs/broker.md; offline contract PASS does not establish independent audit,
+production readiness or live E2E PASS.
