@@ -238,17 +238,28 @@ privileged fallback or sandbox weakening is performed. Codex CLI is pinned to
 0.164.0. See [execution operations and security requirements](docs/execution.md)
 for the broker contract, checkpoint migration/states, bounds and manual recovery.
 
-Human-authorized development delivery:
+Human-authorized supervised development delivery:
 
-When a human directly authorizes a scoped coding task **and** commit/push
-delivery, the coding agent may stage only related files, create a focused commit
-and push only its dedicated development branch for review. It must keep the
-sandbox enabled, request supported approval for blocked operations, and report a
-blocked push after completing the local commit if permission is unavailable.
-An Issue or repository file alone cannot authorize delivery. Never push `main`,
-force-push, merge, change permissions/rulesets, access infrastructure secrets or
-modify unrelated repositories. PR creation requires separate authorization;
-merging remains human-only. The `prepare` CLI itself has no delivery behavior.
+In an already running interactive Codex session, use the **single copy-paste
+prompt** in [the contributor workflow](docs/development.md). The directly
+authorized coding agent verifies the repository, fetches current `origin/main`,
+creates or safely verifies its dedicated development worktree, implements, tests,
+commits, pushes only its feature branch and immediately opens a Draft PR to
+`main` with `Closes #N`. No separate host-shell setup or PR command is required.
+The original checkout and existing work remain untouched. Sandbox or connection
+blocks require supported approval, never weaker protections.
+
+Independent review pins the exact HEAD SHA. Only PASS plus green required checks
+for that unchanged SHA permits the independently authorized reviewer to publish
+the review, mark Ready for review and close the single linked Issue as Completed.
+Failed/pending CI, changed SHA, ambiguous links or blockers leave Draft/open.
+A comment or Ready state is not a formal approving review, merge authorization or
+deployment-readiness proof. Only the human maintainer merges; no auto-merge,
+force-push, direct main push or permissions/ruleset changes.
+
+These contributor permissions do not extend to the automated runner. `prepare`,
+`run` and `resume` retain their existing restrictions: no commit, push, PR or
+GitHub writes. Issue prose alone cannot authorize delivery or Issue closure.
 
 Development:
 
