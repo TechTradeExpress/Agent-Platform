@@ -131,8 +131,19 @@ source/schema evidence. Unknown coverage cannot authorize login, tool execution,
 API fallback, artifact-cap changes or privileged kernel probes. Parser/mock
 success is distinct from real worker isolation and authenticated E2E evidence.
 
-Issue #22 / docs/subscription-transport.md proposes A/B/C transport choices;
-it does not approve replacing Codex or enabling SIWC. Subscription-funded public
-Responses transport differs from separately billed Platform API use, but still
-requires explicit maintainer architecture approval. Preserve the blocked gate:
-no registration, credentials, inference, paid fallback or runtime activation.
+Issue #24 records the binding decision in docs/subscription-transport.md:
+A (stock Codex CLI) is SELECTED as the only intended engine, funded by ChatGPT
+subscription. Agent Platform is an orchestrator; do not implement a replacement
+agent or Responses transport. B/SIWC app-server and C/custom agent are deferred,
+not approved. Preserve ADR research as history, not current implementation scope.
+
+native_codex.execute is unconditionally blocked before inspection/locking/writes.
+Only offline tests replace that gate AND the isolation launcher with a reviewed
+fake executable and synthetic Git/GitHub. No flag/env/model data enables it.
+Reuse the shared execution lifecycle; never bypass its admission, lock, exact UUID,
+checkpoint/guard, bounded-stream or recovery checks. Keep the legacy path intact.
+Follow docs/native-codex.md for the opt-in no-account canary plan. A VM/container
+around Codex protects the host but does not itself isolate tokens inside its
+CODEX_HOME from tools. No credentials, inference, cap increase or host provisioning
+is authorized. Engine selection does not activate subscription runtime or imply
+safe unattended login; future risk acceptance requires explicit separate review.

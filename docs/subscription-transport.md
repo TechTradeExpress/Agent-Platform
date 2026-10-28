@@ -1,6 +1,8 @@
 # ADR 003: subscription-funded execution transport
 
-Status: **PROPOSED — MAINTAINER CHOICE REQUIRED**, 2026-10-28, Issue #22.
+Status: **DECIDED — A (STOCK CODEX CLI) SELECTED**, 2026-10-28, Issue #24.
+Issue #22 research is retained below for provenance; its C recommendation is
+superseded, not an implementation option approved by the maintainer.
 Runtime remains **SUBSCRIPTION_ISOLATION_BLOCKED**. This ADR authorizes neither
 implementation of a replacement agent nor registration, login or inference.
 PR #21 was verified merged at `fead0dc0a7efcf2160ba8453e6b563452c58e50d`;
@@ -8,7 +10,20 @@ fresh GitHub main and fetched origin/main matched that base. Existing checkouts
 were preserved. [ADR 001](subscription-architecture.md) and
 [ADR 002](tool-dispatch-feasibility.md) remain the security baseline.
 
-## Decision and maintainer gate
+## Binding maintainer decision (Issue #24)
+
+Native Codex CLI is the sole intended execution engine; Agent Platform orchestrates
+it and must not become a custom coding agent. ChatGPT subscription funding stays
+mandatory. B (SIWC app-server) and C (custom Responses agent) are deferred and not
+approved; they require a separate maintainer decision. Unresolved credential/tool
+isolation is a deployment security gate, not authority to replace Codex.
+
+The [native adapter and supervised offline dry-run](native-codex.md) implement the
+next testable orchestration seam. Subscription execution remains hard-disabled;
+engine selection does not approve credentials, inference or relaxed isolation.
+The original comparison and proposed C milestone below are historical only.
+
+## Original Issue #22 proposal (superseded)
 
 Recommend **C only if the maintainer explicitly approves replacing native Codex
 execution with a minimal custom agent and using subscription-funded Responses
@@ -152,7 +167,7 @@ and context digests;
 never migrate existing checkpoints or select the latest session automatically.
 Account/workspace/policy change blocks resume. Preserve legitimate edits.
 
-## Smallest practical next implementation task
+## Historical C milestone (not selected)
 
 After explicit approval of **C**, build one manually invoked experimental
 read → patch → fixed offline test task: real OS worker, disabled-by-default SIWC
