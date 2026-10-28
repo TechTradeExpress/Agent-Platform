@@ -183,3 +183,7 @@ the engine throughout; a blocker is not authorization for a custom agent.
 These are offline subprocess/state and nonsecret diagnostic results. Kernel
 canaries BLOCKED/NOT_RUN; real auth/refresh, subscription inference and real
 same-session native resume E2E_NOT_RUN. No deployment-readiness claim follows.
+
+Issue #26 implements the separate [opt-in executable synthetic canary helper](native-canary.md).
+It does not remove this adapter's block or admit the pinned artifact. Its actual
+BLOCKED/kernel-NOT_RUN observations are distinct from this Issue #24 offline suite.
