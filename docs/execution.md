@@ -245,3 +245,11 @@ Readiness is neither a launch reservation nor an attestation of the audited
 broker's internals. Run/resume always repeat validation. Offline CI cannot prove
 kernel isolation or inference deployment security. Follow [the manual E2E
 procedure](e2e.md) to collect distinct live evidence.
+
+## Deployment blueprint and static diagnostics (MVP.2e)
+
+The [deployment blueprint](deployment.md) records UID/GID/socket and artifact-size
+blockers, catalog inspection, non-mutating host audit and separate opt-in kernel
+rehearsal. It grants no installation rights and does not change this runtime
+contract. A host audit or synthetic test PASS never substitutes for this
+launch-specific preflight or an independently audited live deployment.

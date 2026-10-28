@@ -162,3 +162,8 @@ no cleanup script. A human may later retire the disposable repository/worktree
 only after explicit reconciliation and retention review, separately from this
 workflow. Never automatically reset, remove artifacts, commit, push, close Issues,
 label, publish PRs or merge from the runtime runner.
+
+Before attempting this runbook, review the [deployment blueprint and gap
+report](deployment.md). Its read-only host audit and no-credential kernel
+rehearsal are separate evidence levels; neither establishes audited broker
+deployment, live compatibility or paid E2E PASS.

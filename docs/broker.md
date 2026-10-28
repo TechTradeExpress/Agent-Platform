@@ -240,3 +240,7 @@ users, policy, credentials, firewall rules or privileged filesystem state.
 The absence of the curated runtime, audited broker deployment or any negative
 probe is still `isolation_unavailable`. This implementation does not change the
 runner's namespace, lock, checkpoint, authorization or GitHub-write restrictions.
+
+The [MVP.2e deployment blueprint](deployment.md) maps the root-peer/primary-GID
+socket gate and records unresolved confinement, socket grant and runtime-size
+findings. No automated permission change, root launcher or deployment is added.

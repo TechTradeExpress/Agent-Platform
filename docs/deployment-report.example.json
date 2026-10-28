@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "source_sha": "ca4809abb10b28794a8548a6fc5aa7f9123cbbcc",
+  "source_sha_origin": "operator_assertion",
+  "ownership_scope": "current_user_namespace_only",
+  "operator": {
+    "uid": 12345,
+    "primary_gid": 12345
+  },
+  "codex_version": "0.164.0",
+  "codex_sha256": null,
+  "catalog_sha256": null,
+  "profile_sha256": null,
+  "broker_id": null,
+  "bubblewrap_requirement": "unprivileged_namespaces_caps_drop_sync_fd",
+  "bubblewrap_version": null,
+  "checks": {
+    "installed_profile": {
+      "outcome": "BLOCKED",
+      "reason": "runtime_profile_missing"
+    },
+    "broker_socket": {
+      "outcome": "BLOCKED",
+      "reason": "broker_socket_missing"
+    },
+    "catalog": {
+      "outcome": "BLOCKED",
+      "reason": "catalog_required"
+    }
+  },
+  "evidence": {
+    "offline_ci": "NOT_RUN",
+    "real_kernel": "BLOCKED",
+    "audited_broker": "NOT_RUN",
+    "live_inference": "NOT_RUN"
+  },
+  "result": "E2E_BLOCKED",
+  "host_status": "host_audit_blocked"
+}

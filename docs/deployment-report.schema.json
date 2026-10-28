@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nonsecret deployment readiness evidence (not launch authorization)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_sha",
+    "source_sha_origin",
+    "ownership_scope",
+    "operator",
+    "codex_version",
+    "codex_sha256",
+    "catalog_sha256",
+    "profile_sha256",
+    "broker_id",
+    "bubblewrap_requirement",
+    "bubblewrap_version",
+    "checks",
+    "evidence",
+    "result"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "source_sha_origin": {
+      "const": "operator_assertion"
+    },
+    "ownership_scope": {
+      "const": "current_user_namespace_only"
+    },
+    "operator": {
+      "type": "object",
+      "required": [
+        "uid",
+        "primary_gid"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "uid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "primary_gid": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "codex_version": {
+      "const": "0.164.0"
+    },
+    "codex_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "catalog_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "profile_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "broker_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "bubblewrap_requirement": {
+      "const": "unprivileged_namespaces_caps_drop_sync_fd"
+    },
+    "bubblewrap_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$"
+    },
+    "checks": {
+      "type": "object",
+      "maxProperties": 20,
+      "propertyNames": {
+        "pattern": "^[a-z_]{1,40}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "outcome",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "outcome": {
+            "$ref": "#/$defs/outcome"
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^[a-z_]{1,64}$"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offline_ci",
+        "real_kernel",
+        "audited_broker",
+        "live_inference"
+      ],
+      "properties": {
+        "offline_ci": {
+          "$ref": "#/$defs/outcome"
+        },
+        "real_kernel": {
+          "$ref": "#/$defs/outcome"
+        },
+        "audited_broker": {
+          "$ref": "#/$defs/outcome"
+        },
+        "live_inference": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "result": {
+      "const": "E2E_BLOCKED"
+    },
+    "host_status": {
+      "enum": [
+        "host_audit_pass",
+        "host_audit_blocked"
+      ]
+    },
+    "files": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2048
+    },
+    "bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 536870912
+    },
+    "visible_root_owned": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "outcome": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "NOT_RUN"
+      ]
+    }
+  }
+}

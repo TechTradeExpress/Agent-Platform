@@ -106,3 +106,11 @@ in offline tests. Do not auto-start it from the runtime, provision root services
 change host permissions or infer per-turn identity from client data. Follow
 docs/broker.md; offline contract PASS does not establish independent audit,
 production readiness or live E2E PASS.
+
+MVP.2e deployment tooling is read-only except the explicitly opted-in rehearsal's
+new disposable synthetic scratch. Never execute candidate binaries on the host,
+read credentials, install/promote a rootfs, alter socket ownership/modes or relax
+the UID-0 peer/binary-size gates. Keep offline, real-kernel, audited deployment
+and live-inference evidence separate. Preserve blockers in docs/deployment.md;
+unsafe identity/artifact decisions need a separate security review, not a root
+workaround. Doctor remains the authoritative task-specific launch gate.
