@@ -158,3 +158,12 @@ paths. Report offline mocks, real kernel results and auth NOT_RUN separately.
 Host containment is not same-domain CODEX_HOME protection or complete native tool
 mediation. All native/subscription, checkpoint, admission and publisher gates stay.
 Follow docs/native-canary.md; the helper cannot provision or admit its prerequisites.
+
+Issue #29 adds only agent-platform-native-artifact: bounded, read-only inspection
+of the exact pinned native release and explicit ELF closure. Its separate 384 MiB
+ceiling must never relax runtime_manifest/isolation's legacy 256 MiB gates.
+INSPECTED_NATIVE_CANDIDATE is not RUNTIME_ADMITTED; provenance, genuinely root-owned
+full-runtime and subscription/tool isolation gates remain independent. Never
+execute a candidate to inspect it, touch auth stores, install/repair artifacts,
+or bypass unsafe metadata/mounts to obtain PASS. Keep native/subscription execution
+unconditionally disabled. Follow docs/native-artifact.md for evidence limits.

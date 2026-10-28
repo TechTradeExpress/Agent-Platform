@@ -348,3 +348,9 @@ probes or fixture creation;
 runtime validation. Missing/untrusted prerequisites return BLOCKED, never a
 privileged or unsandboxed fallback. Host containment and same-domain CODEX_HOME
 exposure are reported separately; native subscription execution remains disabled.
+
+Issue #29 provides a separate, offline `agent-platform-native-artifact` inspector
+for the exact pinned native Codex release. Its native-only 384 MiB ceiling does
+not change either legacy 256 MiB gate. Static inspection never installs or admits
+a runtime and never enables subscription execution. See the
+[artifact policy, provenance and blockers](docs/native-artifact.md).

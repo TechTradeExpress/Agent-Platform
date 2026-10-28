@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "version": "0.164.0",
+    "source_sha": "6aaac694803004a63c6f393d153c96d22521a6b9",
+    "target": "x86_64-unknown-linux-musl",
+    "bytes": 308139304,
+    "sha256": "b93f6811d3f653f0fb83be4050d857fb9abbb111dfa2ce160563327daff7f306"
+  },
+  "files": {
+    "usr/bin/codex": {
+      "bytes": 308139304,
+      "sha256": "b93f6811d3f653f0fb83be4050d857fb9abbb111dfa2ce160563327daff7f306"
+    }
+  },
+  "libraries": {}
+}
