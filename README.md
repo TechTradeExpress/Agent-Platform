@@ -327,3 +327,9 @@ records Issue #20's offline schema/source audit and synthetic callback tests.
 Complete credential-safe tool mediation remains unproven; subscription execution
 stays `SUBSCRIPTION_ISOLATION_BLOCKED`. Offline CI is not real Linux isolation or
 authenticated E2E evidence.
+
+[ADR 003: subscription transport decision](docs/subscription-transport.md)
+compares native Codex, SIWC app-server and a minimal custom agent. Its custom-agent
+recommendation requires explicit maintainer approval; neither SIWC eligibility
+nor execution is enabled. Subscription-funded Responses transport is distinct
+from separately billed Platform API usage.

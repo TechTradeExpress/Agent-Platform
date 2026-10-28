@@ -130,3 +130,9 @@ of built-in tools. Follow docs/tool-dispatch-feasibility.md and its pinned
 source/schema evidence. Unknown coverage cannot authorize login, tool execution,
 API fallback, artifact-cap changes or privileged kernel probes. Parser/mock
 success is distinct from real worker isolation and authenticated E2E evidence.
+
+Issue #22 / docs/subscription-transport.md proposes A/B/C transport choices;
+it does not approve replacing Codex or enabling SIWC. Subscription-funded public
+Responses transport differs from separately billed Platform API use, but still
+requires explicit maintainer architecture approval. Preserve the blocked gate:
+no registration, credentials, inference, paid fallback or runtime activation.

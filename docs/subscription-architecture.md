@@ -202,3 +202,11 @@ a green CI or ADR approval is not deployment/live-execution authorization.
 partial source audit, route coverage, fabricated protocol proof and remaining
 upstream gap. Dynamic callbacks do not replace built-in handlers. The decision
 remains SUBSCRIPTION_ISOLATION_BLOCKED; no auth, runtime or resume path is enabled.
+
+## Issue #22 decision gate
+
+[ADR 003](subscription-transport.md) compares A: native Codex, B: SIWC app-server
+and C: a custom explicit-tools agent. C is a conditional recommendation requiring
+explicit maintainer approval of the engine and public Responses transport;
+it has not replaced the Codex product premise or authorized runtime activation.
+The blocked gate, credential restrictions and existing checkpoint rules remain.
