@@ -181,14 +181,14 @@ def interrupt_handlers():
             signal.signal(s, handler)
 
 
-def execute(info, number, actors, *, resume=False):
+def execute(info, number, actors, *, resume=False, diagnostic=False):
     check(
         actors and all(issues.LOGIN.fullmatch(a) for a in actors),
         9,
         "missing_trusted_actors",
     )
     # The same lock covers all admission, migration, probes and the child lifetime.
-    with state.host_lock() as lock_fd, interrupt_handlers():
+    with state.host_lock(create=not diagnostic) as lock_fd, interrupt_handlers():
         root = Path(info["root"])
         source = prepare.source_snapshot(info)
         api = issues.GitHub(info["repository"])
@@ -287,6 +287,23 @@ def execute(info, number, actors, *, resume=False):
         if not resume:
             initial_clean(target)
         isolation.check_worktree(target)
+        if diagnostic:
+            # Re-read after probes: readiness never repairs or migrates state.
+            check(
+                state.load_checkpoint(checkpoint) == record, 12, "checkpoint_conflict"
+            )
+            check(
+                not guard.exists() and not guard.is_symlink(),
+                12,
+                "interrupted_execution",
+            )
+            if resume:
+                check(
+                    runtime_digest(home) == record["runtime_sha256"],
+                    12,
+                    "runtime_lineage_mismatch",
+                )
+            return {"status": "ready", "reason": "checks_passed"}, 0
         # Durable guard survives any uncertain checkpoint replacement. Only this
         # invocation may remove its own guard after a durable known terminal state.
         fd = os.open(guard, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)

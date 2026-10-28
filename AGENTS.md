@@ -57,3 +57,13 @@ rulesets/permissions, access infrastructure secrets or change unrelated repos.
 Create PRs only with separate explicit human authorization. Merging is
 human-only; never enable automatic merge. Keep the sandbox enabled and request
 supported approval for blocked Git/network operations; do not weaken protection.
+
+`doctor` reuses launch validation and isolated non-inference probes only. It must
+not create the mutex, change checkpoint generations, initialize native sessions,
+prepare tasks or launch coding turns. Preserve the existing security profile.
+E2E is strictly operator-driven in a disposable approved fixture with explicit
+consent before each paid turn; follow docs/e2e.md and record redacted outcomes.
+CI_PASS is offline evidence only. Missing audited host prerequisites mean
+E2E_BLOCKED; never provision privileges or relax isolation to obtain a PASS.
+A directly authorized supervised delivery may create a Draft PR when explicitly
+requested by the human; the runtime CLI never publishes PRs or changes GitHub.

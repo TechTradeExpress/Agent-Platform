@@ -263,3 +263,12 @@ uv run agent-platform --help
 Tests use local temporary repositories, fake gh responses and controlled
 subprocesses only; they never call live GitHub or providers. CI
 runs Ruff and pytest on Python 3.12. See AGENTS.md for contributor guardrails.
+
+## Readiness and opt-in live smoke testing
+
+`agent-platform doctor --issue N --trusted-actor LOGIN` checks an existing READY
+task without launching it or changing its checkpoint. Use `--resume` only to
+check a recorded PAUSED session. See [diagnostic statuses](docs/execution.md) and
+the [operator E2E runbook](docs/e2e.md). Offline CI success does not establish
+real isolation or inference success; live E2E requires separately audited host
+prerequisites, a disposable fixture and explicit paid-turn consent.
