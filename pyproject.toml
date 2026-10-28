@@ -14,6 +14,7 @@ license = "MIT"
 agent-platform = "agent_platform.cli:main"
 agent-platform-broker = "agent_platform.broker:main"
 agent-platform-native-canary = "agent_platform.native_canary:main"
+agent-platform-native-artifact = "agent_platform.native_artifact:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
