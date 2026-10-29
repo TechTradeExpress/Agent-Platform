@@ -230,3 +230,16 @@ release, signalling, automatic retry/resume, quota/auth/session probing, Telegra
 control or runtime wiring is authorized. Native/subscription remain blocked at
 exit 13. Follow docs/subscription-hold.md; receipts/digests do not authenticate
 operator identity, account ownership or current remote admission.
+
+Issue #38 adds only a disabled-by-default offline Telegram console API. Parse the
+strict synthetic schema and exactly /help, /status, /queue, /issue N; numeric
+sender/private-chat pairs and separately trusted bot context never imply sensitive
+action authority. Use trusted status/queue projections only; no raw model/Issue/
+transport text, paths, logs, session IDs or secrets in replies. Persist only the
+separate bounded replay cursor/pending intent under the non-creating host mutex;
+lost, changing or uncertain evidence blocks without repair/reset/eviction.
+Callbacks bind immutable exact task/operation/expiry/one-use receipts and remain
+non-executable dry runs. No Telegram traffic/token, polling/webhook, dispatcher,
+HOLD/recovery mutation, publisher/GitHub write or native execution is authorized.
+Follow docs/telegram-console.md; hashes/types are not transport authentication,
+independent human approval or OS isolation. Subscription gate remains exit 13.
