@@ -20,6 +20,7 @@ from agent_platform import (
     native_codex,
     prepare,
     process,
+    recovery,
     state,
 )
 from agent_platform.state import PrepareError
@@ -317,13 +318,30 @@ def test_interrupt_and_timeout_reap_fake_and_keep_recovery(native, monkeypatch, 
     monkeypatch.setattr(process, "stream_jsonl", bounded)
     with pytest.raises(PrepareError):
         run(native)
-    assert state.load_checkpoint(native["checkpoint"])["phase"] == "NEEDS_HUMAN"
+    try:
+        assert state.load_checkpoint(native["checkpoint"])["phase"] == "NEEDS_HUMAN"
+    except PrepareError as exc:
+        # A signal may interrupt the session's atomic checkpoint write itself.
+        # Preserved orphan evidence is fail-closed, not a recoverable clean stop.
+        assert exc.code == 12 and exc.reason == "interrupted_checkpoint"
+        assert len(list(native["checkpoint"].parent.glob("issue-1.json.tmp-*"))) == 1
+        result, code = recovery.plan(native["root"], 1)
+        assert code == 12
+        assert result["classification"] == "checkpoint_persistence_incomplete"
+        assert result["human_reconciliation_required"]
+        assert not result["safe_to_replay"]
     assert native["checkpoint"].with_suffix(".execution-guard").exists()
     if signum:
         assert signal.getsignal(signum) == previous
     with pytest.raises(ProcessLookupError):
         os.kill(traces(native)[0]["pid"], 0)
     assert len(traces(native)) == 1
+    before = snapshot(native["home"])
+    for resume in (False, True):
+        with pytest.raises(PrepareError):
+            run(native, resume=resume)
+        assert snapshot(native["home"]) == before
+    assert len(traces(native)) == len(native["calls"]) == 1
 
 
 @pytest.mark.parametrize("point", ["STARTING", "RUNNING", "COMPLETED"])

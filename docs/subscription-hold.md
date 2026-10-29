@@ -135,7 +135,12 @@ Offline tests use synthetic Codex events and existing fake-GitHub/local-state
 fixtures. They exercise successful usage, spoofed limit payloads, malformed and
 interrupted streams, every phase, exact operator lineage, duplicate/conflicting
 HOLD, atomic-write failures, corruption/aliases/permissions, contention, bounded
-redaction and no network/model/auth access. Offline PASS does not establish real
+redaction and no network/model/auth access. A fake-executable integration test
+injects interruption during durable session recording: checkpoint readers and
+HOLD must remain blocked with guard/temporary evidence preserved. The existing
+real-signal fake-adapter regression also checks that an interrupted atomic write
+is an unresolved recovery outcome, with no subsequent launch or state cleanup.
+Offline PASS does not establish real
 account quota, live authentication, audited storage separation or E2E safety.
 Same-UID or privileged compromise of the trusted controller/store is outside
 this receipt model; no cryptographic human attestation is claimed. Independent

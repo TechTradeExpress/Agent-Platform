@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from test_native_codex import native as native
 from test_prepare import git, snapshot
 from test_prepare import task as task
 from test_task_status import EXECUTION, SESSION, USAGE, set_phase
@@ -629,3 +630,36 @@ def test_bounded_hold_directory_has_no_partial_success(ready):
     assert inspect(ready, request)[1] == 12
     assert checked(hold.set_hold(ready["root"], request))[1] == 12
     assert snapshot(ready["home"]) == before
+
+
+def test_interrupted_native_session_persistence_blocks_hold_without_repair(
+    native, monkeypatch
+):
+    from test_execution import events
+    from test_native_codex import run, set_fake
+
+    request = decision(native)
+    set_fake(native, events())
+    original = os.replace
+
+    def interrupted(source, destination):
+        if (
+            destination == native["checkpoint"]
+            and json.loads(Path(source).read_bytes())["phase"] == "RUNNING"
+        ):
+            raise InterruptedError("synthetic interrupted session persistence")
+        return original(source, destination)
+
+    monkeypatch.setattr(os, "replace", interrupted)
+    with pytest.raises(state.PrepareError):
+        run(native)
+    assert len(list(native["checkpoint"].parent.glob("issue-1.json.tmp-*"))) == 1
+    assert native["checkpoint"].with_suffix(".execution-guard").exists()
+    before = snapshot(native["home"])
+    result, code = inspect(native, request)
+    assert code == 12 and result["reason"] == "interrupted_checkpoint"
+    assert result["display_status"] == "NEEDS_HUMAN"
+    assert checked(hold.set_hold(native["root"], request))[1] == 12
+    assert not path(native).exists()
+    assert snapshot(native["home"]) == before
+    assert len(native["calls"]) == 1
