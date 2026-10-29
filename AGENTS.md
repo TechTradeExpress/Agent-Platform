@@ -207,3 +207,14 @@ session-store access, GitHub/Telegram writes or runtime activation is authorized
 Recorded UUIDs/fingerprints and optional trusted exact pins are evidence only,
 not authentication, fresh admission or exactly-once proof. Follow docs/recovery.md;
 queue planning and live notification/control remain separately scoped.
+
+Issue #33 adds only the bounded offline queue API. Operator-held dependency and
+priority policy, admission pins and separately trusted PR-link/merge receipts
+must never come from Issue prose, model output or target JSON. Closed is not
+merged; require exact repository/main/HEAD and local merge-ancestry evidence.
+Reuse existing admission, non-creating host lock, status and recovery checks;
+any retained checkpoint, ambiguous store, busy lock or unresolved task blocks
+nomination. next_candidate is advice only, never prepare/run authorization.
+No scheduler, automatic selection/start/retry, PR collector, GitHub writes,
+cleanup, new credentials or native/subscription activation. Follow docs/queue.md;
+snapshot digests are correlation values, not authenticity or live freshness.
