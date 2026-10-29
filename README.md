@@ -382,3 +382,10 @@ PR evidence. Plans distinguish waiting, eligible candidates, blockers, recorded
 local tasks, review and verified merges. A next candidate is advisory only;
 retained local state or uncertain activity blocks nomination. No scheduler,
 GitHub PR client, automatic task start or new CLI command is introduced.
+
+Issue #34 adds [offline usage presentation and explicit operator HOLD](docs/subscription-hold.md)
+as a trusted Python API. Historical token counts and unclassified failures never
+prove subscription quota. HOLD uses separate private durable records, preserves
+checkpoint/session identity, and has no release, automatic retry or resume.
+Missing or conflicting state requires human intervention; native subscription
+execution remains blocked at exit 13.

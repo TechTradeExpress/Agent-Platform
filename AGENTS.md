@@ -218,3 +218,15 @@ nomination. next_candidate is advice only, never prepare/run authorization.
 No scheduler, automatic selection/start/retry, PR collector, GitHub writes,
 cleanup, new credentials or native/subscription activation. Follow docs/queue.md;
 snapshot digests are correlation values, not authenticity or live freshness.
+
+Issue #34 adds only offline subscription usage presentation and explicit trusted
+operator HOLD API, in separate private storage. turn.failed, prose, stderr and
+token counters never prove quota exhaustion/remaining quota/reset times. No
+verified_limit source is supported. WAITING requires validated explicit human
+HOLD; preserve PAUSED/NEEDS_HUMAN, checkpoints, guards and exact session lineage.
+Reuse non-creating host locking, status/recovery identity and atomic storage;
+missing/corrupt/conflicting HOLD is unknown, never release or permission. No
+release, signalling, automatic retry/resume, quota/auth/session probing, Telegram
+control or runtime wiring is authorized. Native/subscription remain blocked at
+exit 13. Follow docs/subscription-hold.md; receipts/digests do not authenticate
+operator identity, account ownership or current remote admission.
