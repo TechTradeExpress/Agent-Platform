@@ -389,3 +389,9 @@ prove subscription quota. HOLD uses separate private durable records, preserves
 checkpoint/session identity, and has no release, automatic retry or resume.
 Missing or conflicting state requires human intervention; native subscription
 execution remains blocked at exit 13.
+
+Issue #38 adds a [disabled-by-default offline Telegram console API](docs/telegram-console.md)
+with strict numeric caller/chat policy, four read-only commands, sanitized trusted
+report projections, durable replay suppression and non-executable callback
+proposals. It has no bot token, network transport, daemon, active HOLD/resume or
+GitHub authority. Native subscription execution remains blocked at exit 13.
