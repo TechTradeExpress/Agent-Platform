@@ -365,3 +365,8 @@ local checkpoint evidence, guard/lock observations and persisted session/usage
 without contacting GitHub or Codex. Recorded RUNNING never proves live activity;
 no state is repaired. See [task status](docs/task-status.md) for schema, limits
 and the bounded read-only Git subprocess exception.
+
+The [offline Telegram notifier](docs/telegram-notifier.md) provides typed trusted
+events, fixed safe formatting and a bounded durable outbox with scripted fake
+transport tests. It is disabled by default and has no token, real sender, daemon
+or inbound control. Live notification deployment requires separate approval.
