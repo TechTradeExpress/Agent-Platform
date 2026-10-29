@@ -197,3 +197,13 @@ Never evict dedup history, repair lost queue/mutex state, touch task checkpoints
 or change runner gates to notify. No real Telegram credentials/HTTP, bot setup,
 service, inbound control, scheduling or publishing is authorized. Follow
 docs/telegram-notifier.md; live enablement and Issue #38 require separate scope.
+
+Issue #32 adds read-only recovery plan --issue N over the shared status snapshot.
+Never infer replay safety from missing terminal output, a free mutex, edits or a
+COMPLETED checkpoint. Unknown effects remain a NEEDS_HUMAN plan recommendation,
+without rewriting recorded state. Preserve guards, temporary files and worktree
+edits; no repair, migration, cleanup, retry/resume/restart, process signalling,
+session-store access, GitHub/Telegram writes or runtime activation is authorized.
+Recorded UUIDs/fingerprints and optional trusted exact pins are evidence only,
+not authentication, fresh admission or exactly-once proof. Follow docs/recovery.md;
+queue planning and live notification/control remain separately scoped.

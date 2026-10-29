@@ -138,6 +138,12 @@ def main() -> int:
         "status", help="Report recorded local task state offline"
     )
     status.add_argument("--issue", required=True, type=int, metavar="N")
+    recovery = commands.add_parser("recovery", help="Read-only human recovery guidance")
+    recovery_actions = recovery.add_subparsers(dest="recovery_action", required=True)
+    recovery_plan = recovery_actions.add_parser(
+        "plan", help="Inspect recovery evidence only"
+    )
+    recovery_plan.add_argument("--issue", required=True, type=int, metavar="N")
     for command in ("run", "resume", "doctor"):
         execution = commands.add_parser(
             command,
@@ -156,6 +162,14 @@ def main() -> int:
                 "--resume", action="store_true", help="Check PAUSED readiness"
             )
     args = parser.parse_args()
+    if args.command == "recovery":
+        if not positive_int(args.issue):
+            parser.error("--issue must be a positive Issue number")
+        from agent_platform.recovery import plan
+
+        result, code = plan(None, args.issue)
+        print(json.dumps(result, sort_keys=True))
+        return code
     if args.command == "status":
         if not positive_int(args.issue):
             parser.error("--issue must be a positive Issue number")
