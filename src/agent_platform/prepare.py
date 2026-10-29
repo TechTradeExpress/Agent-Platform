@@ -181,6 +181,11 @@ def approved(
         {actor.casefold() for actor in actors},
     )
     check(reason is None and actor is not None, 9, "untrusted_issue")
+    return admission_record(repo_id, canonical, sha, issue, history)
+
+
+def admission_record(repo_id, canonical, sha, issue, history):
+    """Shared nonsecret receipt encoding; callers must validate admission first."""
     digest = hashlib.sha256(
         json.dumps(
             {"title": issue["title"], "body": issue["body"]},
@@ -193,7 +198,7 @@ def approved(
     return {
         "repo_id": repo_id,
         "repository": canonical,
-        "issue": number,
+        "issue": issue["number"],
         "issue_id": issue["id"],
         "scope_sha256": digest,
         "scope_revision": issue["updated_at"],

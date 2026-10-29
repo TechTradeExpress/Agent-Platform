@@ -375,3 +375,10 @@ Human recovery guidance: `agent-platform recovery plan --issue N` reuses the
 read-only status snapshot to explain interrupted or contradictory evidence,
 investigation choices and prohibited actions. It never repairs, resumes or
 replays a task; COMPLETED is not exactly-once proof. See [recovery](docs/recovery.md).
+
+Issue #33 adds a [read-only offline queue planner API](docs/queue.md) for trusted
+operator dependency policy, existing Issue admission and independently supplied
+PR evidence. Plans distinguish waiting, eligible candidates, blockers, recorded
+local tasks, review and verified merges. A next candidate is advisory only;
+retained local state or uncertain activity blocks nomination. No scheduler,
+GitHub PR client, automatic task start or new CLI command is introduced.
