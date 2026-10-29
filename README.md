@@ -370,3 +370,8 @@ The [offline Telegram notifier](docs/telegram-notifier.md) provides typed truste
 events, fixed safe formatting and a bounded durable outbox with scripted fake
 transport tests. It is disabled by default and has no token, real sender, daemon
 or inbound control. Live notification deployment requires separate approval.
+
+Human recovery guidance: `agent-platform recovery plan --issue N` reuses the
+read-only status snapshot to explain interrupted or contradictory evidence,
+investigation choices and prohibited actions. It never repairs, resumes or
+replays a task; COMPLETED is not exactly-once proof. See [recovery](docs/recovery.md).

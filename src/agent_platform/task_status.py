@@ -270,7 +270,7 @@ def find_checkpoint(root, repository, number):
     return candidates[0] if candidates else None
 
 
-def _observe(root, number, report, lock_fd):
+def _observe(root, number, report, lock_fd, details):
     from agent_platform import cli
 
     state.no_symlinks(root)
@@ -324,6 +324,17 @@ def _observe(root, number, report, lock_fd):
         guard_snapshot(guard, record) == (guard_state, guard_info), 12, "guard_changed"
     )
     check(fingerprint(lock.lstat()) == lock_info, 12, "lock_changed")
+    details["checkpoint_version"] = record["version"]
+    if identity_ok:
+        # Recovery receives only validated nonsecret fields from this same lock.
+        details.update(
+            admission={k: record[k] for k in publisher.Admission.__dataclass_fields__},
+            checkpoint_sha256=publisher.digest(record),
+            execution_id=record.get("execution_id"),
+            refs_sha256=record.get("refs_sha256"),
+            isolation_sha256=record.get("isolation_sha256"),
+            runtime_sha256=record.get("runtime_sha256"),
+        )
     if not identity_ok:
         report.update(
             status="blocked",
@@ -348,7 +359,7 @@ def _observe(root, number, report, lock_fd):
     return report, 0
 
 
-def diagnose(cwd, number):
+def _diagnose(cwd, number, details):
     """Fixed JSON-ready schema; no remote admission, model or native session reads."""
     from agent_platform import cli, issues
 
@@ -359,8 +370,16 @@ def diagnose(cwd, number):
     try:
         with state.host_lock(create=False) as fd:
             report["host_lock"] = "free"
-            return _observe(Path.cwd() if cwd is None else cwd, number, report, fd)
+            return _observe(
+                Path.cwd() if cwd is None else cwd, number, report, fd, details
+            )
     except state.PrepareError as exc:
+        details.clear()
+        details["failure"] = (
+            exc.reason
+            if exc.reason in RECOVERY_FAILURES
+            else "local_evidence_unverifiable"
+        )
         if report["host_lock"] == "unknown":
             report["host_lock"] = (
                 "busy"
@@ -403,6 +422,8 @@ def diagnose(cwd, number):
         publisher.PlanError,
     ):
         reason = "local_state_unavailable"
+    if "failure" not in details:
+        details.clear()
     # Clear any earlier partial observations after a failed stable re-read.
     result = empty_report(number)
     result.update(
@@ -416,3 +437,37 @@ def diagnose(cwd, number):
     if report["execution_guard"] == "invalid":
         result["execution_guard"] = "invalid"
     return result, 12
+
+
+RECOVERY_FAILURES = frozenset(
+    {
+        "interrupted_checkpoint",
+        "orphan_guard",
+        "invalid_checkpoint",
+        "invalid_lineage",
+        "identity_mismatch",
+        "checkpoint_identity_mismatch",
+        "unconfirmed_worktree",
+        "unexpected_refs",
+        "stale_or_diverged_refs",
+        "source_changed",
+        "ambiguous_store",
+        "guard_changed",
+        "checkpoint_changed",
+        "lock_changed",
+        "invalid_guard",
+    }
+)
+
+
+def inspect_local(cwd, number):
+    """Shared locked inspection; details are internal, never a raw record/path dump."""
+    details = {}
+    report, code = _diagnose(cwd, number, details)
+    return report, code, details
+
+
+def diagnose(cwd, number):
+    """Preserve the existing public status schema and exit-code contract."""
+    report, code, _ = inspect_local(cwd, number)
+    return report, code
