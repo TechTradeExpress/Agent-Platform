@@ -99,6 +99,7 @@ def _validate(evidence, now):
 def _read(root, evidence, fd):
     pin = evidence.admission
     local_state, local, source, inventory = queue._local(root, pin, fd)
+    need(local_state != "unresolved_local_state", "local_evidence_unverifiable")
     # Do not hide stale Issue/PR evidence behind the queue's local-task override.
     rows = queue._evaluate(root, evidence.queue_snapshot, ())
     # A PR must not mask a failed current admission (e.g. blocking labels).

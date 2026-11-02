@@ -305,7 +305,9 @@ def test_foreign_retained_task_blocks(task):
     marker = parent / "issue-7.json"
     marker.write_text("{}")
     marker.chmod(0o600)
+    before = snapshot(task["home"])
     result, _ = checked(task, inputs)
+    assert snapshot(task["home"]) == before
     assert result["status"] == "BLOCKED"
     assert result["reason"] == "local_evidence_unverifiable"
 
@@ -367,3 +369,27 @@ def test_pr_does_not_override_failed_current_admission(ready):
     result, _ = checked(ready, replace(inputs, queue_snapshot=captured))
     assert result["reason"] == "queue_evidence_blocked"
     assert result["queue"][0]["reason"] == "admission_unverified"
+
+
+def test_unresolved_local_inventory_blocks_before_other_projections(task, monkeypatch):
+    idle()
+    inputs = evidence(task)
+    before = snapshot(task["home"])
+    monkeypatch.setattr(
+        queue, "_local",
+        lambda *args: ("unresolved_local_state", (), {}, ((99, 7),)),
+    )
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unresolved inventory reached subsequent projection or writer")
+
+    monkeypatch.setattr(queue, "_evaluate", forbidden)
+    monkeypatch.setattr(hold, "_snapshot", forbidden)
+    monkeypatch.setattr(state, "write_checkpoint", forbidden)
+    result, code = checked(task, inputs)
+    assert code == 12
+    assert result["status"] == "BLOCKED"
+    assert result["reason"] == "local_evidence_unverifiable"
+    assert result["snapshot_consistency"] == "unverified"
+    assert result["queue"] == result["local_tasks"] == []
+    assert snapshot(task["home"]) == before
