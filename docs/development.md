@@ -192,3 +192,12 @@ results and CI link/status. Report unavailable checks as unavailable, not green.
 Review reports additionally identify reviewed SHA, intended linked Issue and the
 actual outcome of each publication/Ready/closure step. This Issue's implementing
 agent must only create a Draft PR; its independent reviewer owns acceptance.
+
+## Governance and CI evidence
+
+See [GitHub governance and Action provenance](github-governance.md) for observed
+private-repository protection limitations, exact-SHA check/review requirements,
+operator-only configuration proposals and collector/Publisher credential roles.
+Documented policy is not proof of server enforcement. Do not mutate settings or
+relax acceptance when a protection API is unavailable. Action pins and workflow
+permission/timeout changes require scoped review; no new runtime authority follows.
