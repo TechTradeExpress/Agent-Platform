@@ -49,6 +49,11 @@ checkpoint. Offline code cannot detect GitHub changes absent a refreshed trusted
 snapshot. Any future publisher must independently refresh admission/remote state
 and revalidate immediately before each separately authorized operation.
 
+Issue #49's [read-only GitHub collector](github-evidence.md) can supply verified
+PR/CI snapshots and hand back the separately trusted admission pin. It does not
+produce local checkpoint/tree-bound TestEvidence or publication permission.
+Remote CI success cannot replace this API's exact local evidence requirements.
+
 ## Immutable schema, version 1
 
 `Admission`, `FileChange`, `TestCheck`, `TestEvidence` and `PublishPlan` are frozen,

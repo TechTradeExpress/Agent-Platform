@@ -255,3 +255,17 @@ resume_authorized=false; never route to native or API fallback. Subscription
 readiness remains independently SUBSCRIPTION_ISOLATION_BLOCKED at exit 13.
 Retain historical lifecycle tests, not public activation authority. No runtime,
 authentication, provider, host security, scheduler or publisher is enabled.
+
+Issue #49 adds only the trusted-caller github_evidence Python API. Its explicit
+client permits pinned repository REST GETs and two fixed read-only GraphQL queries
+(POST transport, never mutations) for native Issue links and review threads.
+No CLI wiring, credential provisioning, account probing, scheduler or writer.
+Require full bounded stable rereads, caller-pinned reviewers/App checks at exact
+HEAD and base-bound merge result, canonical source identity and non-creating host
+lock; actual merges require local commit ancestry. Unknown/partial/stale evidence
+blocks without repair/retry. Admission pins remain separate caller assertions;
+remote CI never creates checkpoint/tree-bound Publisher TestEvidence. Never load
+authority from model/Issue/target/cached JSON or expose clients/credentials to
+Codex tools or Telegram. Follow docs/github-evidence.md; native and public legacy
+quarantine exit-13 gates remain unchanged. Offline PASS is not live credential
+or production-isolation proof.

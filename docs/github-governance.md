@@ -178,8 +178,10 @@ process, not a replacement claim of technical protection.
 
 ## Collector, Publisher and human credential domains
 
-These are intended roles, not created credentials/services. The #49 collector
-and future writer are **not implemented here**. Existing
+These are intended roles, not created credentials/services. The #48 snapshot
+below specified proposed roles. Issue #49 now adds the
+[explicit read-only collector API](github-evidence.md); the future writer remains
+unimplemented and live credential/OS integration remains unverified. Existing
 [publisher.plan](publisher.md) is offline and always `publish_authorized=false`;
 [queue receipts](queue.md) are trusted caller assertions, not collected GitHub
 proof. No model, Issue text, saved JSON or Telegram assertion can grant authority.
@@ -201,7 +203,8 @@ supply all native closing-Issue links or unresolved review-thread evidence.
 Issue #49 must review any additional read-only query/endpoint and its permissions;
 missing linkage/thread coverage blocks a receipt. An HTTP POST is not inherently
 an API mutation, but no arbitrary GraphQL document or mutation operation is
-permitted by this proposal. No client or endpoint allowlist is implemented here.
+permitted by this proposal. That was the #48 proposal; Issue #49 now implements
+the fixed REST/query allowlist described in [the collector contract](github-evidence.md).
 
 No token contents, creation, installation or credential path is specified by
 this document. Future owners must authenticate their OS/channel principals,
