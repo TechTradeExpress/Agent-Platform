@@ -411,3 +411,6 @@ with strict numeric caller/chat policy, four read-only commands, sanitized trust
 report projections, durable replay suppression and non-executable callback
 proposals. It has no bot token, network transport, daemon, active HOLD/resume or
 GitHub authority. Native subscription execution remains blocked at exit 13.
+
+The [offline supervisory decision report](docs/supervisor.md) joins queue, task,
+recovery and HOLD evidence without authorizing launch, resume or release.
