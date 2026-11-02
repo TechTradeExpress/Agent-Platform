@@ -1,8 +1,37 @@
 # Guarded execution (MVP.2b)
 
-**Legacy API-backed contract; deployment is deferred.** The selected subscription
-path requires the separately reviewed [authentication design](subscription-auth.md).
-The interfaces below are preserved, not promoted as subscription readiness.
+## Current public quarantine (Issue #47)
+
+Valid public `run`, `resume` and `doctor` invocations, including `doctor --resume`,
+return exit **13** and this fixed JSON without stderr:
+
+```json
+{"backend":"legacy_api","launch_allowed":false,"native_status":"SUBSCRIPTION_ISOLATION_BLOCKED","reason":"legacy_execution_quarantined","resume_authorized":false,"state":null,"status":"unavailable"}
+```
+
+Argument parsing/positive Issue and login syntax validation still apply (usage
+errors exit 2; help exits 0). After validation the guard returns before cwd or
+repository inspection, Git/GitHub, credentials/session reads, broker/network,
+mutex/checkpoint access, profile construction, probes or subprocess launch.
+Neither prepared/PAUSED state nor flags/environment can enable the legacy route.
+No public dispatch imports the historical executor or doctor helper.
+
+`subscription` retains its separate inert SUBSCRIPTION_ISOLATION_BLOCKED report
+and exit 13; it never reads real authentication state. Stock subscription-funded
+Codex remains the sole future engine. Public `doctor` performs no legacy or native
+readiness checks; it cannot return ready. Internal `doctor.diagnose` and the legacy
+executor are retained only for offline tests/analysis, not supported operator
+activation or subscription readiness. `inspect`, `issues`, explicit `prepare`,
+`status` and `recovery plan` keep their separate non-launching contracts.
+The supervised interactive developer workflow remains separate.
+
+## Historical legacy contract (not publicly executable)
+
+The remainder records the old API-backed lifecycle and diagnostic behavior for
+source analysis and offline tests. Its examples are historical, not instructions
+to deploy, probe or bypass quarantine. No broker fallback or native activation
+is authorized. See [ADR 004](architecture-trust-boundaries.md) and
+[subscription gates](subscription-auth.md) for the remaining native NO-GO.
 
 `run` and `resume` are explicit operator commands, invoked from the same clean
 primary `main` repository root used for `prepare`:
@@ -206,7 +235,7 @@ remain separate operator responsibilities; this implementation uses only fake
 Codex/GitHub and synthetic repositories in its automated acceptance tests.
 
 
-## Readiness diagnostics (MVP.2c)
+## Historical internal legacy diagnostics (MVP.2c)
 
 From the prepared fixture's primary main checkout, invoke:
 

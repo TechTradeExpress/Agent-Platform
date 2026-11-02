@@ -1,5 +1,11 @@
 # Credential-isolated reference inference broker (MVP.2d)
 
+> Current Issue #47 policy: public `run`, `resume` and `doctor` are quarantined
+> before repository, credentials, locking, broker or probe access (exit 13,
+> `legacy_execution_quarantined`). Historical contracts/results below do not
+> authorize activation or prove native readiness. The native subscription gate
+> remains SUBSCRIPTION_ISOLATION_BLOCKED, exit 13. See [execution.md](execution.md).
+
 **Deferred legacy API transport.** Deploying this broker is not an approved next
 step for the selected ChatGPT-subscription path. The checklist below is retained
 as reference, not current deployment authorization.

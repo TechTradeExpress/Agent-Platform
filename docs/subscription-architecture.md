@@ -1,5 +1,11 @@
 # ADR 001: subscription authentication with isolated tools
 
+> Current Issue #47 policy: public `run`, `resume` and `doctor` are quarantined
+> before repository, credentials, locking, broker or probe access (exit 13,
+> `legacy_execution_quarantined`). Historical contracts/results below do not
+> authorize activation or prove native readiness. The native subscription gate
+> remains SUBSCRIPTION_ISOLATION_BLOCKED, exit 13. See [execution.md](execution.md).
+
 Status: **SUBSCRIPTION_ISOLATION_BLOCKED**. Scope is an architecture/security
 spike and non-launching diagnostic, not an enabled execution backend. ChatGPT
 subscription is the only approved future inference path. There is no API-key

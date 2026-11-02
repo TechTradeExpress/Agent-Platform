@@ -220,23 +220,19 @@ codes, never raw stderr or Issue text.
 | 11 | Dirty/stale/unsupported Git state, default branch or branch/path conflict |
 | 12 | Invalid/mismatched checkpoint or interrupted/uncertain transaction; NEEDS_HUMAN |
 
-Guarded Codex execution (MVP.2b):
+Public execution quarantine (MVP.5b, Issue #47):
 
-```sh
-agent-platform run --issue 42 --trusted-actor maintainer-login
-agent-platform resume --issue 42 --trusted-actor maintainer-login
-```
-
-These manually invoked commands require a previously prepared task and repeat
-admission under the fixed host lock. First start requires READY and a clean base;
-resume accepts only the exact recorded PAUSED session and preserves code edits.
-They never invoke prepare, automatically retry, commit, push or publish a PR.
-The mandatory Linux namespace, native sandbox and credential-separated inference
-profile must already exist and pass negative probes. Otherwise execution returns
-`isolation_unavailable` without launching a coding turn. No host provisioning,
-privileged fallback or sandbox weakening is performed. Codex CLI is pinned to
-0.164.0. See [execution operations and security requirements](docs/execution.md)
-for the broker contract, checkpoint migration/states, bounds and manual recovery.
+Valid `agent-platform run --issue N`, `resume --issue N` and `doctor --issue N`
+(including `doctor --resume`) return exit **13**, `status: unavailable`,
+`reason: legacy_execution_quarantined`, `backend: legacy_api`, `state: null`,
+`launch_allowed: false`, `resume_authorized: false` and
+`native_status: SUBSCRIPTION_ISOLATION_BLOCKED`. Argument usage errors remain exit 2.
+Refusal precedes repository/Git/GitHub inspection, credential/session reads,
+broker/network, locking/state access, probes and runtime launch. The historical
+API-backed lifecycle stays in source for offline tests and analysis only;
+retaining it grants no activation or fallback authority. The selected future
+engine is stock subscription-funded Codex, whose native gate remains blocked.
+See [current quarantine and historical execution contract](docs/execution.md).
 
 Human-authorized supervised development delivery:
 
@@ -280,18 +276,18 @@ runs Ruff and pytest on Python 3.12. See AGENTS.md for contributor guardrails.
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
 distinguishes implemented offline components from proposed integration, defines
 AP-TB/1 evidence and transition requirements, and records the native security
-NO-GO. Public legacy execution quarantine is planned in Issue #47, not completed;
-the API broker is not an authorized product fallback. Native subscription
-execution remains blocked at exit 13. No runtime behavior changes in this freeze.
+NO-GO. Issue #47 now quarantines public legacy run/resume and doctor before
+side effects; the API broker is not an authorized product fallback. Native
+subscription execution remains blocked at exit 13.
 
 ## Readiness and opt-in live smoke testing
 
-`agent-platform doctor --issue N --trusted-actor LOGIN` checks an existing READY
-task without launching it or changing its checkpoint. Use `--resume` only to
-check a recorded PAUSED session. See [diagnostic statuses](docs/execution.md) and
-the [operator E2E runbook](docs/e2e.md). Offline CI success does not establish
-real isolation or inference success; live E2E requires separately audited host
-prerequisites, a disposable fixture and explicit paid-turn consent.
+Public `doctor` is an inert quarantine report, never a native readiness check.
+`subscription` is the unchanged non-launching native isolation-block report.
+See [exact diagnostics](docs/execution.md). The [legacy E2E runbook](docs/e2e.md)
+is historical and cannot be executed through quarantined entrypoints. Offline
+CI does not prove kernel confinement, credential separation or authenticated E2E;
+no host provisioning or live testing is authorized by this quarantine.
 
 ## Reference inference broker (MVP.2d)
 
@@ -311,9 +307,9 @@ of that backend and do not authorize execution. The earlier API broker deploymen
 plan/rehearsal is deferred and removed from PR #16. See [pinned CLI help evidence
 and subscription-auth security gates](docs/subscription-auth.md).
 
-Existing run/resume/doctor and the reference API broker remain unchanged legacy
-interfaces. They do not implement subscription authentication. Do not deploy the
-API broker as the next product step, copy auth.json into the coding sandbox or
+Public run/resume/doctor are quarantined. Their historical internal implementations
+and reference API broker remain for offline analysis, not subscription
+authentication. Do not deploy the API broker as the next product step, copy auth.json into the coding sandbox or
 forward OAuth tokens through it. Authenticated execution, safe refresh and OS-
 enforced credential separation remain blocked pending a separate reviewed design.
 

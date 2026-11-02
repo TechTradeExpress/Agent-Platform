@@ -1,4 +1,9 @@
-"""Readiness is a point-in-time diagnostic, never execution authorization."""
+"""Historical legacy-only diagnostics retained for offline tests and analysis.
+
+The public doctor command is quarantined before reaching this module. Direct
+Python use is not a supported native readiness interface or launch authority;
+no operator deployment/activation is authorized by retaining this code.
+"""
 
 from pathlib import Path
 
