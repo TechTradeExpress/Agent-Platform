@@ -269,3 +269,13 @@ authority from model/Issue/target/cached JSON or expose clients/credentials to
 Codex tools or Telegram. Follow docs/github-evidence.md; native and public legacy
 quarantine exit-13 gates remain unchanged. Offline PASS is not live credential
 or production-isolation proof.
+
+Issue #50 adds only the offline supervisor.report API. Trusted admission/queue/PR
+pins, bounded caller-attested age and exact checkpoint/session reference join
+local status, recovery and HOLD under one non-creating host lock and stable
+rereads. Unknown activity, missing/conflicting HOLD, retained checkpoints or
+changing evidence never mean idle/released/ready. Always deny launch, resume,
+replay, mutation and publication. Do not alter collector reviewer identity checks,
+read auth/session stores, release HOLD, enforce new runtime writes, signal, repair
+or retry. Future release and mandatory enforcement are proposals requiring
+separate authorization. Follow docs/supervisor.md; all native exit-13 gates stay.
