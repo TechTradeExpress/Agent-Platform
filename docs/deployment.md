@@ -1,5 +1,11 @@
 # Read-only Linux diagnostics (revised MVP.2e scope)
 
+> Current Issue #47 policy: public `run`, `resume` and `doctor` are quarantined
+> before repository, credentials, locking, broker or probe access (exit 13,
+> `legacy_execution_quarantined`). Historical contracts/results below do not
+> authorize activation or prove native readiness. The native subscription gate
+> remains SUBSCRIPTION_ISOLATION_BLOCKED, exit 13. See [execution.md](execution.md).
+
 PR #16 is limited to **backend-independent static manifest inspection and host
 policy hints**. Product execution is intended to use Codex authenticated through
 the maintainer's ChatGPT subscription. API-broker deployment, privileged socket
@@ -8,7 +14,8 @@ See [subscription authentication gates](subscription-auth.md) before proposing a
 execution change. No installation, credentials, login, inference or kernel
 rehearsal is performed by these tools.
 
-The existing `run`/`resume`/`doctor` and API broker are unchanged legacy code.
+The internal legacy lifecycle and API broker remain in source; public
+`run`/`resume`/`doctor` are now quarantined.
 Their fail-closed checks, UID-0 peer requirement and binary-size cap remain intact.
 This PR does not convert them into subscription authentication, forward OAuth
 tokens through the API broker, grant root access or introduce a fallback backend.
@@ -60,9 +67,9 @@ namespaces were exercised or that any authentication/execution path is ready.
 The earlier API-coupled `rehearse` mode, production-profile/socket audit and
 privileged deployment blueprint have been removed from this PR. A real-kernel
 exercise must be designed against the independently reviewed subscription trust
-boundary, rather than silently validating a deprecated API path. Existing runtime
-preflight and doctor remain unchanged; their legacy API checks are not evidence
-of subscription readiness.
+boundary, rather than silently validating a deprecated API path. Internal legacy
+preflight/doctor code remains for offline analysis; public doctor performs no
+checks. Historical API checks are not subscription readiness.
 
 ## Evidence and handoff
 

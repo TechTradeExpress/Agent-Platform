@@ -1,5 +1,11 @@
 # Subscription-authenticated Codex: validation gates
 
+> Current Issue #47 policy: public `run`, `resume` and `doctor` are quarantined
+> before repository, credentials, locking, broker or probe access (exit 13,
+> `legacy_execution_quarantined`). Historical contracts/results below do not
+> authorize activation or prove native readiness. The native subscription gate
+> remains SUBSCRIPTION_ISOLATION_BLOCKED, exit 13. See [execution.md](execution.md).
+
 The maintainer-selected product path is Codex CLI using a ChatGPT subscription.
 See [ADR 001](subscription-architecture.md) for the Issue #17 decision, threat
 model, offline prototype and exact blockers. `agent-platform subscription` only

@@ -146,11 +146,10 @@ def test_cli_fixed_json_for_invalid_target(tmp_path, monkeypatch, capsys):
         "argv",
         ["agent-platform", "doctor", "--issue", "1", "--trusted-actor", "maintainer"],
     )
-    assert cli.main() == 7
-    assert json.loads(capsys.readouterr().out) == {
-        "status": "ambiguous",
-        "reason": "invalid_target",
-    }
+    assert cli.main() == 13
+    result = json.loads(capsys.readouterr().out)
+    assert result["reason"] == "legacy_execution_quarantined"
+    assert result["launch_allowed"] is False
 
 
 def test_paused_readiness_preserves_edits_and_session(prepared, monkeypatch, no_turn):
@@ -203,7 +202,7 @@ def test_existing_mutex_missing_file_is_not_created(ready, no_turn):
     assert not (state.LOCK_DIR / "prepare.lock").exists()
 
 
-def test_doctor_cli_success_and_resume_flag(ready, monkeypatch, capsys):
+def test_doctor_cli_quarantined_despite_legacy_success(ready, monkeypatch, capsys):
     calls = []
 
     def diagnose(cwd, issue, actors, *, resume):
@@ -224,9 +223,11 @@ def test_doctor_cli_success_and_resume_flag(ready, monkeypatch, capsys):
             "--resume",
         ],
     )
-    assert cli.main() == 0
-    assert calls == [(1, ["maintainer"], True)]
-    assert json.loads(capsys.readouterr().out)["status"] == "ready"
+    assert cli.main() == 13
+    assert calls == []
+    result = json.loads(capsys.readouterr().out)
+    assert result["reason"] == "legacy_execution_quarantined"
+    assert result["native_status"] == "SUBSCRIPTION_ISOLATION_BLOCKED"
 
 
 def test_report_template_is_redacted_and_not_a_success_claim():

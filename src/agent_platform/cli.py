@@ -1,4 +1,4 @@
-"""Repository inspection, authorized preparation and guarded task execution."""
+"""Repository inspection, authorized preparation and blocked execution diagnostics."""
 
 import argparse
 import json
@@ -148,9 +148,9 @@ def main() -> int:
         execution = commands.add_parser(
             command,
             help=(
-                "Check prepared task readiness"
+                "Report quarantined legacy diagnostics; never probe"
                 if command == "doctor"
-                else "Explicit guarded Codex execution"
+                else "Report quarantined legacy execution; never launch"
             ),
         )
         execution.add_argument("--issue", required=True, type=int, metavar="N")
@@ -159,7 +159,9 @@ def main() -> int:
         )
         if command == "doctor":
             execution.add_argument(
-                "--resume", action="store_true", help="Check PAUSED readiness"
+                "--resume",
+                action="store_true",
+                help="Retained legacy syntax; never inspect PAUSED state",
             )
     args = parser.parse_args()
     if args.command == "recovery":
@@ -183,14 +185,25 @@ def main() -> int:
             parser.error("--issue must be a positive Issue number")
         if any(LOGIN.fullmatch(actor) is None for actor in args.trusted_actor):
             parser.error("--trusted-actor must be a GitHub user login")
-    if args.command == "doctor":
-        from agent_platform.doctor import diagnose
-
-        result, code = diagnose(
-            None, args.issue, args.trusted_actor, resume=args.resume
+    if args.command in ("run", "resume", "doctor"):
+        # Public legacy quarantine: argument validation only, before even cwd,
+        # repository inspection, legacy imports, credentials, locking or probes.
+        # No flag, prepared state or native readiness result enables this route.
+        print(
+            json.dumps(
+                {
+                    "status": "unavailable",
+                    "reason": "legacy_execution_quarantined",
+                    "backend": "legacy_api",
+                    "state": None,
+                    "launch_allowed": False,
+                    "resume_authorized": False,
+                    "native_status": "SUBSCRIPTION_ISOLATION_BLOCKED",
+                },
+                sort_keys=True,
+            )
         )
-        print(json.dumps(result, sort_keys=True))
-        return code
+        return 13
     if args.command == "subscription":
         from agent_platform.subscription import readiness
 
@@ -199,27 +212,12 @@ def main() -> int:
     code = 0
     try:
         result = inspect(Path.cwd())
-        if args.command in ("prepare", "run", "resume"):
+        if args.command == "prepare":
             from agent_platform.prepare import prepare
             from agent_platform.state import PrepareError
 
             try:
-                if args.command == "prepare":
-                    result = prepare(result, args.issue, args.trusted_actor)
-                else:
-                    from agent_platform.execution import execute
-                    from agent_platform.isolation import IsolationError
-
-                    try:
-                        result, code = execute(
-                            result,
-                            args.issue,
-                            args.trusted_actor,
-                            resume=args.command == "resume",
-                        )
-                    except IsolationError:
-                        result = {"status": "isolation_unavailable", "state": None}
-                        code = 13
+                result = prepare(result, args.issue, args.trusted_actor)
             except PrepareError as exc:
                 result = {
                     "status": exc.reason,
@@ -252,7 +250,7 @@ def main() -> int:
                 }
                 code = 8
     except InspectionError as exc:
-        if args.command in ("prepare", "run", "resume"):
+        if args.command == "prepare":
             print(
                 json.dumps(
                     {
@@ -274,7 +272,7 @@ def main() -> int:
         print(f"agent-platform: {exc}", file=sys.stderr)
         return exc.code
     except OSError:
-        if args.command in ("prepare", "run", "resume"):
+        if args.command == "prepare":
             print(
                 json.dumps({"status": "unsafe_target", "state": None}, sort_keys=True)
             )

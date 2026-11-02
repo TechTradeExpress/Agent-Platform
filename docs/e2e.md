@@ -1,5 +1,11 @@
 # Opt-in operator E2E smoke procedure
 
+> Current Issue #47 policy: public `run`, `resume` and `doctor` are quarantined
+> before repository, credentials, locking, broker or probe access (exit 13,
+> `legacy_execution_quarantined`). Historical contracts/results below do not
+> authorize activation or prove native readiness. The native subscription gate
+> remains SUBSCRIPTION_ISOLATION_BLOCKED, exit 13. See [execution.md](execution.md).
+
 **Deferred legacy API workflow.** Do not execute this runbook as subscription
 validation. The selected path first needs the separately scoped
 [subscription-auth design](subscription-auth.md); no API deployment is requested.

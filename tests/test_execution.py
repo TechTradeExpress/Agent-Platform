@@ -314,7 +314,9 @@ def test_cli_unavailable_is_safe_json(prepared, monkeypatch, capsys):
         ["agent-platform", "run", "--issue", "1", "--trusted-actor", "maintainer"],
     )
     assert cli.main() == 13
-    assert json.loads(capsys.readouterr().out)["status"] == "isolation_unavailable"
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "unavailable"
+    assert result["reason"] == "legacy_execution_quarantined"
     assert prepared["calls"] == []
 
 

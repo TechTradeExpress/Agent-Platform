@@ -14,8 +14,11 @@ output bounded. No other network calls are authorized. Never fetch, pull, reset,
 clean, stash, force checkout or rebase in the CLI.
 
 Never echo untrusted stderr, raw remotes, credentials or environment secrets.
-Only explicit `run`/`resume` may execute the pinned Codex CLI for an existing
-prepared task, under the mandatory OS-enforced isolation profile documented in
+Public `run`/`resume`/`doctor` are quarantined at exit 13 before inspection,
+credentials, locking, state, probes or subprocesses. Historical internal legacy
+execution/diagnostic code is retained for offline tests and analysis only, never
+operator activation or an API fallback. The native subscription gate stays blocked.
+Preserve the mandatory OS-enforced isolation profile documented in
 docs/execution.md. Never substitute env filtering or same-UID 0700 permissions
 for isolation. Missing namespaces, trusted runtime, credential-separating broker
 or failed negative probes mean `isolation_unavailable`; never widen approvals,
@@ -88,8 +91,8 @@ their coding child: commit, push and PR publication remain prohibited pending a
 separately designed and explicitly authorized future feature. Never close an
 Issue merely because a PR was opened or the runner reported completion.
 
-`doctor` reuses launch validation and isolated non-inference probes only. It must
-not create the mutex, change checkpoint generations, initialize native sessions,
+The historical internal doctor helper reuses legacy validation in offline tests
+only. It must not create the mutex, change checkpoint generations, initialize native sessions,
 prepare tasks or launch coding turns. Preserve the existing security profile.
 E2E is strictly operator-driven in a disposable approved fixture with explicit
 consent before each paid turn; follow docs/e2e.md and record redacted outcomes.
@@ -141,7 +144,8 @@ native_codex.execute is unconditionally blocked before inspection/locking/writes
 Only offline tests replace that gate AND the isolation launcher with a reviewed
 fake executable and synthetic Git/GitHub. No flag/env/model data enables it.
 Reuse the shared execution lifecycle; never bypass its admission, lock, exact UUID,
-checkpoint/guard, bounded-stream or recovery checks. Keep the legacy path intact.
+checkpoint/guard, bounded-stream or recovery checks. Keep the historical legacy
+implementation intact; public entrypoints stay quarantined.
 Follow docs/native-codex.md for the opt-in no-account canary plan. A VM/container
 around Codex protects the host but does not itself isolate tokens inside its
 CODEX_HOME from tools. No credentials, inference, cap increase or host provisioning
@@ -243,3 +247,11 @@ non-executable dry runs. No Telegram traffic/token, polling/webhook, dispatcher,
 HOLD/recovery mutation, publisher/GitHub write or native execution is authorized.
 Follow docs/telegram-console.md; hashes/types are not transport authentication,
 independent human approval or OS isolation. Subscription gate remains exit 13.
+
+Issue #47 quarantines public run/resume and doctor (including doctor --resume)
+after syntax validation but before any execution-related I/O. Return fixed
+legacy_execution_quarantined JSON, exit 13, launch_allowed=false and
+resume_authorized=false; never route to native or API fallback. Subscription
+readiness remains independently SUBSCRIPTION_ISOLATION_BLOCKED at exit 13.
+Retain historical lifecycle tests, not public activation authority. No runtime,
+authentication, provider, host security, scheduler or publisher is enabled.

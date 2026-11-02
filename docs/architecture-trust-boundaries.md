@@ -22,18 +22,19 @@ PR under direct human authorization and supported sandbox approvals. The latter
 remains **SUBSCRIPTION_ISOLATION_BLOCKED, exit 13**. Neither repository prose nor
 this ADR grants credentials, execution, publishing, provisioning or scheduling.
 
-**Legacy decision:** public `run`/`resume` are still API-backed today. In
-`cli.main`, these commands import `execution.execute`; that wrapper supplies
-`codex.arguments` to the shared `_execute` lifecycle. They do not route through
-`native_codex.execute`. The legacy profile uses the credential-separating API
-broker described in [execution.md](execution.md) and [broker.md](broker.md).
-`doctor` validates that legacy profile; success is not native readiness.
-The API broker is **not an authorized fallback** for the selected product.
-[Issue #47](https://github.com/TechTradeExpress/Agent-Platform/issues/47) must
-quarantine the public entrypoints before inspection, credentials, locking,
-writes, subprocesses or broker contact, retaining offline historical tests.
-That is planned remediation, **not an implemented control**. Issue #46 changes
-no CLI, Python, tests, Actions, runtime caps, permissions or authentication.
+**Legacy decision, implemented by Issue #47:** public `run`, `resume` and
+`doctor` now return fixed `legacy_execution_quarantined` JSON and exit 13 after
+argument validation, before cwd/repository/Git/GitHub, credentials/session, lock,
+checkpoint, broker, probes or subprocesses. They do not route to the legacy
+executor or native adapter. `subscription` retains its separate native block.
+See [exact public response](execution.md). Internal `execution.execute` still
+supplies `codex.arguments` to `_execute`, and internal `doctor.diagnose` retains
+legacy diagnostics for offline analysis/tests only, never native readiness or
+operator launch authority. The API broker is not an authorized fallback.
+
+The original #46 freeze was documentation-only. This #47 amendment records only
+public quarantine; historical lifecycle evidence, native gates, caps and schema
+remain unchanged. Stock subscription Codex is still the sole future engine.
 
 ## Implemented inventory versus intended integration
 
@@ -47,7 +48,7 @@ presence does not establish an authenticated caller or production deployment.
 | Preparation | `prepare.prepare`, `state.host_lock`: explicit Issue, private worktree/checkpoint, durable intent, fixed host mutex | No automatic preparation or queue-driven start |
 | Queue / dependencies | `queue.Policy`, `capture`, `plan`, `PullRequest`: bounded operator policy, supplied receipts, local ancestry checks; [queue contract](queue.md) | `next_candidate` is advice; no scheduler or PR evidence client |
 | Trusted control plane | Existing admission, state, status and planning functions called by a trusted operator/controller | Unified controller and authenticated evidence delivery are not implemented |
-| Execution / checkpoints | `execution.execute`, `_execute`, `validate_record`; `codex` event parser; `state` atomic persistence and guards; [lifecycle](execution.md) | Legacy API path exists; selected native runtime cannot launch |
+| Execution / checkpoints | `execution.execute`, `_execute`, `validate_record`; `codex` event parser; `state` atomic persistence and guards; [lifecycle](execution.md) | Legacy internals retained for offline tests; public run/resume quarantined; native runtime cannot launch |
 | Native auth/session owner | `native_codex.arguments` is a pinned parser seam; `native_codex.execute` rejects unconditionally before inspection/locking/writes; `subscription.readiness` is inert | No production subscription login, refresh, account binding or credential-safe session owner integration |
 | Model-directed tools | Legacy `_sandbox.py` and `isolation.Profile` constrain a credential-free runtime | No complete supported native dispatcher separating every built-in operation from credential-owning Codex |
 | Linux isolation / native canaries | `isolation`, `runtime_manifest`; separate `native_canary` and `_native_canary_probe`; [canary contract](native-canary.md) | Offline mocks are not live kernel proof; reviewed disposable fixture unavailable to this task |
@@ -294,7 +295,7 @@ review; no risk classification grants a bypass.
 | --- | --- | --- | --- | --- |
 | R01 P0 | Issue/repository/model → control plane: prompt injection fabricates authority or commands | Fixed argv, untrusted prose, actor/scope pins, bounded reads | Semantic scope and future integration audit; arbitrary host actions | Keep policy out of target/model, validate provenance and every effect; #46 contract, #49/#51 integration |
 | R02 P0 | Worker → future Publisher: forged tests/change plan triggers unauthorized GitHub publication | Offline `publish_authorized=false`, exact inventory/receipt checks, no runtime writer | Authenticated writer boundary absent; unauthorized commit/push/PR or merge | Separate credential principal and explicit exact-operation grant, durable reconciliation; future Publisher milestone after #49, no current authorization |
-| R03 P0 | Public legacy CLI → API broker: native blocker escaped through old execution route | Legacy isolation checks, documented native-only selection | Public legacy route still present; wrong funding/engine and unintended launch | Pre-inspection fail-closed entrypoint quarantine, no fallback; #47 |
+| R03 P0 | Public legacy CLI → API broker: native blocker escaped through old execution route | Public pre-I/O quarantine, legacy isolation checks, native-only selection | Public guard tested offline; internal code remains, future dispatch changes could reopen unintended launch | Pre-inspection fail-closed entrypoint quarantine, no fallback; #47 |
 | R04 P0 | Native tools → auth owner: credential exposure through read/patch/MCP/alternate dispatch or refresh | Unconditional native gate, no account probes | Exhaustive dispatch and credential denial unproven; token theft/account compromise | Full inventory and immutable OS mediation/disablement; #51, separately reviewed future auth milestone |
 | R05 P0 | Same-UID worker → trusted process: proc/env/memory/keyring/FD/Unix socket access | Legacy namespaces/root peer contract; no reliance on 0700 alone | Actual native principal/FD/proc boundary unproven; control-plane takeover | Real negative probes and authenticated narrow IPC, no shared credential domain; #28/#51 |
 | R06 P0 | Hooks/subagents/background/resume → persistent privileged path | Bounded lifecycle, exact UUID, cancellation/reaping tests, native gate | Complete descendant/refresh/alternate route coverage missing; persistent secret access | Exact-build exhaustive mediation and real cancellation probes; #51 |
@@ -314,7 +315,7 @@ prerequisite. No label, roadmap order or merge automatically launches anything.
 
 | Issue | Dependency and acceptance boundary |
 | --- | --- |
-| [#47 legacy quarantine](https://github.com/TechTradeExpress/Agent-Platform/issues/47) | After human merge of #46; reject public legacy run/resume before all effects, preserve native exit 13 and historical tests; doctor/readiness must not imply native readiness |
+| [#47 legacy quarantine](https://github.com/TechTradeExpress/Agent-Platform/issues/47) | Implements public pre-I/O run/resume/doctor refusal after #46; preserve native exit 13 and historical tests; independent exact-SHA review/green CI and human merge remain acceptance gates |
 | [#48 governance / CI](https://github.com/TechTradeExpress/Agent-Platform/issues/48) | After human merge of #47; independently verified immutable Action SHAs, least privilege and exact-SHA CI; document actual private-repo governance constraints without changing administration |
 | [#49 read-only collector](https://github.com/TechTradeExpress/Agent-Platform/issues/49) | After human merge of #48; bounded authenticated PR/CI/merge facts, exact head/base/Issue/reviewer and local ancestry, no writer or worker-visible credential |
 | [#50 offline supervision](https://github.com/TechTradeExpress/Agent-Platform/issues/50) | After human merge of #49; consistent admission/queue/status/HOLD/recovery report, always launch_allowed=false and resume_authorized=false; no release, signalling or cleanup |
