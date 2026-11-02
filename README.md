@@ -275,6 +275,15 @@ Tests use local temporary repositories, fake gh responses and controlled
 subprocesses only; they never call live GitHub or providers. CI
 runs Ruff and pytest on Python 3.12. See AGENTS.md for contributor guardrails.
 
+## MVP.5 architecture and security contract
+
+[ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
+distinguishes implemented offline components from proposed integration, defines
+AP-TB/1 evidence and transition requirements, and records the native security
+NO-GO. Public legacy execution quarantine is planned in Issue #47, not completed;
+the API broker is not an authorized product fallback. Native subscription
+execution remains blocked at exit 13. No runtime behavior changes in this freeze.
+
 ## Readiness and opt-in live smoke testing
 
 `agent-platform doctor --issue N --trusted-actor LOGIN` checks an existing READY
