@@ -271,6 +271,11 @@ Tests use local temporary repositories, fake gh responses and controlled
 subprocesses only; they never call live GitHub or providers. CI
 runs Ruff and pytest on Python 3.12. See AGENTS.md for contributor guardrails.
 
+[GitHub governance and CI provenance](docs/github-governance.md) records the
+verified Action pins, read-only job policy, private-repository enforcement gaps
+and separately proposed operator configuration. Successful CI is offline evidence,
+not native isolation or authenticated runtime readiness.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
