@@ -414,3 +414,8 @@ GitHub authority. Native subscription execution remains blocked at exit 13.
 
 The [offline supervisory decision report](docs/supervisor.md) joins queue, task,
 recovery and HOLD evidence without authorizing launch, resume or release.
+
+The [disposable Linux fixture specification](docs/native-linux-fixture.md) records
+operator-reported sandbox01 kernel results, an offline build/audit plan and missing
+reproduction inputs. Overall native execution remains BLOCKED; no provisioning
+or kernel run is enabled by that evidence.

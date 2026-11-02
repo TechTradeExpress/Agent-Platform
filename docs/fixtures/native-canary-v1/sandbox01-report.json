@@ -1,0 +1,46 @@
+{
+  "artifact_admission": {
+    "recorded_candidate_bytes": 308139304,
+    "status": "BLOCKED",
+    "unchanged_cap_bytes": 268435456
+  },
+  "authentication": "AUTH_E2E_NOT_RUN",
+  "checks": {
+    "same-domain": {
+      "caps": true,
+      "descendants": true,
+      "fds": true,
+      "files": true,
+      "home_readable": true,
+      "ipc": true,
+      "namespaces": true,
+      "network": true,
+      "proc": true,
+      "worktree": true
+    },
+    "worker": {
+      "caps": true,
+      "descendants": true,
+      "fds": true,
+      "files": true,
+      "home_readable": false,
+      "ipc": true,
+      "namespaces": true,
+      "network": true,
+      "proc": true,
+      "worktree": true
+    }
+  },
+  "codex_internal_routes": "UNKNOWN",
+  "evidence": "REAL_KERNEL_SYNTHETIC",
+  "fixture_id": "67b439eb67b8470b904391ca8ee55bfc",
+  "host_containment": "PASS",
+  "launch_allowed": false,
+  "probe_sha256": "c6f7321d1e5a00a0b9e0e46ba36c3437f9f739dde43bee0a9aba0dbdc59aec2d",
+  "reason": "same_domain_credential_exposure",
+  "runtime_sha256": "37aa74083d1755f7563bcdd7b1e2b4ccab49054743956bdedcfddda1e802a295",
+  "same_domain_codex_home": "FAIL",
+  "status": "BLOCKED",
+  "version": 1,
+  "worker_codex_home": "PASS"
+}

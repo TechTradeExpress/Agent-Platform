@@ -1,0 +1,62 @@
+{
+  "authority": {
+    "authentication_allowed": false,
+    "kernel_run_allowed": false,
+    "launch_allowed": false,
+    "provisioning_allowed": false,
+    "runtime_admitted": false
+  },
+  "limits": {
+    "max_bwrap_bytes": 2097152,
+    "max_entries": 2048,
+    "max_file_bytes": 67108864,
+    "max_files": 512,
+    "max_manifest_bytes": 65536
+  },
+  "purpose": "offline_review_plan_not_installer_or_runtime_admission",
+  "reported_inputs": {
+    "bootstrap_iso": {
+      "name": "sandbox01-bootstrap-draft-v0.2.iso",
+      "sha256": "c9e3ed974b0c7051b2850b44c6f27046e9afb5192aff383b97d54f0dd0112c2a"
+    },
+    "bubblewrap": {
+      "binary_path": "/usr/bin/bwrap",
+      "binary_sha256": "573236e5328ac2ebb08f59ae3a9805b4f8d12bdef14be8af4450d5463294985f",
+      "package_sha256": "70aca4fa8daeacb677ec00e8063eb586f08ae3d94b1f11e684370b5524c43431",
+      "version": "0.12.0-1~deb13u1"
+    },
+    "runtime": {
+      "entries": 319,
+      "file_bytes": 15356345,
+      "files": 293,
+      "manifest_sha256": "37aa74083d1755f7563bcdd7b1e2b4ccab49054743956bdedcfddda1e802a295",
+      "path": "/opt/agent-platform/native-canary-v1"
+    }
+  },
+  "reproduction_status": "BLOCKED_MISSING_INPUTS",
+  "required_missing_inputs": {
+    "base_install_media_identity_and_sha256": null,
+    "build_environment_and_normalization_record": null,
+    "complete_package_versions_architectures_sha256": null,
+    "elf_dependency_resolution_and_import_allowlist": null,
+    "experiment_build_and_audit_scripts": null,
+    "python_version_and_package_ownership_map": null,
+    "raw_guest_report_and_audit_logs": null,
+    "runtime_manifest_bytes_and_file_inventory": null,
+    "signed_debian_release_and_package_index_bundle": null,
+    "source_archive_sha256": null
+  },
+  "schema_version": 1,
+  "source_commit": "0179c665fd8053b3a4978477a6304bf6d49fef78",
+  "vm": {
+    "architecture": "x86_64",
+    "disk_gib": 30,
+    "hypervisor_id": 101,
+    "kernel": "6.12.113+deb13-amd64",
+    "name": "sandbox01",
+    "nic_count": 0,
+    "os": "Debian 13 (Trixie)",
+    "ram_mib": 3072,
+    "vcpus": 2
+  }
+}

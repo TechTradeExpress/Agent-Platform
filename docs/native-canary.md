@@ -53,7 +53,9 @@ An independently reviewed, credential-free immutable fixture must already exist:
   Libraries/loader must work **inside** this image; host libraries are not bound
   as a fallback. Current supervisor Python and reviewed probe source are TCB too.
 
-No privileged setup instructions or automatic dependency copying are supplied.
+The [Issue #28 fixture specification](native-linux-fixture.md) supplies a guarded
+build/audit plan and operator-reported sandbox01 evidence, not a verified installer
+or permission to provision. No automatic dependency copying is supplied.
 If any prerequisite cannot be proved, STOP/BLOCKED. Do not install services,
 change sysctls/ownership/permissions, invoke sudo, relax checks or run probes on
 the general host. These independent canary limits do not change production
@@ -168,3 +170,13 @@ the dedicated issue-26 worktree/feature branch, preserving all previous checkout
 
 The SHA-pinned Draft PR records GitHub CI separately. CI_PASS is offline evidence,
 not real Linux confinement, complete Codex tool isolation or authenticated E2E.
+
+## Later operator-run sandbox01 observation (2026-11-02)
+
+The [fixture evidence record](native-linux-fixture.md) preserves the full JSON
+from the operator's Issue #28 comment: REAL_KERNEL_SYNTHETIC, host/worker PASS,
+same-domain FAIL, overall BLOCKED/exit 13. This supersedes the historical absence
+of a kernel result above only for that reported disposable fixture, not dev01.
+No new run was performed here. Missing external build scripts/runtime manifest
+prevent independent artifact audit and byte-identical reproduction; authentication
+remains NOT_RUN, internal routes UNKNOWN and launch_allowed=false.
