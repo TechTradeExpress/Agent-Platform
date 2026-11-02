@@ -365,6 +365,12 @@ not change either legacy 256 MiB gate. Static inspection never installs or admit
 a runtime and never enables subscription execution. See the
 [artifact policy, provenance and blockers](docs/native-artifact.md).
 
+Issue #49 adds a [trusted read-only GitHub evidence API](docs/github-evidence.md)
+for exact repository/Issue/PR/review/CI snapshots and verified merge ancestry.
+It uses fixed bounded requests only through an explicitly supplied trusted
+controller client; no runtime command or publisher is enabled. Receipts are
+planner inputs, never execution, authentication or publication authority.
+
 Issue #30 adds an [offline trusted Publisher plan API](docs/publisher.md).
 It validates completed-task identity, exact changes and trusted test receipts
 under the existing lock. Its immutable candidate is never publication authority;

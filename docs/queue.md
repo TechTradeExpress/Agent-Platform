@@ -37,7 +37,9 @@ The manually invoking operator or trusted control plane supplies:
    source/target repository identity, target branch, reviewed HEAD and stable
    current HEAD, full PR state, merge timestamp/commit and default-branch SHA.
    Ambiguous linkage or multiple PRs for one Issue must be reconciled before
-   supplying a receipt. There is no PR collector or authenticated transport here.
+   supplying a receipt. Issue #49 now provides an
+   [explicit read-only collector](github-evidence.md); queue itself still creates
+   no client and trusts only separately supplied receipts.
 
 These typed objects are trusted caller assertions, not cryptographic
 attestations. A frozen dataclass does not authenticate its creator. Do not load
