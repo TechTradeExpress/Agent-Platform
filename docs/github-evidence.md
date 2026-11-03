@@ -206,3 +206,13 @@ Protocol references (official sources, not live integration proof):
 [PullRequest and review-thread fields](https://docs.github.com/en/graphql/reference/pulls),
 [Check runs](https://docs.github.com/en/rest/checks/runs),
 [combined statuses](https://docs.github.com/en/rest/commits/statuses).
+
+## Issue #59 Gate A compatibility
+
+The [offline supervised COMMENT policy](review-comment.md) reuses the bounded
+remote snapshot checks for prepublication facts. The internal prepublication
+branch creates no Receipt and does not assert an existing PASS; public collect
+still requires the observed exact-SHA COMMENT marker and all existing rules.
+Principal syntax additionally permits the canonical `[bot]` suffix, with numeric
+ID and case-insensitive author-login independence preserved. No writer, token
+handling or automatic review/Ready/Issue transition enters this collector.

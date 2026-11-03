@@ -287,3 +287,13 @@ verdicts are never real evidence or authority; all-PASS still means NO-GO. Never
 connect to a VM, run kernel/auth/inference probes, inspect login/keyring stores,
 raise caps or change gates for this assessment. No GO branch, launcher, alternate
 engine or writer. Follow docs/native-security-go-no-go.md; exit 13 stays.
+
+Issue #59 is Gate A only: offline review_comment policy with explicitly synthetic
+reader/writer/journal and direct trusted human authorization of an exact payload.
+No App registration, keys/tokens, live reviews, secret/controller deployment or
+ChatGPT integration. COMMENT-only; no APPROVE/REQUEST_CHANGES or state transitions.
+Commit UNKNOWN intent before an attempt; never retry unknown outcomes or reset
+lost state. Reconciliation is read-only remotely. Collector collect() still needs
+an observed exact-SHA PASS; bot ID/login alone is not independent reasoning.
+Follow docs/review-comment.md. Gate B requires separate direct authorization and
+review; all runtime/legacy exit-13 gates and human-only merge remain unchanged.

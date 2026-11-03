@@ -423,3 +423,7 @@ or kernel run is enabled by that evidence.
 The [native security GO/NO-GO assessment](docs/native-security-go-no-go.md) inventories
 the pinned tool routes and evidence gaps. The decision remains NO-GO; synthetic
 PASS cannot authorize credentials, native execution or a weaker fallback.
+
+The [supervised App review COMMENT policy](docs/review-comment.md) implements
+offline Gate A only: exact-SHA human authorization, synthetic pre/postflight and
+unknown-result reconciliation. No App, credentials or live review are enabled.

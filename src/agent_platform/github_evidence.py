@@ -36,7 +36,10 @@ class Principal:
 
     def __post_init__(self):
         need(issues.positive_int(self.identifier))
-        need(type(self.login) is str and issues.LOGIN.fullmatch(self.login))
+        need(
+            type(self.login) is str
+            and re.fullmatch(issues.LOGIN.pattern + r"(?:\[bot\])?", self.login)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,7 +326,7 @@ def _connection(api, policy, pr, connection):
     raise EvidenceError()
 
 
-def _review(values, policy, author, now):
+def _review_candidates(values, policy, author, now):
     trusted = set(policy.reviewers)
     need(
         author not in trusted
@@ -351,6 +354,12 @@ def _review(values, policy, author, now):
         if old is None or submitted > issues.timestamp(old["submitted_at"]):
             latest[who] = v
     need(all(v.get("state") != "CHANGES_REQUESTED" for v in latest.values()))
+    return latest
+
+
+def _review(values, policy, author, now):
+    latest = _review_candidates(values, policy, author, now)
+    trusted = set(policy.reviewers)
     selected = []
     for who, v in latest.items():
         if who not in trusted:
@@ -404,7 +413,11 @@ def _checks(api, policy, now, head):
     return tuple(sorted(facts)), publisher.digest(statuses)
 
 
-def _read(api, policy, now):
+def _read(api, policy, now, *, _before_comment=False):
+    # Internal prepublication facts are NOT a reviewed Receipt. collect() never
+    # selects this branch and still requires _review() at the exact HEAD.
+    if _before_comment:
+        need(policy.purpose == "reviewed")
     pin = policy.admission
     metadata, _ = api.get()
     _repo(metadata, pin)
@@ -475,12 +488,12 @@ def _read(api, policy, now):
             and pr.get("merged_at") is None
         )
         raw_reviews = _Lists(api, pin).pages(f"/pulls/{policy.pull_request}/reviews")
-        reviews = _review(
-            raw_reviews,
-            policy,
-            author,
-            now,
-        )
+        if _before_comment:
+            need(pr["draft"])
+            _review_candidates(raw_reviews, policy, author, now)
+            reviews = tuple(raw_reviews)
+        else:
+            reviews = _review(raw_reviews, policy, author, now)
         need(pr.get("merge_commit_sha") == policy.merge_sha)
         merge, _ = api.get(f"/commits/{policy.merge_sha}")
         need(type(merge) is dict and merge.get("sha") == policy.merge_sha)
