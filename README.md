@@ -419,3 +419,7 @@ The [disposable Linux fixture specification](docs/native-linux-fixture.md) recor
 operator-reported sandbox01 kernel results, an offline build/audit plan and missing
 reproduction inputs. Overall native execution remains BLOCKED; no provisioning
 or kernel run is enabled by that evidence.
+
+The [native security GO/NO-GO assessment](docs/native-security-go-no-go.md) inventories
+the pinned tool routes and evidence gaps. The decision remains NO-GO; synthetic
+PASS cannot authorize credentials, native execution or a weaker fallback.

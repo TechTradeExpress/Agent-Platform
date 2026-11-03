@@ -279,3 +279,11 @@ replay, mutation and publication. Do not alter collector reviewer identity check
 read auth/session stores, release HOLD, enforce new runtime writes, signal, repair
 or retry. Future release and mandatory enforcement are proposals requiring
 separate authorization. Follow docs/supervisor.md; all native exit-13 gates stay.
+
+Issue #51 adds only the pure offline native_security.assess API and AP-NS/1
+assessment. Pin 0.164.0 source/artifact identity; unknown routes, unsupported
+mediation, fixture gaps and same-domain exposure remain blocking. Synthetic
+verdicts are never real evidence or authority; all-PASS still means NO-GO. Never
+connect to a VM, run kernel/auth/inference probes, inspect login/keyring stores,
+raise caps or change gates for this assessment. No GO branch, launcher, alternate
+engine or writer. Follow docs/native-security-go-no-go.md; exit 13 stays.
