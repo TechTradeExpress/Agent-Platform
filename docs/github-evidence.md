@@ -216,3 +216,13 @@ still requires the observed exact-SHA COMMENT marker and all existing rules.
 Principal syntax additionally permits the canonical `[bot]` suffix, with numeric
 ID and case-insensitive author-login independence preserved. No writer, token
 handling or automatic review/Ready/Issue transition enters this collector.
+
+## Issue #62 explicit target-project profile
+
+[AP-TP/1](target-project-policy.md) adds trusted TargetProject owner/branch/source
+pins. Reviewed collection supports an explicitly approved flat default/base
+branch with strict local identity and unchanged two-SHA CI/Issue/reviewer rules.
+Target Receipts are project-bound via for_project(); legacy queue/admission
+handoffs and target merged mode are BLOCKED. No prepare/runtime authority is
+expanded. Earlier fixed-main legacy calls remain compatible; no missing project
+authority is inferred from GitHub, target files or source-repo account names.

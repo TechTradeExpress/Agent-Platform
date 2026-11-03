@@ -227,3 +227,15 @@ principal and least-privilege enforcement, durable storage, live COMMENT transpo
 and independent technical analysis remain **NOT_RUN / REQUIRES_INDEPENDENT_REVIEW**.
 No offline success enables a production service or Gate B. The Draft PR records
 actual local and exact-HEAD CI, including unresolved dev01 baseline failures.
+
+## Issue #62 downstream extension
+
+[AP-TP/1](target-project-policy.md) supersedes the same-owner and universal-main
+assumptions above **only for complete explicit-project envelopes**. AppIdentity
+owner now means registration owner; InstallationIdentity separately pins the
+selected installation account/type and must match target owner. Reader policy,
+installation facts and journal scope/guard bind the selected project. Stable
+repo+PR UNKNOWN history still spans rotations; no new namespace is reset authority.
+Legacy calls retain their main/same-owner constraints, and partial migration
+blocks. Body/context hashes change; saved approvals are not automatically
+converted. Gate A remains synthetic-only, Gate B NOT_AUTHORIZED/NOT_RUN.
