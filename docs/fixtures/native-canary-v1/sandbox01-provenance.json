@@ -1,0 +1,17 @@
+{
+  "comment_body_sha256": "07cd5f3d6db9d4add715cae4f58e7f9b234c32fda6b404a6146c4b564ce0ad7f",
+  "comment_id": 6589316861,
+  "created_at": "2026-11-02T21:48:32Z",
+  "experiment_scripts_supplied": false,
+  "independent_artifact_audit": "NOT_RUN",
+  "kernel_run_performed_by_this_pr": false,
+  "provenance": "operator_reported_remote_snapshot",
+  "raw_vm_report_supplied": false,
+  "report_file_sha256": "2d62e6a6e6169a8ac9c0f8fae7140329a6bd2af13936ac4124fd14fa975784e7",
+  "reported_exit_code": 13,
+  "repository_verification": "probe_source_hash_matches_pinned_commit_only",
+  "runtime_manifest_supplied": false,
+  "schema_version": 1,
+  "source_url": "https://github.com/TechTradeExpress/Agent-Platform/issues/28#issuecomment-6589316861",
+  "updated_at": "2026-11-02T21:48:32Z"
+}
