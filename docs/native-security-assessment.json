@@ -1,0 +1,275 @@
+{
+  "activation_decision": "NO-GO",
+  "artifact_admission": "BLOCKED",
+  "authentication": "AUTH_E2E_NOT_RUN",
+  "blockers": [
+    "no_exhaustive_supported_tool_mediation",
+    "same_domain_synthetic_credential_exposure",
+    "fixture_artifacts_and_provenance_incomplete",
+    "native_artifact_exceeds_unchanged_runtime_cap",
+    "source_binary_equivalence_unverified",
+    "auth_refresh_and_session_boundary_unverified"
+  ],
+  "complete_mediation": "UNKNOWN",
+  "credential_isolation": "NO_FOR_REPORTED_SAME_DOMAIN_PROFILE",
+  "kernel_probes_this_assessment": "NOT_RUN",
+  "launch_allowed": false,
+  "mutations_allowed": false,
+  "prior_kernel_snapshot": {
+    "evidence_label": "REAL_KERNEL_SYNTHETIC",
+    "fixture_reproduction": "BLOCKED_MISSING_INPUTS",
+    "host_containment": "PASS",
+    "independently_reenacted": false,
+    "provenance": "OPERATOR_REPORTED_REMOTE_SNAPSHOT",
+    "reason": "same_domain_credential_exposure",
+    "same_domain_codex_home": "FAIL",
+    "status": "BLOCKED",
+    "worker_codex_home": "PASS"
+  },
+  "publish_authorized": false,
+  "reason": "native_boundary_not_demonstrated",
+  "report_sha256": "60cf1f0143d96e9a6dabb8ee3cf728c025a02d30fe0d8fed31de32177ac3e6e7",
+  "resume_authorized": false,
+  "routes": [
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "SUPPORTED_SUBSET",
+      "route": "dynamic_tools",
+      "source_reference": "S1/S2",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "shell_exec",
+      "source_reference": "S1",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "pty",
+      "source_reference": "S1",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "write_stdin",
+      "source_reference": "S1",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "patch",
+      "source_reference": "S1/S3",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "file_reads",
+      "source_reference": "S1/S4",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "file_mutations",
+      "source_reference": "schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "mcp_connectors",
+      "source_reference": "S1/S4",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "plugins_skills",
+      "source_reference": "S1/schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "js_code_mode",
+      "source_reference": "S5",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "hooks",
+      "source_reference": "S2",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "background_children",
+      "source_reference": "S1/schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNSUPPORTED",
+      "route": "subagents",
+      "source_reference": "S1/S6",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "hosted_tools",
+      "source_reference": "S1",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "resume_fork_replay",
+      "source_reference": "schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "cancellation",
+      "source_reference": "schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "credential_refresh_persistence",
+      "source_reference": "audit_gap",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "implicit_config_session_reads",
+      "source_reference": "audit_gap",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "remote_alternate_dispatch",
+      "source_reference": "schema_inventory",
+      "verified_mediated": false
+    },
+    {
+      "enforced_boundary": "UNKNOWN",
+      "evidence": "RECORDED_PARTIAL_STATIC_AUDIT",
+      "external_callback_dispatch": "UNKNOWN",
+      "route": "approvals_control_tools",
+      "source_reference": "S1/schema_inventory",
+      "verified_mediated": false
+    }
+  ],
+  "runtime_exit_code": 13,
+  "runtime_status": "SUBSCRIPTION_ISOLATION_BLOCKED",
+  "schema_version": 1,
+  "security_decision": "NO",
+  "specification": "AP-NS/1",
+  "status": "BLOCKED",
+  "subject": {
+    "artifact_bytes": 308139304,
+    "artifact_sha256": "b93f6811d3f653f0fb83be4050d857fb9abbb111dfa2ce160563327daff7f306",
+    "current_installation_inspected": false,
+    "input_pin_matched": true,
+    "source_binary_equivalence": "UNKNOWN",
+    "source_commit": "6aaac694803004a63c6f393d153c96d22521a6b9",
+    "target": "x86_64-unknown-linux-musl",
+    "version": "0.164.0"
+  },
+  "synthetic_trace": [
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "file_keyring",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "proc_parent_memory",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "inherited_fds",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "mounts_aliases",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "ipc_sockets",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "network",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "descendant_persistence",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "same_domain_home",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "refresh_session_writes",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    },
+    {
+      "evidence": "OFFLINE_SYNTHETIC",
+      "probe": "cancellation_resume",
+      "real_probe": "NOT_RUN",
+      "verdict": "NOT_RUN"
+    }
+  ],
+  "unchanged_runtime_cap_bytes": 268435456,
+  "unlisted_routes": "UNKNOWN_BLOCKING"
+}
