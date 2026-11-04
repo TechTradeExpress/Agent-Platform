@@ -35,6 +35,7 @@ class AppIdentity:
     installation_id: int
     owner: evidence.Principal
     bot: evidence.Principal
+    owner_type: str = "Organization"
 
     def __post_init__(self):
         need(
@@ -45,10 +46,38 @@ class AppIdentity:
             type(self.owner) is evidence.Principal
             and type(self.bot) is evidence.Principal
         )
+        need(self.owner_type in {"Organization", "User"})
         need(type(self.slug) is str and issues.LOGIN.fullmatch(self.slug))
         evidence.Principal(self.owner.identifier, self.owner.login)
         evidence.Principal(self.bot.identifier, self.bot.login)
         need(self.bot.login.casefold() == (self.slug + "[bot]").casefold())
+
+
+@dataclass(frozen=True, slots=True)
+class InstallationIdentity:
+    identifier: int
+    account: evidence.Principal
+    account_type: str
+
+    def __post_init__(self):
+        need(issues.positive_int(self.identifier))
+        need(type(self.account) is evidence.Principal)
+        evidence.Principal(self.account.identifier, self.account.login)
+        need(self.account_type in {"Organization", "User"})
+        need(not self.account.login.endswith("[bot]"))
+
+
+def publication_context(app, installation, author):
+    """Nonsecret canonical binding, not an App/installation authentication proof."""
+    need(type(app) is AppIdentity and type(installation) is InstallationIdentity)
+    need(type(author) is evidence.Principal)
+    return publisher.digest(
+        {
+            "app": asdict(app),
+            "installation": asdict(installation),
+            "author": asdict(author),
+        }
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +87,7 @@ class Envelope:
     app: AppIdentity
     decision: Decision
     summary: str
+    installation: InstallationIdentity | None = None
 
     def __post_init__(self):
         need(type(self.policy) is evidence.Policy and self.policy.purpose == "reviewed")
@@ -69,10 +99,25 @@ class Envelope:
         for check in self.policy.checks:
             evidence.Check(check.app_id, check.app_slug, check.name)
         need(self.policy.reviewers == (self.app.bot,))
-        need(
-            self.app.owner.login.casefold()
-            == self.policy.admission.repository.split("/")[0].casefold()
-        )
+        if self.policy.project is None:
+            # Explicit legacy Gate A profile: main, same-owner, no partially
+            # migrated installation/project context may be silently inferred.
+            need(self.installation is None and self.app.owner_type == "Organization")
+            need(
+                self.app.owner.login.casefold()
+                == self.policy.admission.repository.split("/")[0].casefold()
+            )
+        else:
+            need(type(self.installation) is InstallationIdentity)
+            replace(self.installation)
+            need(self.installation.identifier == self.app.installation_id)
+            need(self.installation.account == self.policy.project.owner)
+            need(self.installation.account_type == self.policy.project.owner_type)
+            need(self.author == self.policy.project.author)
+            need(
+                self.policy.project.publication_context_sha256
+                == publication_context(self.app, self.installation, self.author)
+            )
         need(type(self.decision) is Decision)
         need(self.author.identifier != self.app.bot.identifier)
         need(self.author.login.casefold() != self.app.bot.login.casefold())
@@ -96,6 +141,9 @@ class Envelope:
                 "policy": asdict(self.policy),
                 "author": asdict(self.author),
                 "app": asdict(self.app),
+                "installation": None
+                if self.installation is None
+                else asdict(self.installation),
             }
         )
         return (
@@ -110,6 +158,14 @@ class Envelope:
     @property
     def digest(self):
         return publisher.digest(asdict(self))
+
+    @property
+    def journal_scope(self):
+        if self.policy.project is None:
+            return None
+        return publisher.digest(
+            [self.policy.project.digest, asdict(self.app), asdict(self.installation)]
+        )
 
     @property
     def key(self):
@@ -166,6 +222,8 @@ class InstallationFacts:
     token_kind: str = "installation"
     owner_type: str = "Organization"
     repository_selection: str = "selected"
+    installation: InstallationIdentity | None = None
+    project_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,6 +258,8 @@ class Intent:
 class JournalFacts:
     epoch: str
     complete: bool
+    scope_sha256: str | None = None
+    guard_sha256: str | None = None
 
 
 class _Reads:
@@ -211,7 +271,7 @@ class _Reads:
         pin, p = self.policy.admission, self.policy.pull_request
         self.singles = {
             "",
-            "/branches/main",
+            f"/branches/{self.policy.base_branch}",
             f"/issues/{pin.issue}",
             f"/pulls/{p}",
             f"/commits/{self.policy.merge_sha}",
@@ -264,7 +324,13 @@ def _identity(writer, env, now):
     need(facts.repository_ids == (env.policy.admission.repo_id,))
     need(facts.permissions == PERMISSIONS and facts.token_kind == "installation")
     need(
-        facts.owner_type == "Organization" and facts.repository_selection == "selected"
+        facts.owner_type == env.app.owner_type
+        and facts.repository_selection == "selected"
+    )
+    need(facts.installation == env.installation)
+    need(
+        facts.project_sha256
+        == (None if env.policy.project is None else env.policy.project.digest)
     )
     need(type(facts.issued_at) is type(facts.expires_at) is int)
     need(0 <= facts.issued_at <= now < facts.expires_at <= facts.issued_at + 3600)
@@ -319,8 +385,16 @@ def _snapshot(reads, env, now):
     author = evidence._principal(pr.get("user"))
     need(author == env.author and pr["draft"] is True)
     owner = pr["base"]["repo"].get("owner")
-    need(type(owner) is dict and owner.get("type") == "Organization")
-    need(evidence._principal(owner) == env.app.owner)
+    expected_owner = (
+        env.app.owner if env.installation is None else env.installation.account
+    )
+    expected_type = (
+        env.app.owner_type
+        if env.installation is None
+        else env.installation.account_type
+    )
+    need(type(owner) is dict and owner.get("type") == expected_type)
+    need(evidence._principal(owner) == expected_owner)
     return _existing(reviews, env, now)
 
 
@@ -387,6 +461,15 @@ def publish(
         facts = journal.identity()
         need(type(facts) is JournalFacts and facts.complete is True)
         need(facts.epoch == authorization.journal_epoch)
+        need(facts.scope_sha256 == envelope.journal_scope)
+        need(
+            facts.guard_sha256
+            == (
+                None
+                if envelope.policy.project is None
+                else envelope.policy.project.journal_guard_sha256
+            )
+        )
         previous = journal.read(envelope.key, epoch=authorization.journal_epoch)
         if previous is not None:
             need(type(previous) is Intent)

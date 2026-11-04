@@ -297,3 +297,13 @@ lost state. Reconciliation is read-only remotely. Collector collect() still need
 an observed exact-SHA PASS; bot ID/login alone is not independent reasoning.
 Follow docs/review-comment.md. Gate B requires separate direct authorization and
 review; all runtime/legacy exit-13 gates and human-only merge remain unchanged.
+
+Issue #62 adds only trusted TargetProject policy and offline project/installation
+isolation. Product targets are explicitly authorized downstream repositories,
+not implicit source-repo tenants. Pin repo/owner/branch/root/checks and separate
+App registration owner from installation account. Scope clients, authorizations,
+receipts and journal views per project; retain a stable repo+PR UNKNOWN guard
+across App/installation/namespace rotation. No reset, live App/downstream access,
+credentials or #60 integration. Target receipts cannot enter legacy main-only
+queue/prepare/runtime domains. Follow docs/target-project-policy.md; Gate B stays
+NOT_AUTHORIZED and all native/public legacy exit-13 barriers remain unchanged.

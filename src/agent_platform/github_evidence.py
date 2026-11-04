@@ -5,7 +5,7 @@ import json
 import os
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from agent_platform import cli, issues, prepare, publisher, queue, state, task_status
@@ -58,6 +58,77 @@ class Check:
 
 
 @dataclass(frozen=True, slots=True)
+class TargetProject:
+    """Versioned operator authorization, never discovered from target content."""
+
+    authorization_sha256: str
+    admission: publisher.Admission
+    owner: Principal
+    owner_type: str
+    base_branch: str
+    head_sha: str
+    pull_request: int
+    checks: tuple[Check, ...]
+    source_root: str
+    journal_guard_sha256: str
+    author: Principal
+    reviewers: tuple[Principal, ...]
+    publication_context_sha256: str
+    schema_version: int = 1
+
+    def __post_init__(self):
+        need(type(self.schema_version) is int and self.schema_version == 1)
+        need(publisher.hex_digest(self.authorization_sha256))
+        need(publisher.hex_digest(self.journal_guard_sha256))
+        need(publisher.hex_digest(self.publication_context_sha256))
+        need(type(self.author) is Principal)
+        Principal(self.author.identifier, self.author.login)
+        need(type(self.reviewers) is tuple and 0 < len(self.reviewers) <= 8)
+        need(all(type(p) is Principal for p in self.reviewers))
+        need(len({p.identifier for p in self.reviewers}) == len(self.reviewers))
+        need(len({p.login.casefold() for p in self.reviewers}) == len(self.reviewers))
+        for p in self.reviewers:
+            Principal(p.identifier, p.login)
+            need(
+                p.identifier != self.author.identifier
+                and p.login.casefold() != self.author.login.casefold()
+            )
+        need(type(self.admission) is publisher.Admission)
+        replace(self.admission)
+        need(
+            type(self.owner) is Principal
+            and self.owner_type in {"Organization", "User"}
+        )
+        Principal(self.owner.identifier, self.owner.login)
+        need(self.owner.login == self.admission.repository.split("/")[0])
+        need(not self.owner.login.endswith("[bot]"))
+        # Finite flat ref subset: no URL escaping, traversal, revisions or fallback.
+        need(
+            type(self.base_branch) is str
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", self.base_branch)
+        )
+        need(self.base_branch not in {"HEAD", "FETCH_HEAD", "ORIG_HEAD", "MERGE_HEAD"})
+        need(sha(self.head_sha) and issues.positive_int(self.pull_request))
+        need(type(self.checks) is tuple and 0 < len(self.checks) <= 8)
+        need(all(type(c) is Check for c in self.checks))
+        need(len({c.name for c in self.checks}) == len(self.checks))
+        for c in self.checks:
+            Check(c.app_id, c.app_slug, c.name)
+        need(type(self.source_root) is str and len(self.source_root) <= 4096)
+        path = Path(self.source_root)
+        need(
+            path.is_absolute()
+            and str(path) == self.source_root
+            and ".." not in path.parts
+        )
+        need(not any(ord(c) < 32 or ord(c) == 127 for c in self.source_root))
+
+    @property
+    def digest(self):
+        return publisher.digest(asdict(self))
+
+
+@dataclass(frozen=True, slots=True)
 class Policy:
     """Operator-held pins, never decoded from target files or model output."""
 
@@ -69,6 +140,11 @@ class Policy:
     reviewers: tuple[Principal, ...] = ()
     checks: tuple[Check, ...] = ()
     merge_sha: str | None = None
+    project: TargetProject | None = None
+
+    @property
+    def base_branch(self):
+        return "main" if self.project is None else self.project.base_branch
 
     def __post_init__(self):
         need(type(self.admission) is publisher.Admission)
@@ -87,6 +163,21 @@ class Policy:
         need(len({p.identifier for p in self.reviewers}) == len(self.reviewers))
         need(len({p.login.casefold() for p in self.reviewers}) == len(self.reviewers))
         need(len({c.name for c in self.checks}) == len(self.checks))
+        if self.project is not None:
+            need(type(self.project) is TargetProject)
+            replace(self.project)
+            need(
+                self.purpose == "reviewed"
+            )  # Target merged/queue admission is deferred.
+            need(self.project.admission == self.admission)
+            need(
+                self.project.head_sha == self.head_sha
+                and self.project.pull_request == self.pull_request
+            )
+            need(
+                self.project.checks == self.checks
+                and self.project.reviewers == self.reviewers
+            )
         if self.purpose == "reviewed":
             need(self.reviewers and self.checks and sha(self.merge_sha))
             need(self.base_sha == self.admission.base_sha)
@@ -126,10 +217,16 @@ class GitHub(issues.GitHub):
 
     def __init__(self, policy):
         need(type(policy) is Policy)
+        replace(policy)
         super().__init__(policy.admission.repository)
         self.policy = policy
         n, p, h = policy.admission.issue, policy.pull_request, policy.head_sha
-        self.singles = {"", "/branches/main", f"/issues/{n}", f"/pulls/{p}"}
+        self.singles = {
+            "",
+            f"/branches/{policy.base_branch}",
+            f"/issues/{n}",
+            f"/pulls/{p}",
+        }
         if policy.merge_sha is not None:
             self.singles.add(f"/commits/{policy.merge_sha}")
         self.lists = {
@@ -258,6 +355,14 @@ def _repo(value, pin, *, graph=False):
     identifier = value.get("databaseId" if graph else "id")
     need(issues.positive_int(identifier) and identifier == pin.repo_id)
     need(value.get("nameWithOwner" if graph else "full_name") == pin.repository)
+
+
+def _project_repo(value, policy):
+    _repo(value, policy.admission)
+    if policy.project is not None:
+        owner = value.get("owner")
+        need(type(owner) is dict and owner.get("type") == policy.project.owner_type)
+        need(_principal(owner) == policy.project.owner)
 
 
 def _principal(value):
@@ -420,12 +525,12 @@ def _read(api, policy, now, *, _before_comment=False):
         need(policy.purpose == "reviewed")
     pin = policy.admission
     metadata, _ = api.get()
-    _repo(metadata, pin)
-    need(metadata.get("default_branch") == "main")
-    branch, _ = api.get("/branches/main")
+    _project_repo(metadata, policy)
+    need(metadata.get("default_branch") == policy.base_branch)
+    branch, _ = api.get(f"/branches/{policy.base_branch}")
     need(
         type(branch) is dict
-        and branch.get("name") == "main"
+        and branch.get("name") == policy.base_branch
         and type(branch.get("commit")) is dict
     )
     need(branch["commit"].get("sha") == pin.base_sha)
@@ -458,10 +563,12 @@ def _read(api, policy, now, *, _before_comment=False):
     for key, expected in [("head", policy.head_sha), ("base", policy.base_sha)]:
         side = pr.get(key)
         need(type(side) is dict and side.get("sha") == expected)
-        _repo(side.get("repo"), pin)
-    need(pr["base"].get("ref") == "main")
+        _project_repo(side.get("repo"), policy)
+    need(pr["base"].get("ref") == policy.base_branch)
     need(issues.timestamp(pr.get("updated_at")).timestamp() <= now)
     author = _principal(pr.get("user"))
+    if policy.project is not None:
+        need(author == policy.project.author)
     need(type(pr.get("body")) is str and len(pr["body"]) <= 65536)
     body = pr["body"]
     need(len(re.findall(rf"(?m)^Closes #{pin.issue}[ \t]*$", body)) == 1)
@@ -519,7 +626,7 @@ def _read(api, policy, now, *, _before_comment=False):
     need(_Lists(api, pin).pages(f"/issues/{pin.issue}/events") == history)
     again, _ = api.get()
     need(again == metadata)
-    again, _ = api.get("/branches/main")
+    again, _ = api.get(f"/branches/{policy.base_branch}")
     need(again == branch)
     # Entire bounded facts are hashed for drift detection, never rendered as text.
     facts = publisher.digest(
@@ -550,21 +657,28 @@ class Receipt:
     local_sha256: str
     reviews: tuple
     checks: tuple
-    pull_request: queue.PullRequest
+    pull_request: queue.PullRequest | None
 
     def _fresh(self, now):
         need(type(now) is int and self.observed_at <= now <= self.observed_at + MAX_AGE)
 
     def queue_receipt(self, *, now):
         self._fresh(now)
+        need(self.policy.project is None and self.pull_request is not None)
         return self.pull_request
 
     def publisher_admission(self, *, now):
         self._fresh(now)
-        need(self.policy.purpose == "reviewed")
+        need(self.policy.purpose == "reviewed" and self.policy.project is None)
         # This remains the separately trusted admission pin, not new launch
         # admission or synthetic local checkpoint/tree-bound TestEvidence.
         return self.policy.admission
+
+    def for_project(self, project, *, now):
+        self._fresh(now)
+        need(type(project) is TargetProject and self.policy.project == project)
+        replace(project)
+        return self
 
     def diagnostic(self):
         return {
@@ -582,12 +696,124 @@ class Receipt:
         }
 
 
-def _local(root, pin):
+def _project_source(info, project):
+    """Read-only evidence identity; does not widen prepare/runtime authority."""
+    root = Path(info["root"])
+    need(str(root) == project.source_root)
+    state.check(
+        info["branch"] == project.base_branch and not info["linked_worktree"],
+        11,
+        "source_must_be_primary_project_branch",
+    )
+    state.no_symlinks(root / ".git")
+    common = Path(
+        prepare.line(
+            prepare.git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        )
+    )
+    state.check(
+        common == root / ".git" and common.is_dir(), 11, "ambiguous_common_directory"
+    )
+    # Worktree config, includes and checkout filters can override safety settings
+    # or execute commands during checkout. MVP.2a rejects these configurations.
+    keys = prepare.git(
+        root, "config", "--local", "--no-includes", "--name-only", "--list"
+    )
+    try:
+        config_keys = keys.decode("utf-8").lower().splitlines()
+    except UnicodeError:
+        raise prepare.PrepareError(11, "unsupported_git_configuration") from None
+    for key in config_keys:
+        state.check(
+            not key.startswith(
+                (
+                    "include.",
+                    "includeif.",
+                    "filter.",
+                    "extensions.",
+                    "core.worktree",
+                    "core.sparsecheckout",
+                )
+            )
+            and not key.endswith((".promisor", ".partialclonefilter")),
+            11,
+            "unsupported_git_configuration",
+        )
+    for relative in ("objects/info/alternates", "info/grafts", "shallow", "commondir"):
+        state.check(
+            not (common / relative).exists() and not (common / relative).is_symlink(),
+            11,
+            "unsupported_git_layout",
+        )
+    for relative in (
+        "config",
+        "index",
+        "HEAD",
+        "packed-refs",
+        "worktrees",
+        "objects/pack",
+        "refs/heads/agent",
+        "logs/refs/heads/agent",
+    ):
+        state.no_symlinks(common / relative)
+    origin = prepare.line(prepare.git(root, "remote", "get-url", "--all", "origin"))
+    configured = prepare.line(
+        prepare.git(root, "config", "--local", "--get-all", "remote.origin.url")
+    )
+    state.check(
+        origin == configured and prepare.parse_origin(origin) == info["repository"],
+        11,
+        "ambiguous_origin",
+    )
+    stages = prepare.git(root, "ls-files", "--stage")
+    state.check(
+        not any(row.startswith(b"160000 ") for row in stages.splitlines()),
+        11,
+        "submodules_not_supported",
+    )
+    flags = prepare.git(root, "ls-files", "-v")
+    state.check(
+        all(row.startswith(b"H ") for row in flags.splitlines()),
+        11,
+        "unsupported_index_flags",
+    )
+    prepare.clean(root)
+    revisions = [
+        prepare.line(prepare.git(root, "rev-parse", "--verify", ref + "^{commit}"))
+        for ref in (
+            "HEAD",
+            "refs/heads/" + project.base_branch,
+            "refs/remotes/origin/" + project.base_branch,
+        )
+    ]
+    state.check(
+        all(prepare.SHA.fullmatch(sha) for sha in revisions)
+        and len(set(revisions)) == 1,
+        11,
+        "stale_or_diverged_refs",
+    )
+    return {
+        "source_root": str(root),
+        "common_dir": str(common),
+        "repository": info["repository"],
+        "base_sha": revisions[0],
+    }
+
+
+def _local(root, pin, project=None):
+    if project is not None:
+        need(str(root) == project.source_root)
     info = cli.inspect(root)
-    source = prepare.source_snapshot(info)
+    source = (
+        prepare.source_snapshot(info)
+        if project is None
+        else _project_source(info, project)
+    )
     need(source["repository"] == pin.repository and source["base_sha"] == pin.base_sha)
     refs = prepare.git(root, "for-each-ref", "--format=%(refname) %(objectname)")
-    return publisher.digest([source, refs.hex()])
+    return publisher.digest(
+        [source, refs.hex(), None if project is None else project.digest]
+    )
 
 
 def collect(root: Path, policy: Policy, *, api):
@@ -598,6 +824,9 @@ def collect(root: Path, policy: Policy, *, api):
     """
     try:
         need(type(policy) is Policy and isinstance(root, Path))
+        replace(policy)
+        if policy.project is not None:
+            need(str(root) == policy.project.source_root)
         need(root.is_absolute() and root.resolve(strict=True) == root)
         state.no_symlinks(root)
         need(
@@ -608,7 +837,7 @@ def collect(root: Path, policy: Policy, *, api):
         now = int(time.time())
         with state.host_lock(create=False) as fd:
             lock = task_status.fingerprint(os.fstat(fd))
-            before = _local(root, policy.admission)
+            before = _local(root, policy.admission, policy.project)
             first = _read(api, policy, now)
             need(_read(api, policy, now) == first)
             pr, reviews, checks, facts = first
@@ -625,7 +854,7 @@ def collect(root: Path, policy: Policy, *, api):
                         commit,
                         policy.admission.base_sha,
                     )
-            need(_local(root, policy.admission) == before)
+            need(_local(root, policy.admission, policy.project) == before)
             need(
                 task_status.fingerprint((state.LOCK_DIR / "prepare.lock").lstat())
                 == lock
@@ -633,20 +862,24 @@ def collect(root: Path, policy: Policy, *, api):
             need(api.policy == policy)
             need(time.monotonic() - started <= issues.TOTAL_TIMEOUT)
         pin = policy.admission
-        receipt = queue.PullRequest(
-            pin,
-            policy.pull_request,
-            pin.repo_id,
-            pin.repository,
-            "main",
-            policy.head_sha,
-            policy.head_sha,
-            pr["state"],
-            pr["merged"],
-            pr["merge_commit_sha"] if pr["merged"] else None,
-            pr["merged_at"],
-            (pin.issue,),
-            pin.base_sha,
+        receipt = (
+            None
+            if policy.project is not None
+            else queue.PullRequest(
+                pin,
+                policy.pull_request,
+                pin.repo_id,
+                pin.repository,
+                policy.base_branch,
+                policy.head_sha,
+                policy.head_sha,
+                pr["state"],
+                pr["merged"],
+                pr["merge_commit_sha"] if pr["merged"] else None,
+                pr["merged_at"],
+                (pin.issue,),
+                pin.base_sha,
+            )
         )
         return Receipt(
             policy, now, api.provenance, facts, before, reviews, checks, receipt

@@ -427,3 +427,7 @@ PASS cannot authorize credentials, native execution or a weaker fallback.
 The [supervised App review COMMENT policy](docs/review-comment.md) implements
 offline Gate A only: exact-SHA human authorization, synthetic pre/postflight and
 unknown-result reconciliation. No App, credentials or live review are enabled.
+
+The [downstream project policy](docs/target-project-policy.md) pins independently
+authorized target repositories, branches and installations. App registration
+ownership is separate from target ownership; live tenant access remains NOT_RUN.
