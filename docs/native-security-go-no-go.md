@@ -216,3 +216,9 @@ a new SHA/profile/version, and no operator risk acceptance can be labelled an
 isolation PASS. Any later auth/inference/runtime integration is another explicit
 scope and review, even after a security assessment improves. No automated action,
 Issue transition, merge or deployment follows from this report.
+
+## Current-release feasibility follow-up
+
+[ADR 005 / AP-NF/1](native-runtime-feasibility.md) separately inspects upstream
+0.166.0 public source and current documentation. It does not repin AP-NS/1,
+relabel its historical evidence, or change any runtime gate.

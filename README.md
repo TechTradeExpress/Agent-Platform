@@ -431,3 +431,7 @@ unknown-result reconciliation. No App, credentials or live review are enabled.
 The [downstream project policy](docs/target-project-policy.md) pins independently
 authorized target repositories, branches and installations. App registration
 ownership is separate from target ownership; live tenant access remains NOT_RUN.
+
+The [current stock-runtime feasibility decision](docs/native-runtime-feasibility.md)
+records AP-NF/1 source evidence and a future verification plan. Runtime remains
+NO-GO; the historical AP-NS/1 assessment retains its exact original subject.
