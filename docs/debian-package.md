@@ -151,7 +151,7 @@ it is not authoritative state-schema discovery.
 
 A corrupt archive rejection leaves installed N unchanged. CI deliberately stops
 a real N+1 transaction after `dpkg --unpack`, verifies `install ok unpacked`, then
-recovers with `dpkg --configure agent-platform`; this is a controlled staged
+recovers with `dpkg --force-confdef --force-confold --configure agent-platform`; this is a controlled staged
 interruption, not a power-loss durability claim. No application code runs during
 configure. Validate versions/files/config before proceeding. For uncertain package
 manager operations, inspect dpkg status/audit and retained evidence first; do not
@@ -172,13 +172,19 @@ blindly rerun state migration. Host recovery actions need their own operator sco
 
 [Debian package workflow](../.github/workflows/debian-package.yml) uses read-only
 permissions, pinned checkout/upload actions and disabled persisted Git credentials.
+Packaging checkout explicitly pins the event feature HEAD (also for PR events),
+so embedded provenance does not silently bind a synthetic merge commit. Existing
+Python CI retains its original merge-result behavior.
 Docker is used only on GitHub-hosted ubuntu-24.04, never installed/used on dev01.
 No privileged container, Docker socket, auth home or host infrastructure is mounted.
 Build receives read-only source and a dedicated output mount; destructive tests
 see only disposable image files, read-only packages and a fresh evidence mount.
 Lifecycle runs with network=none, no-new-privileges and process/memory bounds.
 Dependencies are predownloaded into the isolated image, then **actually installed
-by apt** on the clean testbed with --no-download. Network setup is separate.
+by apt** on the clean testbed with --no-download. Local .deb installation then
+uses ordinary apt local-file handling inside network=none (APT no-download local
+archive handling failed in the first CI run). Missing cache inputs fail rather
+than enabling network. Network setup is separate.
 
 Required implemented checks (failure/missing evidence fails the job):
 

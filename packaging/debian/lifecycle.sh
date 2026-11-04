@@ -16,5 +16,6 @@ done
 test ! -e /usr/bin/codex
 ln -s /usr/local/bin/codex /usr/bin/codex
 # Dependency acquisition happened during image construction. No network at lifecycle.
-apt-get --no-download --no-install-recommends -y install /packages/n/agent-platform_0.1.0-1_amd64.deb
+apt-get --no-download --no-install-recommends -y install python3 git gh
+apt-get --no-install-recommends -y install /packages/n/agent-platform_0.1.0-1_amd64.deb
 exec python3 /opt/ap-tests/smoke.py --lifecycle

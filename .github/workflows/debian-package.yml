@@ -10,6 +10,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Build isolated tool and dependency images
         run: |
           docker build --platform linux/amd64 --target quality -t ap-package-quality -f packaging/debian/Dockerfile packaging/debian
@@ -37,7 +38,7 @@ jobs:
             dpkg-deb --control /packages/next/*.deb /tmp/ap-control
             for hook in preinst postinst prerm postrm triggers; do test ! -e "/tmp/ap-control/$hook"; done
             lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1
-            apt-get --no-download -y install /packages/next/*.deb
+            apt-get -y install /packages/next/*.deb
             autopkgtest --no-built-binaries -o /evidence/autopkgtest /packages/next/agent-platform_0.1.0-2_amd64.deb /source -- null
             test -s /evidence/autopkgtest/summary
             grep -Eq "smoke[[:space:]]+PASS" /evidence/autopkgtest/summary

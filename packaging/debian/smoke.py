@@ -114,7 +114,9 @@ def lifecycle():
         == "install ok unpacked"
     )
     assert digest(cfg) == config and (state / "example.json").read_bytes() == before
-    call(["dpkg", "--configure", "agent-platform"])
+    call(
+        ["dpkg", "--force-confdef", "--force-confold", "--configure", "agent-platform"]
+    )
     assert (
         call(["dpkg-query", "-W", "-f=${Status}", "agent-platform"])
         == "install ok installed"
@@ -147,7 +149,7 @@ def lifecycle():
     assert {p.name: digest(p) for p in state.iterdir()} == migrated
     retained_ok()
     phases.append("remove_retains_configuration_and_data")
-    call(["apt-get", "--no-download", "-y", "install", newer])
+    call(["apt-get", "-y", "install", newer])
     assert digest(cfg) == config
     retained_ok()
     phases.append("reinstall_after_remove_keeps_configuration")
@@ -156,7 +158,7 @@ def lifecycle():
     assert {p.name: digest(p) for p in state.iterdir()} == migrated
     retained_ok()
     phases.append("purge_retains_unowned_data")
-    call(["apt-get", "--no-download", "-y", "install", newer])
+    call(["apt-get", "-y", "install", newer])
     assert (
         "package_schema=2" in cfg.read_text()
         and "# administrator" not in cfg.read_text()
