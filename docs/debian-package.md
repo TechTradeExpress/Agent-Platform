@@ -190,8 +190,10 @@ Required implemented checks (failure/missing evidence fails the job):
 
 1. Build N, N+1 and a second N+1; compare bytes; save hashes/provenance.
 2. Inspect real dpkg-deb info/content, owner/modes/conffiles/no hooks; run lintian
-   with `--fail-on error`. Warnings remain visible, including the justified
-   amd64-only pure-Python candidate (architecture expansion intentionally deferred).
+   with `--fail-on error`. Warnings remain visible. The candidate retains
+   initial-upload-closes-no-bugs: this private project has no Debian BTS upload
+   or Debian bug to close; inventing a BTS number would be misleading. Initial
+   amd64-only support is intentional; architecture expansion is deferred.
 3. Real clean apt dependency/package installation; all help/package-version checks,
    inert canary report and legacy/native exit-13 gates. Fake Codex/service tripwires
    and absence of any unit/state directory deny activation; no real native tools.

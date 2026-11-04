@@ -14,6 +14,7 @@ Priority: optional
 Depends: python3 (>= 3.12), git, gh
 Homepage: https://github.com/TechTradeExpress/Agent-Platform
 Description: supervised repository tooling with fail-closed execution gates
- Offline inspection, policy and evidence tools for explicitly authorized projects.
+ Offline inspection, policy and evidence tools for explicitly authorized
+ projects.
  Native subscription execution and public legacy execution remain blocked.
  No service, Codex binary or authentication material is installed.
