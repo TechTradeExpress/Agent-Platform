@@ -1,0 +1,20 @@
+{
+  "observed_on": "2026-11-04",
+  "image": {
+    "repository": "docker.io/library/debian",
+    "tag": "trixie-slim",
+    "platform": "linux/amd64",
+    "index_digest": "sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4",
+    "manifest_digest": "sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d",
+    "source": "https://hub.docker.com/v2/repositories/library/debian/tags/trixie-slim"
+  },
+  "upload_action": {
+    "repository": "actions/upload-artifact",
+    "version": "v4.6.2",
+    "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "action_blob": "2a0ecf19e8d0087dd2e5d1785dcf764811e79fae",
+    "release": "https://github.com/actions/upload-artifact/releases/tag/v4.6.2",
+    "ref": "https://api.github.com/repos/actions/upload-artifact/git/ref/tags/v4.6.2"
+  },
+  "apt_inputs": "Signed trixie indexes are mutable at image construction; exact installed package versions retained in CI evidence. Not a hermetic historical snapshot."
+}

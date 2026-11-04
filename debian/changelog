@@ -1,0 +1,12 @@
+agent-platform (0.1.0-2) trixie; urgency=medium
+
+  * Unreleased candidate: package CLI and explicit synthetic schema-v2 migration.
+  * Revision 1 is a controlled lifecycle baseline, not a historical public release.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Wed, 04 Nov 2026 00:00:00 +0000
+
+agent-platform (0.1.0-1) trixie; urgency=medium
+
+  * Controlled unreleased lifecycle baseline with synthetic schema-v1 defaults.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Wed, 04 Nov 2026 00:00:00 +0000

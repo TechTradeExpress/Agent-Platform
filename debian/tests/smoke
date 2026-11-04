@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+test -f /.dockerenv
+test "$(cat /ap-package-ci-fixture)" = AP-PKG-CI-DISPOSABLE-v1
+python3 packaging/debian/smoke.py

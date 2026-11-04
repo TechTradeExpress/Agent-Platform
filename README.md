@@ -435,3 +435,7 @@ ownership is separate from target ownership; live tenant access remains NOT_RUN.
 The [current stock-runtime feasibility decision](docs/native-runtime-feasibility.md)
 records AP-NF/1 source evidence and a future verification plan. Runtime remains
 NO-GO; the historical AP-NS/1 assessment retains its exact original subject.
+
+The [Debian 13 candidate package](docs/debian-package.md) provides the existing
+CLI tools with no services or automatic state migrations. Its separate disposable
+CI verifies real package lifecycle operations while execution remains blocked.

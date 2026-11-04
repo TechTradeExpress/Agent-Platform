@@ -1,0 +1,4 @@
+#!/usr/bin/make -f
+.PHONY: binary
+binary:
+	python3 packaging/build_deb.py --output dist/debian
