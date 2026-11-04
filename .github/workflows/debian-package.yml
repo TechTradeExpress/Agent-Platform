@@ -28,6 +28,7 @@ jobs:
           docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 256 --memory 2g --cpus 2 -v "$RUNNER_TEMP/ap-packages:/packages:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" ap-package-lifecycle
           test -s "$RUNNER_TEMP/ap-evidence/lifecycle.json"
       - name: Inspect archives, lintian and autopkgtest in separate container
+        if: always()
         run: |
           docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 256 --memory 2g -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" -w /source ap-package-quality sh -ec '
             dpkg-deb --info /packages/next/*.deb > /evidence/package-info.txt

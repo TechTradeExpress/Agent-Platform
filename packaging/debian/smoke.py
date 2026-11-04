@@ -52,7 +52,13 @@ def smoke():
         assert result["launch_allowed"] is result["resume_authorized"] is False
     result = json.loads(call(["agent-platform", "subscription"], 13))
     assert "SUBSCRIPTION_ISOLATION_BLOCKED" in json.dumps(result)
-    call(["agent-platform-native-canary"], 13)  # inert report, never --run-synthetic
+    # The separate canary's default is successful NOT_RUN presentation, not
+    # the native runtime gate. Never opt into kernel probes here.
+    inert = json.loads(call(["agent-platform-native-canary"]))
+    assert inert["status"] == "NOT_RUN" and inert["checks"] == {}
+    assert inert["launch_allowed"] is False
+    assert inert["reason"] == "explicit_opt_in_required"
+    assert inert["authentication"] == "AUTH_E2E_NOT_RUN"
     assert not Path("/var/lib/agent-platform").exists()
     assert not Path("/run/agent-platform").exists()
     files = call(["dpkg-query", "-L", "agent-platform"]).splitlines()
