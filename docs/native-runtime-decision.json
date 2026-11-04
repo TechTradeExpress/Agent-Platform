@@ -1,0 +1,637 @@
+{
+  "schema_version": 1,
+  "specification": "AP-NF/1",
+  "issue": 64,
+  "observed_on": "2026-11-04",
+  "repository_base": "7df34e9fbe1a81c56833dcab648ffb4c9caec54e",
+  "architecture_verdict": "ARCHITECTURE_REDESIGN_REQUIRED",
+  "activation_decision": "NO-GO",
+  "runtime_status": "SUBSCRIPTION_ISOLATION_BLOCKED",
+  "runtime_exit_code": 13,
+  "selected_engine": "STOCK_CODEX_CHATGPT_SUBSCRIPTION",
+  "selected_candidate": null,
+  "research_priority": "B_SUPPORTED_APP_SERVER_SEPARATE_EXECUTOR_CONTRACT",
+  "authority": {
+    "launch_allowed": false,
+    "resume_authorized": false,
+    "authentication_allowed": false,
+    "kernel_run_allowed": false,
+    "provisioning_allowed": false,
+    "publish_authorized": false
+  },
+  "subject": {
+    "repository": "openai/codex",
+    "release_tag": "rust-v0.166.0",
+    "release_published_at": "2026-10-29T19:47:53Z",
+    "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+    "tag_object": "593389380740f7b4762771573c447ccfdc59742f",
+    "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+    "latest_scope": "LATEST_NON_PRERELEASE_FROM_OFFICIAL_RELEASES_LATEST_AT_OBSERVATION",
+    "upstream_main_snapshot": "9ff072db8ae43d413c8d205ebf22b54b83c72cef",
+    "source_binary_equivalence": "UNKNOWN",
+    "artifact_sha256": null,
+    "artifact_bytes": null,
+    "artifact_admission": "UNKNOWN_BLOCKING",
+    "installed_build": "NOT_TESTED",
+    "protocol_schema_generation": "NOT_TESTED",
+    "user_plan_eligibility": "UNKNOWN"
+  },
+  "runtime_cap_bytes": 268435456,
+  "historical_subject": {
+    "specification": "AP-NS/1",
+    "version": "0.164.0",
+    "source_commit": "6aaac694803004a63c6f393d153c96d22521a6b9",
+    "same_domain_result": "FAIL_RECORDED_HISTORICAL",
+    "fixture_status": "BLOCKED_MISSING_INPUTS",
+    "receipt": "native-security-assessment.json"
+  },
+  "sources": [
+    {
+      "id": "S1",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "build_tool_router; add_core_tool_sources; add_shell_tools; append_dynamic_tool_runtimes",
+      "path": "codex-rs/core/src/tools/spec_plan.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/spec_plan.rs",
+      "blob_sha1": "2602fcb9bbbd9f916444d0c338a161b9fa9b5413",
+      "sha256": "d97205602296e4e27c9f3183b7126fe2d5ca4cf6f4d79ea1ae5761f1da266e6f",
+      "bytes": 66423
+    },
+    {
+      "id": "S2",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "CoreToolRuntime; dispatch_any_with_state; pre/post hooks",
+      "path": "codex-rs/core/src/tools/registry.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/registry.rs",
+      "blob_sha1": "3dccc2eece1a11a7e46b5c4cb378a7ffbc37b513",
+      "sha256": "4a80e968acd8092278426700e510ab559758e582c76b527a51dc75c541d8cc25",
+      "bytes": 40715
+    },
+    {
+      "id": "S3",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "DynamicToolHandler; insert_pending_dynamic_tool",
+      "path": "codex-rs/core/src/tools/handlers/dynamic.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/handlers/dynamic.rs",
+      "blob_sha1": "0eac846e05187ab469d9ecc33f295b75e06f7a48",
+      "sha256": "97986c9a4af552ff6f069781f7c3356d0ad671596376f6084c3d3d871870eb94",
+      "bytes": 8655
+    },
+    {
+      "id": "S4",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "ApplyPatchHandler; selected_executor; prepare_patch_request",
+      "path": "codex-rs/core/src/tools/handlers/apply_patch.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/handlers/apply_patch.rs",
+      "blob_sha1": "64d6cc196be4a21b15316dc402a3f18c9173c960",
+      "sha256": "17ac10916bfb719850fcbf57ff7add094ca61fdb5f28f4b709d57e20f3749f4b",
+      "bytes": 22672
+    },
+    {
+      "id": "S5",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "Authentication; Remote connections; Lifecycle; process/start; providerId",
+      "path": "codex-rs/exec-server/README.md",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/exec-server/README.md",
+      "blob_sha1": "46a465a79d316e86820a0e3261bd2df1abe2fac7",
+      "sha256": "d41090e5f935049a7532fba18e8c24f5557b39c11cc8916c534dd8a76397db96",
+      "bytes": 18493
+    },
+    {
+      "id": "S6",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "default_thread_environment_requests; local_selection; local/remote shell snapshots",
+      "path": "codex-rs/core/src/environment_selection.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/environment_selection.rs",
+      "blob_sha1": "3700d594ec79bb435991718fa841870f2a59261b",
+      "sha256": "c0052378f12db7c19c8563cd08537eca846d3b45edc8e12dd3de16add5e0fe35",
+      "bytes": 107323
+    },
+    {
+      "id": "S7",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "tool_hook_cwd: hooks run on the host",
+      "path": "codex-rs/core/src/hook_runtime.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/hook_runtime.rs",
+      "blob_sha1": "02d710450024db7f79ae712996b2270c9a63350a",
+      "sha256": "d89eec069e9d0557c419b82b5527fe08380c4649f24ceb68b03ce52288f3acb5",
+      "bytes": 53020
+    },
+    {
+      "id": "S8",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "CodeModeDispatchBroker; CoreTurnHost; nested tool runtime",
+      "path": "codex-rs/core/src/tools/code_mode/delegate.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/code_mode/delegate.rs",
+      "blob_sha1": "9e4429a4b167d2705189b8631af3610297f19d3d",
+      "sha256": "515961dca924cc2772611e8c6c30eed9011ab3a3c4f61af2a61907677b5b5f49",
+      "bytes": 18658
+    },
+    {
+      "id": "S9",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "get_auth_file; FileAuthStorage; DirectKeyringAuthStorage",
+      "path": "codex-rs/login/src/auth/storage.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/login/src/auth/storage.rs",
+      "blob_sha1": "60adea09ca81eb9b1d71511984db8041f42c2ba2",
+      "sha256": "0b6c51f6a74f87134b11f24617968ce4871c84799f9aaceaeea05dec00dd2831",
+      "bytes": 22988
+    },
+    {
+      "id": "S10",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "ThreadStartParams environments/dynamic_tools; resume/fork; disabled_plugin_ids",
+      "path": "codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/app-server-protocol/src/protocol/v2/thread.rs",
+      "blob_sha1": "1279bb8661c1051f227a250964673445b5337a12",
+      "sha256": "edc34b2b8cdbeefd48756f7f540b96ab7c4dc4580b9a17c0b8e3aa4f686ae7ce",
+      "bytes": 84643
+    },
+    {
+      "id": "S11",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "ToolPolicy; ExtensionDataInit startup ceiling; resupply on resume",
+      "path": "codex-rs/ext/extension-api/src/tool_policy.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/ext/extension-api/src/tool_policy.rs",
+      "blob_sha1": "71824bd42c40fd5284b76492363d7fe08ffaf73f",
+      "sha256": "909df60dd82a289a4fb7ae7083f56d6018e75cc1942880be14f2f51bc5e33f42",
+      "bytes": 1774
+    },
+    {
+      "id": "S12",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "EnvironmentAddParams; auth_bearer_token",
+      "path": "codex-rs/app-server-protocol/src/protocol/v2/environment.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/app-server-protocol/src/protocol/v2/environment.rs",
+      "blob_sha1": "3794780c18b67113374dcf0c9148fdb6e903b6f1",
+      "sha256": "6fdeff43677b50e3997306c3168d84aa9e0878939765c45c95be26e6c6bd9a7e",
+      "bytes": 5968
+    },
+    {
+      "id": "S13",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "Current upstream interface notes; explicit-login startup reads",
+      "path": "codex-rs/app-server/README.md",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/app-server/README.md",
+      "blob_sha1": "acb7a9ac219b57d9a68a83abad1257537b52bb2f",
+      "sha256": "7d5da6fb29d05debe830ef9fe3ce1ddc18bc5bd8987a411d7971562a49f3ea57",
+      "bytes": 46426
+    },
+    {
+      "id": "S14",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "ToolRouter; code_mode_tool_names; tool registration metrics",
+      "path": "codex-rs/core/src/tools/router.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/router.rs",
+      "blob_sha1": "36fbfe442724f9f0ae7b003f336a104713591880",
+      "sha256": "004482b5398df9b02c503a9115f4899802f6793661f84212e00af76a167ff2d4",
+      "bytes": 15483
+    },
+    {
+      "id": "S15",
+      "kind": "PINNED_PUBLIC_SOURCE",
+      "classification": "UNKNOWN",
+      "support_scope": "Source observation; stable stock integration contract not established",
+      "locator": "Separate child-agent handler implementation",
+      "path": "codex-rs/core/src/tools/handlers/multi_agents.rs",
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/core/src/tools/handlers/multi_agents.rs",
+      "blob_sha1": "87afc2b7cffac4b1d25363af8e6f29c3016fa8e4",
+      "sha256": "1f1e4e6d4d075d3387e1b63237730c7e48326ced095fef30a548482ecebb3b04",
+      "bytes": 3594
+    },
+    {
+      "id": "D1",
+      "kind": "MUTABLE_OFFICIAL_DOCUMENTATION",
+      "classification": "EXPERIMENTAL",
+      "url": "https://learn.chatgpt.com/docs/app-server.md",
+      "sha256": "bb74cd23b269d7e5f9d179221a0083850edff4eef76fa8657bacbf85e0db080c",
+      "bytes": 105861,
+      "claim": "Documented client lifecycle; dynamic tools and thread environment fields experimental, not total mediation"
+    },
+    {
+      "id": "D2",
+      "kind": "MUTABLE_OFFICIAL_DOCUMENTATION",
+      "classification": "OFFICIAL_SUPPORTED",
+      "url": "https://learn.chatgpt.com/docs/auth.md",
+      "sha256": "67d3f0c64897ea26b48e62a634ced7dbd2763a47104e12a0923cc528986de588",
+      "bytes": 17334,
+      "claim": "ChatGPT subscription sign-in documented; API key billing distinct; cached auth and automatic refresh described"
+    },
+    {
+      "id": "D3",
+      "kind": "MUTABLE_OFFICIAL_DOCUMENTATION",
+      "classification": "OFFICIAL_SUPPORTED",
+      "url": "https://learn.chatgpt.com/docs/agent-approvals-security.md",
+      "sha256": "595db3a5a3276996071dcc2442e2cfcfef2c11c50cf46fccfd1de4a869a82017",
+      "bytes": 35349,
+      "claim": "Sandbox and approval policy described; no complete credential-domain separation attestation"
+    }
+  ],
+  "routes": [
+    {
+      "route": "dynamic_tools",
+      "historical_dispatch": "SUPPORTED_SUBSET",
+      "historical_boundary": "UNKNOWN",
+      "classification": "EXPERIMENTAL",
+      "current_callback": "SUPPORTED_SUBSET",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "D1",
+        "S1",
+        "S3",
+        "S10"
+      ],
+      "delta": "Extra callbacks remain separate registrations, not a universal replacement.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "shell_exec",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S5",
+        "S6",
+        "S11"
+      ],
+      "delta": "Unified exec or one-shot internal handler; managed startup ceiling exists in Rust, stock RPC access unestablished.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "pty",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S5"
+      ],
+      "delta": "Exec-server PTY and continuation exist; move all execution to worker or deny immutably.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "write_stdin",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S5"
+      ],
+      "delta": "Existing process input is a separate effect; bind process/epoch and revoke after cancel.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "patch",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S4",
+        "S6"
+      ],
+      "delta": "Selected-environment filesystem routing is positive partial evidence; local selection/other patch paths need closure.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "file_reads",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S9"
+      ],
+      "delta": "Image/resource/local and implicit reads are not universally substituted; deny auth read even in read-only mode.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "file_mutations",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S4",
+        "S5",
+        "S12"
+      ],
+      "delta": "Filesystem RPCs are not model callback proofs; prevent effects in trusted auth filesystem.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "mcp_connectors",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "D1"
+      ],
+      "delta": "MCP tools register separately; resources, auth/reload and server processes require disablement or confined ownership.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "plugins_skills",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S7",
+        "S10",
+        "S13"
+      ],
+      "delta": "Selection/disabled plugin IDs do not prove complete installer, instruction or hook exclusion.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "js_code_mode",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S8",
+        "S14",
+        "D1"
+      ],
+      "delta": "Nested dispatch and local/remote Code Mode host are distinct boundaries; remote JS host alone is insufficient.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "hooks",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S2",
+        "S7"
+      ],
+      "delta": "Host-run hooks are explicit source counterevidence to remote workspace implying all effects moved.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "background_children",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S5",
+        "S8"
+      ],
+      "delta": "Managed-process disconnect termination is documented; arbitrary descendants and retained sessions still need denial/liveness proof.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "subagents",
+      "historical_dispatch": "UNSUPPORTED",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S15",
+        "S10"
+      ],
+      "delta": "Child config/environment/tool inheritance must retain the ceiling and auth principal boundary.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "hosted_tools",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S1",
+        "S14",
+        "D3"
+      ],
+      "delta": "Hosted specs and network/app paths remain distinct from local executor isolation.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "resume_fork_replay",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "EXPERIMENTAL",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S10",
+        "S11",
+        "D1"
+      ],
+      "delta": "Dynamic metadata restores on resume; internal ToolPolicy must be resupplied. No audited immutable cross-lifecycle inventory.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "cancellation",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S2",
+        "S5",
+        "S8"
+      ],
+      "delta": "Cancellation tokens/managed-process termination are partial evidence, not whole-tree kill/reap or exactly-once proof.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "credential_refresh_persistence",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "OFFICIAL_SUPPORTED",
+      "current_callback": "NOT_A_TOOL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "D2",
+        "S9"
+      ],
+      "delta": "Cache/refresh is credential-owner work, outside tool callback model; live boundary not tested.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "implicit_config_session_reads",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "UNKNOWN",
+      "current_callback": "NOT_A_TOOL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "S9",
+        "S13",
+        "S10"
+      ],
+      "delta": "Startup config, AGENTS, plugin/session reads require trusted bootstrap and hostile input separation before turns.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "remote_alternate_dispatch",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "EXPERIMENTAL",
+      "current_callback": "UNKNOWN",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "D1",
+        "S5",
+        "S12"
+      ],
+      "delta": "Environment/direct process/fs/remote control ingress must be denied or authenticated; remote registration auth must not enter worker.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    },
+    {
+      "route": "approvals_control_tools",
+      "historical_dispatch": "UNKNOWN",
+      "historical_boundary": "UNKNOWN",
+      "classification": "OFFICIAL_SUPPORTED",
+      "current_callback": "NO_UNIVERSAL_CALLBACK",
+      "enforced_boundary": "UNKNOWN",
+      "verified_mediated": false,
+      "source_ids": [
+        "D1",
+        "D3",
+        "S2"
+      ],
+      "delta": "Approval grants/denials and user-input responses are not universal execution/result substitution or OS isolation.",
+      "required_proof": "Exact-build immutable disablement or exclusively credential-free worker execution, including lifecycle and alternate ingress"
+    }
+  ],
+  "unlisted_routes": "UNKNOWN_BLOCKING",
+  "gates": [
+    {
+      "id": "G0",
+      "status": "PARTIAL_STATIC_ONLY",
+      "human_authorization": "Separate scope before fixture actions",
+      "missing": [
+        "supported exhaustive stock interface and immutable denial contract",
+        "dependency and alternate ingress audit",
+        "source to binary equivalence and cap admission"
+      ]
+    },
+    {
+      "id": "G1",
+      "status": "NOT_RUN",
+      "human_authorization": "Explicit disposable VM build and no-account kernel test authorization",
+      "missing": [
+        "original #28 scripts, manifest, package lock, raw logs and reproducibility",
+        "exact verified fixture, zero capabilities, mandatory namespaces and denial positive controls"
+      ]
+    },
+    {
+      "id": "G2",
+      "status": "NOT_RUN",
+      "human_authorization": "Separately approved exact-build stock route and kill/resume tests",
+      "missing": [
+        "all 20 routes plus newly discovered routes",
+        "worker/auth UID, mount, FD, proc, keyring, IPC, network and descendant isolation",
+        "immutable ceiling across resume/fork, config and discovery changes"
+      ]
+    },
+    {
+      "id": "G3",
+      "status": "NOT_RUN",
+      "human_authorization": "Separate explicit ChatGPT login/refresh and per-inference consent after G0-G2 independent PASS",
+      "missing": [
+        "account/workspace eligibility",
+        "protected auth/refresh/session lifecycle",
+        "exact-session recovery and no unknown replay"
+      ]
+    }
+  ],
+  "blockers": [
+    "no_complete_supported_stock_tool_mediation_contract",
+    "host_effects_and_implicit_reads_not_closed",
+    "independent_worker_credential_domain_unverified",
+    "fixture_inputs_and_reproducibility_incomplete",
+    "current_artifact_provenance_size_and_admission_unknown",
+    "auth_refresh_session_and_process_recovery_not_tested",
+    "project_aware_runtime_authority_chain_not_implemented"
+  ],
+  "follow_up": {
+    "owner": "Human maintainer with independently authorized security reviewer",
+    "review_by": "2026-11-18",
+    "scope": "Proposal only; create no Issue or service in #64",
+    "upstream_questions": [
+      "Can stock CLI/RPC install an immutable startup ToolPolicy ceiling covering implicit and alternate effects?",
+      "Can all hooks, plugins, MCP, hosted tools and child routes be confined or positively disabled without custom Codex?",
+      "Which environment and executor contracts are stable and supported for local ChatGPT subscription use?",
+      "What is guaranteed for cancellation, descendants, reconnect, refresh and resume policy retention?"
+    ],
+    "stop_condition": "No supported complete contract after bounded review: retain NO-GO and return product decision to human; no API/OAuth fallback"
+  }
+}
