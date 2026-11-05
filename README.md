@@ -435,3 +435,7 @@ ownership is separate from target ownership; live tenant access remains NOT_RUN.
 The [current stock-runtime feasibility decision](docs/native-runtime-feasibility.md)
 records AP-NF/1 source evidence and a future verification plan. Runtime remains
 NO-GO; the historical AP-NS/1 assessment retains its exact original subject.
+
+The [ChatGPT review handoff](docs/chatgpt-handoff.md) adds Stage 1 typed offline
+proposals, separate operator approval and durable synthetic UNKNOWN journaling.
+Live integration remains INTEGRATION_BLOCKED / NO-GO; no publisher is deployed.
