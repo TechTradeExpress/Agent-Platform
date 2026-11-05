@@ -73,10 +73,21 @@ enabled and request supported approval for blocked filesystem/Git/network/PR
 operations; if approval is unavailable, report the exact blocker without bypass.
 Report final HEAD SHA, changed files, tests, Draft PR URL and CI status/link.
 
-Review must be independent and pinned to the exact HEAD SHA. FAIL, failed/pending
-checks, changed SHA, ambiguous Issue association or new blockers leave the PR
-Draft and Issue open. With independent PASS and required checks green for the
-unchanged reviewed SHA, the independently authorized reviewer revalidates the
+Apply [Solo Maintainer Policy v1](docs/solo-maintainer-policy.md) to source manual
+acceptance and downstream roles. Separate ChatGPT AI-assisted technical analysis
+is not a second human. Same-actor source COMMENTs require transparent labelling,
+both direct-HEAD/current merge-result CI and explicit human maintainer acceptance;
+they never satisfy #49's distinct-reviewer checks or produce a product Receipt.
+The sole maintainer may also be the downstream approving operator; bot-versus-
+author separation, authenticated approval and all product/security gates remain.
+In the source workflow, "independent" below means separate technical analysis,
+not an independently attributed GitHub principal. No automatic transitions follow.
+
+Review must be separate from implementation and pinned to the exact HEAD SHA.
+FAIL, failed/pending checks, changed SHA, ambiguous Issue association or new blockers leave the PR
+Draft and Issue open. With separate technical PASS, explicit human maintainer
+acceptance and required checks green for the unchanged reviewed SHA, the
+separately human-authorized reviewer revalidates the
 open PR, exact head/base, single linked open Issue and absence of blockers, then
 publishes the review, marks Ready for review and closes exactly that Issue as
 Completed, in that order. Report partial failures and reconcile explicitly; do

@@ -8,6 +8,23 @@ and operator-only proposals. It changes no GitHub administration or runtime gate
 [ADR 004](architecture-trust-boundaries.md) and the
 [supervised contributor/reviewer workflow](development.md) remain binding.
 
+## Solo-maintainer acceptance clarification
+
+[Solo Maintainer Policy v1](solo-maintainer-policy.md) defines permanent manual
+source acceptance and single-human downstream roles. Same-actor source ChatGPT
+COMMENTs are AI-assisted technical review, not collector #49 reviewed evidence or
+formal approving reviews. Explicit maintainer acceptance plus separate technical
+review and both CI revisions is the source policy; the implementing agent cannot
+accept its own work. The sole maintainer may also be the downstream operator,
+while the product bot must stay distinct from the actual PR author. No identity
+check, authenticated approval boundary or security gate is relaxed.
+
+The operator configuration below is a historical proposal, not a mandatory
+second-human architecture or an applied ruleset. Existing server-enforced formal
+approval requirements still apply and cannot be bypassed by AP-SM/1. No settings
+change is authorized by this clarification. Green CI/AI analysis alone is not
+production security assurance; additional live security verification remains.
+
 ## Observed governance, not assumed enforcement
 
 The existing authenticated developer environment issued only GET requests for
