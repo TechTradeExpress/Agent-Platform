@@ -436,6 +436,10 @@ The [current stock-runtime feasibility decision](docs/native-runtime-feasibility
 records AP-NF/1 source evidence and a future verification plan. Runtime remains
 NO-GO; the historical AP-NS/1 assessment retains its exact original subject.
 
+The [ChatGPT review handoff](docs/chatgpt-handoff.md) adds Stage 1 typed offline
+proposals, separate operator approval and durable synthetic UNKNOWN journaling.
+Live integration remains INTEGRATION_BLOCKED / NO-GO; no publisher is deployed.
+
 The [Debian 13 candidate package](docs/debian-package.md) provides the existing
 CLI tools with no services or automatic state migrations. Its separate disposable
 CI verifies real package lifecycle operations while execution remains blocked.

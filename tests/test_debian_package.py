@@ -1,5 +1,6 @@
 """Build/inspect archives and migrate owned temporary examples; never install."""
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -77,6 +78,19 @@ def test_real_deb_archives_metadata_permissions_contents_and_reproducibility(tmp
                 assert member.uid == member.gid == 0
                 assert member.isfile() or member.isdir()
                 assert member.mode in (0o644, 0o755)
+            provenance = json.loads(
+                archive.extractfile("./usr/share/doc/agent-platform/build.json").read()
+            )
+            # Newly merged modules must ship byte-for-byte in both profiles,
+            # with source hashes, without changing admission or entry points.
+            for source in (ROOT / "src/agent_platform").glob("*.py"):
+                installed = "./usr/lib/agent-platform/agent_platform/" + source.name
+                assert archive.extractfile(installed).read() == source.read_bytes()
+                relative = str(source.relative_to(ROOT))
+                assert (
+                    provenance["inputs"][relative]
+                    == hashlib.sha256(source.read_bytes()).hexdigest()
+                )
             wrapper = archive.extractfile("./usr/bin/agent-platform").read()
             assert wrapper.startswith(b"#!/usr/bin/python3 -I\n")
             assert b"sys.dont_write_bytecode = True" in wrapper

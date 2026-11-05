@@ -67,6 +67,18 @@ and exact installed versions are saved. Hosted runner, image registry, tool
 binaries and dependency supply chain remain trust inputs. A signed snapshot
 package lock and cross-builder independent reproduction are future work.
 
+## Integration with current source
+
+The builder includes every committed top-level `src/agent_platform/*.py` module,
+including AP-CH/1 `chatgpt_handoff.py` and `handoff_journal.py` merged from #68.
+Archive tests compare every installed module byte-for-byte with source and its
+embedded input hash in both candidate profiles. Inclusion grants no live
+transport, authenticated approval, journal initialization or runtime authority.
+[Solo Maintainer Policy v1](solo-maintainer-policy.md) and its source/product
+identity distinction remain intact. Package admission, four entry points and all
+exit-13 gates are unchanged. Candidates must be rebuilt for the integration HEAD;
+old hashes/CI results cannot attest these new bytes.
+
 ## Installed paths and ownership
 
 | Path | Policy |
