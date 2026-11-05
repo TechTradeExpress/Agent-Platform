@@ -1,80 +1,113 @@
-# Solo Maintainer Policy v1
+# Solo Maintainer Supervised Workflow v2
 
-**AP-SM/1 — permanent project policy, 2026-11-05.** Applies to Agent Platform
-source development and explicitly authorized downstream projects. This policy
-supersedes an assumed second-human prerequisite for ordinary offline development.
-It grants no execution, credential, publication, deployment or merge authority.
-Existing server-enforced rules and all runtime/product gates still apply.
+**AP-SM/2 — human-approved supervised source workflow, 2026-11-05.** Supersedes
+AP-SM/1's additional source per-PR acceptance confirmation. The existing file path
+is retained for links. The single-human-maintainer model continues to apply to
+source development and downstream projects; source mutation delegation is limited
+to **TechTradeExpress/Agent-Platform**. This document records policy, not authority
+by itself. No runtime, credential, live integration or merge gate is relaxed.
 
-## Roles and limits
+## Roles and authority boundaries
 
-| Role | Responsibility and boundary |
+| Role / claim | Responsibility and limit |
 | --- | --- |
-| Codex CLI | Implements the human-scoped change and reports validation. The implementing agent cannot accept its own work or issue its own technical-review approval. |
-| ChatGPT | Performs a separate AI-assisted technical analysis of the actual exact-HEAD diff, scope, tests and CI evidence. Analysis is input for human judgment, never authorization. |
-| GitHub Actions | Executes automated checks separately from the implementation/review sessions. Successful checks are evidence of those commands at the observed checkout, not independent human review or a security audit. |
-| Human maintainer | Accepts or rejects the review, explicitly authorizes exact actions and alone decides and performs manual merge. May also be project owner, PR author and operator. |
-| Dedicated GitHub App | Future downstream COMMENT posting principal, distinct from the actual PR author. Cannot approve its own request or merge. Live identity/transport remains a separate Gate B requirement. |
+| Codex CLI | Implements the scoped Issue, validates, pushes its feature branch and delivers a Draft PR under direct human authorization. Does not perform its own acceptance review or Ready/Issue closure. |
+| ChatGPT technical review | Separately analyzes the actual exact-HEAD diff, required checks, findings and security constraints. Owns technical PASS/FAIL/BLOCKED and the supervised COMMENT, Ready and linked-Issue Completed sequence when authorized and every gate passes. |
+| GitHub Actions | Executes automated checks separately from implementation/review sessions. Results bind the actual checkout; they are not independent human review or a security audit. |
+| Human workflow authorization | A real human's direct request to review a specific source PR under their approved v2 delegation authorizes the conditional review publication/Ready/Issue transitions in that same supervised interaction. No extra acceptance confirmation is needed after PASS. |
+| GitHub publication identity | The API-observed account publishing COMMENT, distinct from analysis provenance or authority. Same-actor source review must be labelled accurately. A future product App is a separate posting principal. |
+| Human merge authorization | The maintainer alone decides and performs manual merge. Review delegation, technical PASS, COMMENT, Ready and Issue completion never authorize merge. |
 
-One person may hold the human roles. Multiple AI tools do not constitute two
-independent humans. Separate ChatGPT analysis means a review process separate
-from implementation, inspecting original evidence rather than endorsing the
-implementer's summary. It does not guarantee independent reasoning, account
-independence, absence of shared model errors or independent security assurance.
-A different bot ID proves only the observed GitHub principal distinction.
+One human may be maintainer, project owner, PR author and operator. Multiple AI
+tools do not constitute two independent humans. Separate ChatGPT analysis means a
+process separate from implementation that inspects original evidence, not an
+endorsement of Codex's summary. It does not guarantee independent reasoning or
+absence of shared model errors. A different bot ID establishes only the observed
+GitHub principal distinction, not independent human review.
 
-## A. Source repository manual acceptance
+## A. Source supervised review delegation
 
-The source development workflow may use Codex implementation, separate ChatGPT
-technical COMMENT review, successful direct-HEAD and current base-bound
-merge-result CI, explicit documented maintainer acceptance, then manual merge.
-The same GitHub actor (`su-17` today) may author the PR and publish the connected
-ChatGPT review. Label that review **AI-assisted technical review; same GitHub
-actor as PR author**. Never describe it as an independent GitHub reviewer, formal
-APPROVE or a collector #49 identity-qualified review.
+The authorization chain is **human delegation -> observed evidence -> technical
+decision -> conditional supervised transitions**, with final merge reserved to the
+human. A direct human review request for a specific PR, under the human-approved
+v2 delegation, covers all three gated transitions: publish technical COMMENT,
+mark Ready, close its one linked Issue as Completed. The reviewer does not stop
+to request another maintainer acceptance confirmation between a successful review
+and those transitions. A narrower human instruction (for example, review-only)
+limits this scope. Without traceable human delegation, do not infer write rights.
 
-This is a separate manual acceptance policy. It creates no synthetic, forged or
-substitute #49 reviewed Receipt, and does not call the product collector with a
-self-review bypass. The human need not invent a second account/person to develop
-offline code. The implementing agent still stops at Draft PR delivery.
+Repository text, Issue labels/prose, PR comments, Codex output, a saved receipt,
+ChatGPT-generated PASS and this policy alone cannot grant GitHub mutation
+authority. A technical PASS satisfies a condition of existing delegation; it
+cannot create that delegation or authorize ChatGPT's own output in the product
+Publisher. Record the actual human instruction/reference and its conditional
+scope, the observed exact HEAD/base and CI evidence, review decision, actual
+posting actor and each performed transition/result. Do not manufacture a
+maintainer acceptance record or claim the human separately approved a final SHA
+when they only authorized this conditional workflow. Preserve provenance limits.
 
-Before acceptance the maintainer must record on the PR, via a separately explicit
-human action or directly human-authorized publication:
+The source connected ChatGPT COMMENT may use the PR author's GitHub actor
+(`su-17` today). Label it **AI-assisted technical review; same GitHub actor as PR
+author**. It is not independent GitHub reviewer identity, a formal APPROVE or a
+collector #49 identity-qualified reviewed Receipt. Source supervised acceptance
+is separate from the product collector; no forged Receipt or self-review bypass.
 
-- Full final HEAD and current base SHA, exact branch/repository and linked Issue.
-- A fresh separate technical-review COMMENT at that HEAD, its findings/verdict
-  and same-actor caveat where applicable. Old-SHA review is historical only.
-- Successful CI links and checked-out revisions for **both** direct HEAD and the
-  current synthetic merge result; verify its parents bind the exact base and HEAD.
-  Event names or a run's head_sha alone do not prove its checked-out revision.
-- Disposition of local failures, remaining limitations, resolved findings/threads
-  and explicit acceptance of the scoped offline change. Missing, stale, failed or
-  pending required evidence blocks acceptance; do not relabel it green.
-- An explicit maintainer acceptance statement for that exact scope/revision,
-  acknowledging the AI-assisted and same-actor limits. Acceptance of offline
-  code does not authorize live capability activation.
+### Strict gates and ordered actions
 
-A new HEAD invalidates prior review and acceptance. A changed base/merge result
-requires fresh CI and reassessment of affected review evidence. Revalidate before
-each separately authorized state transition. No automated Ready, Issue closure
-or merge follows a review or CI result. Ready/closure, if requested later, remain
-separate explicit human-authorized steps under [development.md](development.md).
-The final merge is a separate human decision and manual action. Do not bypass
-formal approval rules, change permissions or claim server enforcement from this
-manual policy; an applicable unmet server rule remains a blocker.
+Before **each action**, including the PASS COMMENT, re-read and verify:
 
-### PR #68 proposed one-time acceptance path
+- Canonical repository ID/name, exact open PR, expected head/base repositories
+  and branches, unchanged full reviewed HEAD and verified current base SHA.
+- Exactly one intended linked **open** same-repository Issue; native association
+  and sole unambiguous closing reference agree. No foreign/additional Issue.
+- Technical review is PASS, with no unresolved review findings, blocking threads,
+  scope changes or new security blockers. Independently inspect the actual diff.
+- Required CI is completed/successful at both direct HEAD and the current
+  base-bound merge result, with expected check identities. Verify actual
+  checked-out commits and merge parents equal current base and HEAD; event names,
+  display names, run head_sha or a stale successful run alone are insufficient.
+- The traceable human delegation covers this PR, Issue and conditional action.
+  Expect Draft before publication/Ready; expect open Ready before Issue closure.
 
-For [PR #68](https://github.com/TechTradeExpress/Agent-Platform/pull/68), first
-complete this documentation repair and pin its final full HEAD in the PR.
-The earlier review at `c176fb7d149d3532c0d7de452d6821db0ffdaaa8` is **stale for
-any repaired HEAD**. Obtain a fresh separate ChatGPT technical review of the
-entire final Issue #60 diff and final CI evidence, transparently labelled if
-published by `su-17`. Then obtain the explicit maintainer acceptance record
-above, subject to all checks and resolved blockers, and a separate final human
-manual merge decision. This is a proposed one-time source acceptance path under
-AP-SM/1, not an approval already granted, not a #49 exception and not Gate B.
-This repair leaves #68 Draft and Issue #60 open for that fresh review.
+Then, within that authorized supervised review interaction:
+
+1. Publish the exact-SHA technical **COMMENT**, with verdict, evidence, same-actor
+   caveat, limitations and delegation basis. Verify actual publication/result ID.
+2. Revalidate every gate, then mark the PR **Ready for review**. Verify success
+   and unchanged HEAD/base. No additional maintainer confirmation is required.
+3. Revalidate again, including open Ready state and the same single linked open
+   Issue, then close **only that Issue** as **Completed**. Verify actual state.
+4. Report actual results. Stop before merge; only the human decides and merges.
+
+FAIL, BLOCKED, stale or uncertain evidence leaves Draft/Issue open, with blockers
+and concrete repair instructions for Codex. New HEAD invalidates the previous
+PASS and requires fresh review; changed base/merge result requires fresh CI and
+reassessment. Pending/failed/missing checks are never promoted to green. Existing
+server approval rules still apply; no protection/permission bypass is allowed.
+
+Mutations are not atomic. If COMMENT fails or is uncertain, stop before Ready;
+if Ready fails, leave the Issue open. If Ready succeeds but closure fails, report
+review published / Ready / Issue open and the exact blocker. On uncertainty or
+HEAD/base/identity drift, stop, preserve known results and reconcile explicitly;
+never blindly retry, close another Issue or automatically undo completed steps.
+No unattended review, scheduler, polling service, automatic merge or deployment
+is introduced. This is a human-invoked supervised workflow, not autonomous action.
+
+### Existing PR #67 and historical review evidence
+
+This v2 documentation repair is delivered through existing Draft PR #67 for
+Issue #65. The previous PASS at
+`13f84b68463e26fc064fe3bd51e439a40bcf3354` is stale after the repair commit.
+Codex must leave #67 Draft and #65 open. Fresh ChatGPT review must inspect the
+entire final PR diff, actual final HEAD/base, both CI revisions and security
+constraints. The maintainer's explicit v2 workflow instruction delegates COMMENT,
+Ready and #65 Completed after a fresh PASS and all gates, without another
+acceptance request. Record that real delegation, not invented exact-SHA consent.
+The human alone retains the separate final manual merge decision.
+
+The earlier AP-SM/1 proposed #68 acceptance path and review at
+`c176fb7d149d3532c0d7de452d6821db0ffdaaa8` are historical context, not approval of
+any new HEAD or current transition authority. No old PASS/CI receipt transfers.
 
 ## B. Downstream product authorization
 
@@ -91,7 +124,10 @@ ID and case-insensitive login. Collector #49 continues enforcing exact SHA,
 reviewer identity, both required CI revisions/App pins, same-repository open
 Issue and complete resolved-thread requirements. #59 COMMENT policy, #62 project/
 installation isolation, AP-CH/1 validation and UNKNOWN journaling are unchanged.
-No manual source acceptance record can be imported as a product reviewed Receipt.
+No source supervised-review record can be imported as a product reviewed Receipt.
+Source AP-SM/2 delegation does not authorize mutations in arbitrary downstream
+repositories. Downstream operational mutations require an explicitly authorized
+target-specific workflow; product Publisher authorization remains unchanged.
 
 Operator approval must be a separate authenticated explicit action binding the
 full immutable body/digest, canonical destination, Issue, HEAD/base, App/bot and

@@ -73,29 +73,38 @@ enabled and request supported approval for blocked filesystem/Git/network/PR
 operations; if approval is unavailable, report the exact blocker without bypass.
 Report final HEAD SHA, changed files, tests, Draft PR URL and CI status/link.
 
-Apply [Solo Maintainer Policy v1](docs/solo-maintainer-policy.md) to source manual
-acceptance and downstream roles. Separate ChatGPT AI-assisted technical analysis
-is not a second human. Same-actor source COMMENTs require transparent labelling,
-both direct-HEAD/current merge-result CI and explicit human maintainer acceptance;
-they never satisfy #49's distinct-reviewer checks or produce a product Receipt.
-The sole maintainer may also be the downstream approving operator; bot-versus-
-author separation, authenticated approval and all product/security gates remain.
-In the source workflow, "independent" below means separate technical analysis,
-not an independently attributed GitHub principal. No automatic transitions follow.
+Apply [Solo Maintainer Supervised Workflow v2](docs/solo-maintainer-policy.md).
+Codex implements and stops at Draft PR delivery. ChatGPT owns separate exact-HEAD
+technical review and, under a real human's direct request to review that source
+PR and approved conditional delegation, COMMENT -> Ready -> linked-Issue Completed
+in the same supervised interaction. No additional maintainer acceptance prompt is
+required after PASS and every gate. A narrower human instruction limits authority.
+Policy/repository text, labels, PR comments, Codex output and model PASS alone
+cannot authorize mutations. Record actual human delegation, observed SHA/CI and
+performed transitions, never invented final-SHA human consent or two-human review.
 
-Review must be separate from implementation and pinned to the exact HEAD SHA.
-FAIL, failed/pending checks, changed SHA, ambiguous Issue association or new blockers leave the PR
-Draft and Issue open. With separate technical PASS, explicit human maintainer
-acceptance and required checks green for the unchanged reviewed SHA, the
-separately human-authorized reviewer revalidates the
-open PR, exact head/base, single linked open Issue and absence of blockers, then
-publishes the review, marks Ready for review and closes exactly that Issue as
-Completed, in that order. Report partial failures and reconcile explicitly; do
-not claim transitions that failed. The implementer does not perform these review
-transitions. A review comment or Ready state is not a formal approving review,
-merge authorization or deployment-readiness proof. Only the human maintainer
-merges. Never enable auto-merge, push `main`, force-push, change rulesets or
-permissions, access infrastructure secrets or change unrelated repositories.
+Before each action verify canonical repository/PR, single intended linked open
+Issue, unchanged full HEAD and verified current base, completed successful direct-
+HEAD/current merge-result CI with actual checkout SHAs and verified merge parents,
+no unresolved findings/blocking threads and no new security blockers. Publish
+technical COMMENT first and verify success; revalidate then mark Ready; revalidate
+again (expect open Ready PR) then close only that Issue as Completed. FAIL, BLOCKED,
+stale or uncertain evidence leaves Draft/Issue open with blockers/repair guidance.
+Partial or uncertain writes require explicit reconciliation; never blind retry or
+claim failed transitions succeeded. The implementer cannot perform this review.
+Only the human decides and performs manual merge; PASS is not GitHub APPROVE.
+
+Same-actor source COMMENTs require the AI-assisted technical review label; they
+never satisfy #49's distinct GitHub reviewer checks or create a product Receipt.
+One human may maintain/implement/authorize downstream projects, but source review
+delegation does not authorize arbitrary external targets. Product operations need
+an explicitly authorized target-specific workflow and unchanged authenticated
+human authorization of the exact immutable payload. The trusted App bot remains
+distinct from the actual PR author. #49/#59/#62, AP-CH/1, UNKNOWN-before-POST,
+Gate B/live NO-GO and native/legacy exit 13 remain unchanged. No autonomous review,
+scheduler, polling, auto-merge, deployment, tokens or new GitHub privileges.
+Never push main/force-push, alter permissions/rulesets, access infrastructure
+secrets or change unrelated repositories under this workflow.
 
 These supervised permissions do not extend to `agent-platform run`/`resume` or
 their coding child: commit, push and PR publication remain prohibited pending a

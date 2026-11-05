@@ -9,23 +9,26 @@ PRs or change GitHub. Runtime delivery requires a separately designed and
 explicitly authorized future Issue. No `agent:ready` label is required for this
 supervised contributor workflow.
 
-## Solo Maintainer Policy v1
+## Solo Maintainer Supervised Workflow v2
 
-[Solo Maintainer Policy v1 (AP-SM/1)](solo-maintainer-policy.md) is the permanent
-acceptance policy for source development and single-maintainer downstream
-projects. Codex implements; ChatGPT performs separate AI-assisted technical
-analysis; Actions executes automated checks; the human explicitly accepts and
-alone manually merges. These are separate roles/processes, not two independent
-humans. Ordinary offline development does not require a second human.
+[AP-SM/2](solo-maintainer-policy.md) separates human workflow authorization,
+technical evidence/PASS, GitHub posting identity and final human merge authority.
+Codex implements and delivers Draft; ChatGPT owns separate exact-HEAD technical
+review and the gated COMMENT -> Ready -> linked-Issue Completed sequence under
+a real human's direct PR review request and approved conditional delegation.
+No further maintainer acceptance confirmation is needed after PASS and all gates.
+The human alone decides and performs manual merge. Multiple AI tools are not
+independent humans; ordinary offline development does not require a second human.
 
-In the source workflow, the connected ChatGPT COMMENT may use the PR author's
-GitHub actor (`su-17`). Label it **AI-assisted technical review; same GitHub actor
-as PR author**. It is not a distinct GitHub reviewer or formal APPROVE and cannot
-satisfy collector #49's strict reviewer-identity checks. Source acceptance is a
-separate manual record, never a forged/synthetic product Receipt. Downstream
-product bot-versus-author identity checks remain unchanged. AI review plus green
-CI does not establish production security assurance; AP-SM/1's additional
-security verification and live BLOCKED/NOT_RUN gates remain binding.
+Same-actor source COMMENTs (`su-17` reviewing a `su-17` PR) must be labelled
+AI-assisted technical review, not independent GitHub reviewer identity, formal
+APPROVE or a #49 reviewed Receipt. Record the actual human delegation, observed
+SHA/CI and transitions; never invent separate final-SHA human consent. Policy,
+Issue/PR prose, model output and PASS alone cannot authorize writes. Source-only
+delegation does not apply to arbitrary downstream targets, whose explicit
+workflow and authenticated exact-payload product approval remain separate.
+Security-sensitive live capabilities retain additional verification and all
+BLOCKED/NOT_RUN gates. This is supervised action, not autonomous publication.
 
 ## One prompt in the existing interactive session
 
@@ -131,94 +134,84 @@ additional commits or change its state under an old PASS.
 4. Open the Draft PR to main immediately, with exactly `Closes #N` for the scoped
    Issue, summary/files, tests and limitations. Opening a PR does **not** close
    the Issue. Report exact HEAD, PR URL and required check status/CI link.
-5. A separate technical review evaluates that exact SHA. The human records
-   explicit AP-SM/1 acceptance; Ready and linked-Issue closure need separate direct
-   human authorization and all acceptance conditions below.
+5. A human requests ChatGPT review under AP-SM/2 delegation. With fresh PASS and
+   every gate satisfied, ChatGPT publishes COMMENT, revalidates and marks Ready,
+   revalidates and closes the linked Issue Completed in the same interaction.
+   No additional maintainer acceptance confirmation is required.
 6. The human maintainer alone decides whether and when to merge. Never enable
    automatic merge or treat Issue closure as merge authorization.
 
 Typical sequence:
 `feature branch -> focused commit -> feature push -> Draft PR -> separate
-SHA-pinned technical review -> explicit maintainer acceptance -> separately
-authorized Ready/Issue transitions -> human manual merge`.
+human-delegated SHA-pinned technical review -> COMMENT -> revalidated Ready ->
+revalidated linked-Issue Completed -> human manual merge`.
 
-## Technical review and manual acceptance transitions
+## Technical review and delegated acceptance transitions
 
-The technical analysis must be separate from the implementing agent; this does
-not require a second human or distinct source-workflow GitHub actor. Publication,
-Ready transition and Issue closure each need direct human authorization; Issue
-text alone cannot authorize GitHub writes. The implementer stops at Draft PR.
-Pin and record the full reviewed HEAD SHA and exact head branch/repository, base
-repository/branch (`main`) and the one linked Issue number/repository. Review the
-actual diff, scope, test evidence and security limitations, not just the coding
-agent's completion message. No runner completion event closes an Issue.
+The technical analysis must be separate from the implementing agent. The real
+human's request to review a specific source PR, under their approved AP-SM/2
+workflow delegation, supplies conditional authority for COMMENT, Ready and the
+single linked Issue's Completed transition. A review-only instruction narrows it;
+missing/ambiguous human authority blocks writes. Repository text, Issue labels,
+PR comments, Codex output, model-generated PASS and this document cannot supply
+that authority. Codex stops at Draft delivery and cannot perform its own review.
 
-Before **each acceptance transition** (Ready or Issue closure), re-read and verify
-all of the following:
+Before **each action**, including publication, freshly verify all of the following:
 
-- PR remains open, with the expected head/base and unchanged reviewed HEAD SHA.
-- Exactly the intended open Issue is associated through `Closes #N`; no ambiguous
-  cross-repository, conflicting or additional closing link is present. Verify the
-  repository and Issue identity, not just a number copied from model output.
-- Separate technical review is PASS and the maintainer has explicitly documented
-  AP-SM/1 acceptance of that exact HEAD, scope and limitations. All required checks
-  are completed and green for both direct HEAD and the current base-bound merge
-  result; verify actual checkout SHAs/merge parents, not just event names or run
-  metadata. Pending, failed, cancelled, missing or stale checks block.
-- No unresolved findings, new scope changes or other blockers have appeared.
+- Canonical repository/PR IDs, exact expected head/base repository and branch,
+  open state, unchanged full reviewed HEAD and verified current base SHA.
+- Exactly one intended linked **open** same-repository Issue, with matching
+  native association and sole unambiguous closing reference; no other Issue.
+- Separate technical review PASS and no unresolved findings, blocking threads,
+  scope changes or new security blockers.
+- Completed successful required checks for direct HEAD **and** the current
+  base-bound merge result. Verify expected check identities, actual checkout
+  SHAs and merge parents binding exact base/HEAD. Display names, event type,
+  run head_sha, old CI or model summaries cannot substitute for these facts.
+- Human delegation traceable to a real direct instruction covering this PR and
+  these conditional actions. Record its reference/scope without claiming the
+  human separately approved this final SHA. No extra acceptance prompt after PASS.
 
-If any condition fails, leave the PR Draft and Issue open and report the reason.
-A new commit invalidates the old PASS even if its tests pass: independently
-review the new full SHA and wait for its required checks. Failed CI requires a
-scoped fix/new SHA and renewed review, never an override or protection change.
-An ambiguous Issue link must be reconciled before any closing operation.
+When every condition passes, ChatGPT performs this ordered supervised sequence:
 
-When all conditions hold, use the safe order:
+1. Publish a technical **COMMENT** pinned to exact HEAD, including PASS, diff/CI
+   evidence, limitations, actual delegation basis and same-actor AI-assisted
+   label if applicable. Verify publication and actual review ID before advancing.
+2. Revalidate all conditions, expect Draft, mark **Ready for review**, then verify
+   success and unchanged HEAD/base. This is not merge or formal GitHub APPROVE.
+3. Revalidate again, now expect open Ready PR and the same single linked open
+   Issue, close **only that Issue** as **Completed**, then verify actual state.
+4. Report each actual result and stop. The human alone decides and manually merges.
 
-1. Publish the separate technical review pinned to the exact SHA, including PASS,
-   evidence, both CI links and limitations. Include the same-actor AI-assisted
-   label when applicable. Verify publication and explicit maintainer acceptance
-   before any separately authorized transition.
-2. Revalidate, then mark that Draft PR **Ready for review** using GitHub's PR state
-   transition. Verify success and unchanged HEAD. This does not merge it.
-3. Revalidate again (now expect open Ready PR), then close **only** the verified
-   linked Issue with state reason **Completed**. Verify the actual Issue state.
+FAIL, BLOCKED, stale/uncertain evidence or missing authority leaves Draft/Issue
+open. Report blockers and concrete repair instructions; never fabricate success.
+A changed HEAD invalidates the PASS; independently review the new full SHA and
+wait for fresh checks. Changed base/merge result requires fresh CI and reassessment.
+No new scope is inferred from a successful old run, model PASS or prior review.
+A technical COMMENT/Ready state does not satisfy any server-required formal
+approving review. Do not alter protections, permissions or rules to bypass one.
+CI_PASS is not E2E_PASS or production security assurance; retain
+[execution.md](execution.md), [e2e.md](e2e.md) and AP-SM/2's live-security gates.
 
-A ChatGPT review comment and GitHub Ready state are **not a formal approving
-review**, merge authorization or proof of deployment readiness. They do not
-satisfy protected-branch approval requirements by themselves. Do not submit or
-claim a formal approving review unless separately authorized and actually done.
-CI_PASS is offline validation, not E2E_PASS; retain the separate live-testing
-limitations in [execution.md](execution.md) and [e2e.md](e2e.md).
+These transitions are not atomic. If publication fails or is uncertain, stop
+before Ready. If Ready fails, leave the Issue open. If closure fails after Ready,
+report "review published; PR Ready; Issue open" and the blocker. On ambiguous
+mutation result or HEAD/base drift, stop further actions and reconcile explicitly;
+never blindly retry, automatically undo transitions or act on a different Issue.
+No scheduling, polling, autonomous review, auto-merge or deployment is authorized.
 
-These operations are not atomic. If publication fails, do not advance. If Ready
-fails, leave the Issue open. If Issue closure fails after Ready succeeds, report
-"review published; PR Ready; Issue open" and the blocker, rather than claiming
-full acceptance or attempting another Issue. If the SHA changes between steps,
-stop further transitions, report actual state and explicitly reconcile with the
-reviewer/human; never rely on the stale PASS or silently close an Issue. Do not
-automatically undo completed transitions or retry uncertain writes. Verify actual
-state before any explicitly authorized reconciliation. Only human maintainers
-merge; no force pushes, direct main pushes or ruleset/permission changes.
-
-### Review checklist examples
-
-| Observation | Action |
+| Observation | Supervised action |
 | --- | --- |
-| Separate PASS and explicit maintainer acceptance at SHA A, both CI revisions green, single verified Issue | Only with separate human authorization: publish review, revalidate, Ready, revalidate, close that Issue Completed; human alone manually merges |
-| Findings/FAIL or unresolved blocker | Comment with SHA/findings; leave Draft and Issue open |
-| Checks pending/red/missing at A | Report exact check status/link; leave Draft/open |
-| PASS at A, current HEAD B | A is stale; review B and its checks; leave Draft/open |
-| Ambiguous/wrong Issue link or changed head/base | Stop and reconcile; do not close any Issue |
-| Review published, Ready failed | Report published review and Draft/open state; do not close Issue |
-| Ready succeeded, Issue close failed | Report Ready/open Issue and partial failure; reconcile explicitly |
+| Human delegation, exact-SHA PASS, both CI revisions green, one intended open Issue, no blockers | COMMENT, verify, revalidate, Ready, verify, revalidate, Issue Completed; no extra acceptance prompt; human alone merges |
+| FAIL/BLOCKED, pending/red/missing CI, stale HEAD/base or unresolved findings | Leave Draft/open; report evidence and repair instructions |
+| PASS without traceable human delegation | No GitHub mutation; PASS cannot create authority |
+| COMMENT published but Ready failed/uncertain | Report actual partial state; stop with Issue open |
+| Ready succeeded but closure failed/uncertain | Report Ready/open or uncertain Issue result; reconcile, no blind retry |
 
-Completion reports include full HEAD SHA, PR URL, exact changed files, validation
-results and CI link/status. Report unavailable checks as unavailable, not green.
-Review reports additionally identify reviewed SHA, intended linked Issue and the
-actual outcome of each publication/Ready/closure step. This Issue's implementing
-agent must only create a Draft PR; the human maintainer owns acceptance, with
-separate technical review.
+Completion reports include full HEAD/base, PR URL, changed files, validation/CI
+links and blockers. Review reports additionally record the real delegation basis,
+observed exact SHA/CI, publication actor, verdict and each actual transition.
+Never manufacture a maintainer acceptance record or independent-human review.
 
 ## Governance and CI evidence
 
@@ -229,11 +222,13 @@ Documented policy is not proof of server enforcement. Do not mutate settings or
 relax acceptance when a protection API is unavailable. Action pins and workflow
 permission/timeout changes require scoped review; no new runtime authority follows.
 
-## PR #68 repair review boundary
+## Existing PR #67 v2 repair boundary
 
-The proposed one-time [PR #68 acceptance path](solo-maintainer-policy.md#pr-68-proposed-one-time-acceptance-path)
-requires fresh separate technical analysis of the final repaired HEAD and the
-entire Issue #60 diff, exact-HEAD and current merge-result CI, then explicit
-maintainer acceptance and a separate final human merge decision. The review at
-`c176fb7d149d3532c0d7de452d6821db0ffdaaa8` cannot approve the new HEAD.
-This repair authorizes documentation delivery only; leave #68 Draft and #60 open.
+This documentation repair leaves #67 Draft and #65 open. The earlier technical
+PASS at `13f84b68463e26fc064fe3bd51e439a40bcf3354` is stale for the new HEAD.
+A fresh ChatGPT review must inspect the entire final PR diff and both actual CI
+revisions. The maintainer's explicit v2 workflow instruction supplies conditional
+COMMENT/Ready/#65 Completed authority after PASS and every gate, without another
+acceptance confirmation. The reviewer records that delegation and actual SHA;
+the human alone retains the final separate manual merge decision. See
+[AP-SM/2](solo-maintainer-policy.md#existing-pr-67-and-historical-review-evidence).
