@@ -8,6 +8,39 @@ The source repository's interactive development/Draft PR delivery is distinct
 from the downstream product workflow. Native and public legacy execution retain
 exit 13. No production OpenAI API or billed inference is used.
 
+## Solo-maintainer product roles
+
+[Solo Maintainer Policy v1](solo-maintainer-policy.md) explicitly supports one
+human maintaining a downstream project and approving its review. The operator,
+project owner/maintainer and PR author MAY be the same person; a second human is
+not an architectural prerequisite. The required separation is among the actual
+PR author GitHub principal, a separate ChatGPT technical-analysis process,
+explicit authenticated human authorization of the immutable payload, and the
+App posting principal. Multiple AI tools are not two independent humans.
+
+The bot must remain distinct from the actual author by numeric ID and
+case-insensitive login. It cannot authorize its own review; ChatGPT cannot
+authorize its own output. Human approval remains a separate authenticated action,
+not model/Issue text or self-reported approval. Body, canonical repository/Issue,
+SHAs, identities, evidence, digest and expiry remain immutable and independently
+validated through the existing #49/#59/#62/AP-CH/1 rules. Distinct bot identity
+neither proves a separate human nor guarantees independent reasoning. No source
+same-actor exception enters the collector; no automatic Ready, closure or merge.
+
+Source development instead uses the separate AP-SM/1 manual acceptance record.
+A connected `su-17` COMMENT on a `su-17` PR is labelled AI-assisted technical
+review, not a #49-qualified independent GitHub review. The earlier #68 review at
+`c176fb7d149d3532c0d7de452d6821db0ffdaaa8` is stale after repair; fresh final-HEAD
+technical review, both CI revisions and separate explicit human acceptance/merge
+are required. No product Receipt is manufactured from that source review.
+
+AI-assisted analysis and green CI do not establish production security assurance.
+Credential, isolation, privileged-execution, GitHub-permission and trusted
+controller changes retain additional security-verification gates under AP-SM/1.
+Unavailable assurance leaves the live capability BLOCKED / NOT_RUN, without
+requiring a second human for ordinary offline development. Gate B, real approval
+boundary, deployment and live pilot remain separately gated and NOT_RUN.
+
 ## Capability decision and sources
 
 Official documentation was read on 2026-11-05. Documentation establishes general
