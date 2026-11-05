@@ -12,7 +12,7 @@ def test_external_actions_have_reviewed_official_commit_pins():
     workflows = ROOT / ".github/workflows"
     assert sorted(
         p.name for p in workflows.iterdir() if p.suffix in {".yml", ".yaml"}
-    ) == ["ci.yml"]
+    ) == ["ci.yml", "debian-package.yml"]
     evidence = json.loads((ROOT / "docs/ci-action-pins.json").read_text())
     allowed = {
         "actions/checkout": 4,

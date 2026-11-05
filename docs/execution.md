@@ -235,6 +235,39 @@ remain separate operator responsibilities; this implementation uses only fake
 Codex/GitHub and synthetic repositories in its automated acceptance tests.
 
 
+### Signal-test synchronization and interrupted checkpoint evidence
+
+The internal synthetic test previously sent SIGINT/SIGTERM after a 150 ms timer
+started before child creation. That timer did not establish that `thread.started`
+had been durably recorded. A signal during its atomic checkpoint transaction can
+leave STARTING plus a fsynced RUNNING temporary file. `load_checkpoint` then
+rejects the orphan; the best-effort NEEDS_HUMAN write must not overwrite it.
+After replacement but before the callback updates its in-memory generation, the
+expected-record check can instead reject that fallback and preserve RUNNING plus
+the execution guard. An interrupted terminal replacement can similarly retain a
+terminal-looking record with a guard. Those records are **not resumable outcomes**.
+NEEDS_HUMAN is the recovery requirement, not permission to force its phase into
+an uncertain checkpoint. Launch-intent replacement may permit a NEEDS_HUMAN
+write when the expected record already matches; all guards still remain.
+
+The repaired steady-stream test delivers the real OS signal only after accepting
+`turn.started` and verifying the exact durable RUNNING/session record. It retains
+the exact NEEDS_HUMAN assertion and additionally checks child reaping, signal
+handler restoration and denial of both fresh start and resume. Separate
+regressions inject both signals immediately before and after real replacement
+of STARTING, RUNNING and COMPLETED checkpoints. They assert exact retained bytes,
+orphan/guard preservation, child reaping and denied start/resume/reprepare without
+changing evidence. No timer, added sleep, skipped test or weaker steady-state
+expectation is used. This reproduces the reported STARTING symptom at a known
+transaction boundary; the original CI log lacks retained checkpoint artifacts,
+so its precise interruption instruction cannot be established retrospectively.
+
+These are offline fake-worker tests of the historical internal lifecycle only.
+No execution/process/storage algorithm or public/native exit-13 gate is changed.
+The findings demonstrate a test synchronization error against an intentionally
+fail-closed checkpoint contract, not authority to repair or retry real state.
+
+
 ## Historical internal legacy diagnostics (MVP.2c)
 
 From the prepared fixture's primary main checkout, invoke:

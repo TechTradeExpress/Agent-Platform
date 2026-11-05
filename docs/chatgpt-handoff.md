@@ -10,8 +10,8 @@ exit 13. No production OpenAI API or billed inference is used.
 
 ## Solo-maintainer product roles
 
-[Solo Maintainer Policy v1](solo-maintainer-policy.md) explicitly supports one
-human maintaining a downstream project and approving its review. The operator,
+[Solo Maintainer Supervised Workflow v2](solo-maintainer-policy.md) supports
+one human maintaining a downstream project and approving its review. The operator,
 project owner/maintainer and PR author MAY be the same person; a second human is
 not an architectural prerequisite. The required separation is among the actual
 PR author GitHub principal, a separate ChatGPT technical-analysis process,
@@ -27,16 +27,22 @@ validated through the existing #49/#59/#62/AP-CH/1 rules. Distinct bot identity
 neither proves a separate human nor guarantees independent reasoning. No source
 same-actor exception enters the collector; no automatic Ready, closure or merge.
 
-Source development instead uses the separate AP-SM/1 manual acceptance record.
-A connected `su-17` COMMENT on a `su-17` PR is labelled AI-assisted technical
-review, not a #49-qualified independent GitHub review. The earlier #68 review at
-`c176fb7d149d3532c0d7de452d6821db0ffdaaa8` is stale after repair; fresh final-HEAD
-technical review, both CI revisions and separate explicit human acceptance/merge
-are required. No product Receipt is manufactured from that source review.
+Source development uses AP-SM/2's human-delegated supervised review workflow:
+ChatGPT publishes COMMENT, revalidates Ready and linked-Issue Completed after PASS
+and every gate, without an additional acceptance confirmation; the human alone
+manually merges. Record the actual delegation basis and observed SHA, never
+invent exact-SHA human consent. Same-actor source COMMENTs remain AI-assisted
+technical review, not #49-qualified independent GitHub review or product Receipts.
+This source delegation does not extend to external projects or replace product
+Publisher approval. Downstream operational mutations need an explicitly authorized
+target-specific workflow. The product still requires separate authenticated human
+authorization of the **exact immutable review payload**, and the trusted App bot
+must remain distinct from the actual PR author. No product Ready/closure/merge or
+new live authority is enabled by AP-SM/2.
 
 AI-assisted analysis and green CI do not establish production security assurance.
 Credential, isolation, privileged-execution, GitHub-permission and trusted
-controller changes retain additional security-verification gates under AP-SM/1.
+controller changes retain additional security-verification gates under AP-SM/2.
 Unavailable assurance leaves the live capability BLOCKED / NOT_RUN, without
 requiring a second human for ordinary offline development. Gate B, real approval
 boundary, deployment and live pilot remain separately gated and NOT_RUN.

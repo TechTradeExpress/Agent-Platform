@@ -1,0 +1,20 @@
+Source: agent-platform
+Section: devel
+Priority: optional
+Maintainer: TechTradeExpress <maintainers@techtradeexpress.com>
+Standards-Version: 4.7.2
+Build-Depends: python3 (>= 3.12), dpkg (>= 1.22)
+
+Package: agent-platform
+Version: @VERSION@
+Architecture: amd64
+Maintainer: TechTradeExpress <maintainers@techtradeexpress.com>
+Section: devel
+Priority: optional
+Depends: python3 (>= 3.12), git, gh
+Homepage: https://github.com/TechTradeExpress/Agent-Platform
+Description: supervised repository tooling with fail-closed execution gates
+ Offline inspection, policy and evidence tools for explicitly authorized
+ projects.
+ Native subscription execution and public legacy execution remain blocked.
+ No service, Codex binary or authentication material is installed.

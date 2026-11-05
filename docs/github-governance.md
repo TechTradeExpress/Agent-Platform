@@ -8,22 +8,35 @@ and operator-only proposals. It changes no GitHub administration or runtime gate
 [ADR 004](architecture-trust-boundaries.md) and the
 [supervised contributor/reviewer workflow](development.md) remain binding.
 
-## Solo-maintainer acceptance clarification
+## Solo-maintainer supervised delegation v2
 
-[Solo Maintainer Policy v1](solo-maintainer-policy.md) defines permanent manual
-source acceptance and single-human downstream roles. Same-actor source ChatGPT
-COMMENTs are AI-assisted technical review, not collector #49 reviewed evidence or
-formal approving reviews. Explicit maintainer acceptance plus separate technical
-review and both CI revisions is the source policy; the implementing agent cannot
-accept its own work. The sole maintainer may also be the downstream operator,
-while the product bot must stay distinct from the actual PR author. No identity
-check, authenticated approval boundary or security gate is relaxed.
+[AP-SM/2](solo-maintainer-policy.md) replaces additional source per-PR acceptance
+confirmation with the human-approved conditional supervised review delegation.
+A real human's direct request to review a specific source PR authorizes ChatGPT's
+COMMENT, revalidated Ready and revalidated single linked-Issue Completed sequence
+when every technical/identity/CI/security gate passes. No further acceptance prompt
+is required. The human alone retains final manual merge; technical PASS is neither
+GitHub APPROVE nor merge authority. Record the actual human instruction/scope,
+observed final SHA/CI, posting actor and transition results, not invented separate
+final-SHA consent. Repository/Issue/PR text, model output and policy alone cannot
+grant mutation authority. Codex cannot review/accept its own implementation.
 
-The operator configuration below is a historical proposal, not a mandatory
-second-human architecture or an applied ruleset. Existing server-enforced formal
-approval requirements still apply and cannot be bypassed by AP-SM/1. No settings
-change is authorized by this clarification. Green CI/AI analysis alone is not
-production security assurance; additional live security verification remains.
+Same-actor source COMMENTs are AI-assisted technical review, not #49 reviewed
+receipts or independent human/GitHub-actor evidence. Both direct HEAD and current
+merge-result checks require actual checkout and merge-parent verification before
+each action, alongside one linked open Issue and no unresolved findings, blocking
+threads or new security blockers. Ambiguous/partial writes stop for reconciliation;
+never blind retry. No autonomous service, polling, merge or deployment is added.
+
+One human may also operate a downstream project, but source delegation does not
+extend to arbitrary external targets. Downstream mutations require an explicitly
+authorized target-specific workflow; product exact-payload authenticated approval,
+App-versus-author identity, #49/#59/#62, AP-CH/1 and UNKNOWN journaling remain intact.
+The operator configuration below remains a historical proposal, not an applied
+ruleset or mandatory second-human architecture. Actual server approval rules
+cannot be bypassed by AP-SM/2. No settings, permission or token change is authorized.
+Green CI/AI review alone is not production security assurance; additional live
+verification and Gate B/native/legacy barriers remain unchanged.
 
 ## Observed governance, not assumed enforcement
 
@@ -209,7 +222,7 @@ proof. No model, Issue text, saved JSON or Telegram assertion can grant authorit
 | Future Publisher | Separate explicit human authorization for one exact feature commit/push/Draft PR; exact destination, inventory, base/head, admission and fresh independent receipts; no merge, main push, force, administration or automatic replay | Distinct short-lived write principal limited to required contents/PR operations for one repo, with branch restrictions independently enforced. No blanket Issues/workflow/admin permission. Trusted private store/memory/channel outside Codex/tools/Telegram; no writer/client/privileged Unix socket inherited by worker or collector |
 | Existing interactive developer | Human-scoped Issue implementation, feature push and one Draft PR using supported approvals; cannot independently accept own work or merge | Existing operator-managed GitHub environment only; do not read/copy tokens or auth stores. No new credential is made; developer authority never becomes runtime authority |
 | Autonomous model-directed worker | Untrusted code/prose/tools; no GitHub authority, client, token, publisher socket or implicit evidence issuer; execution remains blocked | No collector/publisher credentials, host auth env/files/keyring/proc/FD/sockets, session stores or control-plane mounts. Same UID/0700 and environment filtering do not establish isolation; OS-enforced native separation remains unproven |
-| Independent reviewer | Separately human-authorized exact-SHA technical review; COMMENT, Ready and single-Issue Completed transitions only under development.md gates; formal APPROVE requires separate authority and actual eligible reviewer | Separate authorized review channel, never supplied by implementer/model receipts. Readiness/closure is not merge; no token handed to coding worker or Telegram |
+| ChatGPT technical reviewer | Human-delegated separate exact-SHA technical review; source COMMENT, Ready and single-Issue Completed under AP-SM/2 without an extra acceptance prompt; no merge. Formal APPROVE needs separate authority and eligible reviewer | Separate authorized review channel, never supplied by implementer/model receipts. Readiness/closure is not merge; no token handed to coding worker or Telegram |
 | Human maintainer | Sole merge decision after fresh scope/review/checks and governance verification; alone authorizes any future administrative decision | Account authority remains human managed; no delegated auto-merge, bot merge, persistent daemon or Issue-label launch permission |
 
 The proposed collector REST allowlist is repository metadata, `branches/main`,
