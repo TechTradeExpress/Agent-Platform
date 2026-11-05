@@ -347,29 +347,171 @@ def test_parent_crash_guard_blocks_a_second_attempt(prepared, monkeypatch):
     assert len(prepared["calls"]) == 1
 
 
+def capture_worker(prepared, monkeypatch):
+    """Observe only the fixture-owned synthetic child; never launch real Codex."""
+    children = []
+    original = process.subprocess.Popen
+
+    def capture(argv, *args, **kwargs):
+        child = original(argv, *args, **kwargs)
+        if argv[:2] == [sys.executable, str(prepared["worker"])]:
+            children.append(child)
+        return child
+
+    monkeypatch.setattr(process.subprocess, "Popen", capture)
+    return children
+
+
+def assert_uncertain_cannot_relaunch(prepared):
+    guard = prepared["checkpoint"].with_suffix(".execution-guard")
+    assert guard.is_file()
+    before = snapshot(prepared["home"])
+    calls = len(prepared["calls"])
+    for resume in (False, True):
+        with pytest.raises(PrepareError) as error:
+            run(prepared, resume=resume)
+        assert error.value.code == 12
+        assert snapshot(prepared["home"]) == before
+        assert len(prepared["calls"]) == calls
+    with pytest.raises(PrepareError):
+        prepare_task(prepared)
+    assert snapshot(prepared["home"]) == before
+
+
 @pytest.mark.parametrize("signum", [2, 15])
 def test_signals_stop_child_and_preserve_recovery_state(prepared, monkeypatch, signum):
     import signal
-    import threading
 
     original = process.stream_jsonl
     previous = signal.getsignal(signum)
-    set_worker(prepared, events()[:2], suffix="time.sleep(2)")
+    # A real synthetic worker remains live until stream cleanup kills/reaps it.
+    # Deliver the parent signal after the accepted event, not after a wall clock
+    # guess that can interrupt the checkpoint transaction itself.
+    set_worker(prepared, events()[:2], suffix="import signal; signal.pause()")
+    children = capture_worker(prepared, monkeypatch)
+    observed = []
 
-    def interrupted(*args, **kwargs):
-        timer = threading.Timer(0.15, lambda: os.kill(os.getpid(), signum))
-        timer.start()
-        try:
-            return original(*args, **kwargs)
-        finally:
-            timer.join(1)
+    def interrupted(argv, cwd, env, prompt, accept, **kwargs):
+        def after_event(raw):
+            accept(raw)
+            if json.loads(raw)["type"] == "turn.started":
+                record = state.load_checkpoint(prepared["checkpoint"])
+                assert record["phase"] == "RUNNING"
+                assert record["codex_thread_id"] == SESSION
+                assert not list(
+                    prepared["checkpoint"].parent.glob(
+                        prepared["checkpoint"].name + ".tmp-*"
+                    )
+                )
+                assert len(children) == 1 and children[0].returncode is None
+                observed.append(record)
+                os.kill(os.getpid(), signum)
+
+        return original(argv, cwd, env, prompt, after_event, timeout=3, **kwargs)
 
     monkeypatch.setattr(process, "stream_jsonl", interrupted)
-    with pytest.raises(PrepareError):
+    with pytest.raises(PrepareError) as error:
         run(prepared)
+    assert error.value.reason == "execution_needs_human"
+    assert len(observed) == 1
     assert signal.getsignal(signum) == previous
-    assert json.loads(prepared["checkpoint"].read_text())["phase"] == "NEEDS_HUMAN"
-    assert prepared["checkpoint"].with_suffix(".execution-guard").exists()
+    record = state.load_checkpoint(prepared["checkpoint"])
+    assert record["phase"] == "NEEDS_HUMAN"
+    assert record["last_intent"] == "AMBIGUOUS_STOP"
+    assert record["codex_thread_id"] == SESSION
+    assert record["generation"] == observed[0]["generation"] + 1
+    assert children[0].returncode == -signal.SIGKILL
+    assert_uncertain_cannot_relaunch(prepared)
+
+
+@pytest.mark.parametrize("signum", [2, 15])
+@pytest.mark.parametrize(
+    "transition,prior",
+    [
+        ("STARTING", "READY"),
+        ("RUNNING", "STARTING"),
+        ("COMPLETED", "RUNNING"),
+    ],
+)
+@pytest.mark.parametrize("boundary", ["before_replace", "after_replace"])
+def test_signals_during_checkpoint_commit_preserve_uncertainty(
+    prepared, monkeypatch, signum, transition, prior, boundary
+):
+    import signal
+
+    original_write = state.write_checkpoint
+    original_replace = state.os.replace
+    original_stream = process.stream_jsonl
+    previous = signal.getsignal(signum)
+    children = capture_worker(prepared, monkeypatch)
+    observed = []
+
+    def bounded(*args, **kwargs):
+        return original_stream(*args, timeout=3, **kwargs)
+
+    def write(path, data, **kwargs):
+        if data["phase"] != transition or observed:
+            return original_write(path, data, **kwargs)
+
+        def replace(source, destination):
+            assert destination == prepared["checkpoint"]
+            assert Path(source).is_file()
+            assert json.loads(Path(source).read_text())["phase"] == transition
+            assert json.loads(path.read_text())["phase"] == prior
+            observed.append(
+                {
+                    "temporary": Path(source),
+                    "before": path.read_bytes(),
+                    "candidate": Path(source).read_bytes(),
+                }
+            )
+            if boundary == "after_replace":
+                original_replace(source, destination)
+            # Interrupt inside the real transaction with a real OS-delivered
+            # parent signal, after file fsync / before directory fsync.
+            os.kill(os.getpid(), signum)
+            pytest.fail("signal handler did not interrupt checkpoint replacement")
+
+        with monkeypatch.context() as local:
+            local.setattr(state.os, "replace", replace)
+            return original_write(path, data, **kwargs)
+
+    monkeypatch.setattr(process, "stream_jsonl", bounded)
+    monkeypatch.setattr(state, "write_checkpoint", write)
+    with pytest.raises(PrepareError) as error:
+        run(prepared)
+    assert error.value.reason == "execution_needs_human"
+    assert len(observed) == 1 and signal.getsignal(signum) == previous
+    record = json.loads(prepared["checkpoint"].read_text())
+    evidence = observed[0]
+    # For launch intent, active already equals STARTING before write_checkpoint;
+    # after replacement its matching CAS permits a durable NEEDS_HUMAN. Session
+    # and terminal writes instead leave active at the previous generation until
+    # the write returns, so ambiguity must preserve the mismatching disk record.
+    if boundary == "after_replace" and transition == "STARTING":
+        assert record["phase"] == "NEEDS_HUMAN"
+        assert record["last_intent"] == "AMBIGUOUS_STOP"
+        assert (
+            record["generation"] == json.loads(evidence["candidate"])["generation"] + 1
+        )
+    else:
+        expected = evidence["before" if boundary == "before_replace" else "candidate"]
+        assert prepared["checkpoint"].read_bytes() == expected
+        assert record["phase"] == (
+            prior if boundary == "before_replace" else transition
+        )
+    if boundary == "before_replace":
+        assert evidence["temporary"].is_file()
+        assert evidence["temporary"].read_bytes() == evidence["candidate"]
+        with pytest.raises(PrepareError) as interrupted:
+            state.load_checkpoint(prepared["checkpoint"])
+        assert interrupted.value.reason == "interrupted_checkpoint"
+    else:
+        assert not evidence["temporary"].exists()
+        assert state.load_checkpoint(prepared["checkpoint"]) == record
+    assert len(children) == (0 if transition == "STARTING" else 1)
+    assert all(child.returncode is not None for child in children)
+    assert_uncertain_cannot_relaunch(prepared)
 
 
 def test_prepare_refuses_an_execution_guard_even_before_migration(prepared):
