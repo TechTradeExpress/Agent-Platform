@@ -338,3 +338,13 @@ lease/scheduler, retry or cleanup is enabled. Missing continuity blocks; advice
 is not a durable claim or launch receipt. Main-only queue limitations and all
 native/public exit-13 gates remain. Follow docs/codex-assignment.md; live Gate B
 requires separate authorization, protected-main evidence and credential isolation.
+
+Issue #71 adds AP-CI/1 synthetic-only coding-App identity observation and a future
+operator Gate B runbook. Reuse AP-CA/1 pins and custody assertions; fixed GETs only,
+no real client, credentials or network. Require actual fabricated bot/App
+association, exact selected single-repo facts and fresh challenge-bound evidence;
+missing proof is unverified, never guessed from a slug. Offline verification is
+not live identity, task authority, reservation or launch/publication permission.
+No settings, host, App provisioning or writer follows; protected-main/custody and
+physical-host/reboot verification remain open. Follow docs/coding-app-gate-b.md;
+all native/legacy exit-13, admission, queue and publication gates stay unchanged.
