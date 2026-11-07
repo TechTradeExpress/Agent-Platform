@@ -443,3 +443,7 @@ Live integration remains INTEGRATION_BLOCKED / NO-GO; no publisher is deployed.
 The [Debian 13 candidate package](docs/debian-package.md) provides the existing
 CLI tools with no services or automatic state migrations. Its separate disposable
 CI verifies real package lifecycle operations while execution remains blocked.
+
+The [offline Codex assignment contract](docs/codex-assignment.md) binds one trusted
+logical-agent assignment to existing admission/queue checks and a separate coding
+App identity. Its advice neither reserves/prepares work nor enables execution.

@@ -327,3 +327,14 @@ across App/installation/namespace rotation. No reset, live App/downstream access
 credentials or #60 integration. Target receipts cannot enter legacy main-only
 queue/prepare/runtime domains. Follow docs/target-project-policy.md; Gate B stays
 NOT_AUTHORIZED and all native/public legacy exit-13 barriers remain unchanged.
+
+Issue #69 adds only AP-CA/1 trusted-caller offline assignment advice. Reuse
+admission, App/installation primitives and bounded queue/state checks; coding App
+and reviewer App/bot identities remain distinct. Assignment prose/labels/assignees
+and serialized model data are not authority. Require complete single-agent
+inventory, fresh exact scope/identity and retained replay/UNKNOWN history. No
+reservation, prepare, live identity probe, worker adapter, writer, credentials,
+lease/scheduler, retry or cleanup is enabled. Missing continuity blocks; advice
+is not a durable claim or launch receipt. Main-only queue limitations and all
+native/public exit-13 gates remain. Follow docs/codex-assignment.md; live Gate B
+requires separate authorization, protected-main evidence and credential isolation.
