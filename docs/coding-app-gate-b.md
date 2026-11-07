@@ -1,5 +1,10 @@
 # Coding App identity and future Gate B
 
+The #71 sections below preserve the **historical synthetic writer-profile design**,
+not instructions to upgrade the current App. Current operator-reported progress
+and MVP.8c's separate metadata contract are recorded in the final section. The
+current App stays Metadata read only; no write permission is authorized.
+
 Issue #71 is offline preparation only. AP-CI/1 verifies fabricated observations,
 never a live installation, task authorization or permission to execute. The
 baseline is PR #70's squash `ba3d8162a97d297f1da7fe492aab4f5d1a2889a6`;
@@ -101,7 +106,7 @@ NOT_RUN and runtime exit code 13. No result can become live VERIFIED or authoriz
 AP-CA/1 advice, prepare, native execution or publishing. No CLI, network client,
 credential loader, state writer, scheduler or live transport is supplied.
 
-## Future operator Gate B procedure — NOT EXECUTED
+## Historical #71 future writer Gate B procedure — NOT EXECUTED
 
 Each step requires a real human's separate explicit target-specific approval;
 this runbook, an Issue or model output cannot authorize it. Stop if assurance is
@@ -144,7 +149,7 @@ missing. Record decisions and redacted observations; never paste keys or tokens.
    do not reuse a digest, discard unresolved intent or bypass UNKNOWN guards.
    Re-observe and reauthorize exact identities before any future operation.
 
-## Readiness ledger / exact next steps
+## Historical #71 readiness ledger
 
 | Capability | State after offline PASS / next independently authorized evidence |
 | --- | --- |
@@ -163,3 +168,42 @@ The next operator action is to approve the exact target/governance and host/cust
 verification plan, **not execute this library**. Offline tests and AI review do not
 establish production security assurance. Human-only merge and all existing native,
 legacy, admission, state, queue, review and publication gates remain unchanged.
+
+
+## Operator-reported MVP.8b milestone and MVP.8c
+
+Issue #74 summarizes the human operator's tracker #73 observations. Codex has not
+repeated the App probe, accessed publisher01 or inspected any credentials:
+
+- Private organization-owned App **TechTradeExpress Agent**, ID **5660901**, slug
+  `techtradeexpress-agent`, registration owner `TechTradeExpress`.
+- Installation **179693483**, selected mode, organization account, unsuspended,
+  exactly Metadata read. Installation-wide enumeration showed only
+  `TechTradeExpress/Agent-Platform`, repository ID **1436076348**; token revocation
+  was reported successful. No token or key is retained in source evidence.
+- Public profile `techtradeexpress-agent[bot]`, ID **353883253**, type Bot. This is
+  **not** an authenticated App-attributed action or performed_via_github_app proof.
+- Signing PEM is held on publisher01 under root-owned 0600 custody; publisherapp
+  has no direct read access. This Issue does not retrieve/sign with it or access
+  the VM. VM 102 backup was consciously deferred; loss/rotation risk remains.
+- Repository is now reported public. Main ruleset **26772477** is reported active,
+  no bypass, requiring PR plus checks/lifecycle and linear history, prohibiting
+  force-push/deletion; squash-only merging and auto-merge off. This supersedes the
+  historical unprotected/private observation above, but governance must be freshly
+  verified before future write authority. Contents write remains repository-scoped.
+
+[AP-AM/1](app-metadata-observer.md) adds the separately typed live-response metadata
+boundary with only offline mocked transport/custody. It accepts Metadata read,
+not AP-CI/1's future writer grants, and does not require or fabricate an Issue
+comment. All successful results remain metadata-only / bot-attribution-unverified.
+AP-CI/1's existing synthetic status and strict action-evidence requirements remain
+unchanged; AP-CA/1 still cannot accept this as a coding writer identity or claim.
+
+Current readiness: operator reports one manual metadata probe complete; MVP.8c
+live adapter/run is **NOT_RUN**, credential-host confinement/reboot/recovery is
+not established by offline tests, native and legacy execution stay exit 13,
+durable assignment claim is NOT_IMPLEMENTED and all publication remains BLOCKED.
+Metadata-only grants cannot produce an App-authored Issue comment; public Bot
+lookup cannot substitute. The next step is separately approved trusted-host
+adapter/custody review and a bounded metadata-only run, following the new handoff.
+Do not register a second App or upgrade permissions merely to satisfy old fixtures.

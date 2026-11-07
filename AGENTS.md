@@ -348,3 +348,14 @@ not live identity, task authority, reservation or launch/publication permission.
 No settings, host, App provisioning or writer follows; protected-main/custody and
 physical-host/reboot verification remain open. Follow docs/coding-app-gate-b.md;
 all native/legacy exit-13, admission, queue and publication gates stay unchanged.
+
+Issue #74 adds AP-AM/1 metadata-only observation with typed injected transport and
+external custody interfaces, offline tests only. Keep AP-CI/1/AP-CA/1 unchanged;
+Metadata read and a public Bot profile cannot prove an App-attributed action or
+writer identity. Require installation-wide, unrestricted-grant custody assertions,
+two distinct pass-bound finally-revoked leases, strict fixed GET scope and fresh
+consistent observations. Unknown issuance/revocation or incomplete history blocks.
+No real HTTP client, PEM loader, token minting, service/SSH/probe, permission
+upgrade, writer or execution is authorized. Follow docs/app-metadata-observer.md;
+source metadata/source flags cannot grant downstream authority. All exit-13,
+admission, queue, review and UNKNOWN publication boundaries remain unchanged.
