@@ -447,3 +447,8 @@ CI verifies real package lifecycle operations while execution remains blocked.
 The [offline Codex assignment contract](docs/codex-assignment.md) binds one trusted
 logical-agent assignment to existing admission/queue checks and a separate coding
 App identity. Its advice neither reserves/prepares work nor enables execution.
+
+The [coding App identity contract and Gate B runbook](docs/coding-app-gate-b.md)
+normalize bounded synthetic GET evidence against existing assignment pins. Offline
+fixture verification never establishes live identity or authorizes credentials,
+App provisioning, task reservation, native execution or branch/PR publication.
