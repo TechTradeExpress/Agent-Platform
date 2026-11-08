@@ -173,3 +173,11 @@ facts, untrusted labels/assignees; replay, lost history and simultaneous tasks;
 existing prepared work, busy/missing lock; API failures, pagination ambiguity,
 redaction and forbidden runtime/writer/state mutations. Live identities, credentials,
 publication, production isolation and durable claim authority remain NOT_RUN.
+
+
+Issue #74's [AP-AM/1 metadata contract](app-metadata-observer.md) is separate from
+this synthetic assignment/writer identity contract. The operator-reported real
+App has Metadata read only; no public Bot profile or metadata result satisfies
+AP-CA/1's writer, admission, queue, authorization or durable-claim requirements.
+Do not synthesize an assignment or reviewer receipt from it. See the updated
+[operator milestone](coding-app-gate-b.md#operator-reported-mvp8b-milestone-and-mvp8c).

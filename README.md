@@ -452,3 +452,8 @@ The [coding App identity contract and Gate B runbook](docs/coding-app-gate-b.md)
 normalize bounded synthetic GET evidence against existing assignment pins. Offline
 fixture verification never establishes live identity or authorizes credentials,
 App provisioning, task reservation, native execution or branch/PR publication.
+
+The [metadata-only App observer boundary](docs/app-metadata-observer.md) accepts
+real-shaped responses through separately typed transport/custody interfaces,
+exercised only with offline fixtures. It preserves the synthetic observer and
+never promotes metadata or a public Bot profile to App-attributed action proof.
