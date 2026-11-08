@@ -380,3 +380,10 @@ or trust in custody UID; future external continuity/storage assurance remains ga
 Custody must own AP-AM observe and injected clients, exporting only redacted facts.
 No signer/IPC/unit/user/host activation, credentials or native gate change. Follow
 docs/custody-journal-and-host-isolation.md; 8f/8g require separate authorization.
+
+Issue #80 supplies inactive AP-AS/1 fixed RS256 signer and bounded Unix IPC
+libraries only. Require independently trusted admission, pinned peers/App/key and
+durable UNKNOWN-before-sign replay control. No default authority, key loader,
+listener or safe legacy Claims-only adapter bridge exists. Missing admission or
+continuity blocks, never renews an allowance. Follow docs/app-signer-ipc.md;
+NOT_DEPLOYED / LIVE_BLOCKED, existing authorization and exit-13 gates remain.

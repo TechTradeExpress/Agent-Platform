@@ -35,7 +35,7 @@ jobs:
             dpkg-deb --contents /packages/next/*.deb > /evidence/package-files.txt
             test "$(dpkg-deb -f /packages/next/*.deb Architecture)" = amd64
             test "$(dpkg-deb -f /packages/next/*.deb Version)" = 0.1.0-2
-            test "$(dpkg-deb -f /packages/next/*.deb Depends)" = "python3 (>= 3.12), git, gh"
+            test "$(dpkg-deb -f /packages/next/*.deb Depends)" = "python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, gh"
             dpkg-deb --control /packages/next/*.deb /tmp/ap-control
             for hook in preinst postinst prerm postrm triggers; do test ! -e "/tmp/ap-control/$hook"; done
             lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1

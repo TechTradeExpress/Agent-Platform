@@ -3,8 +3,10 @@
 The package is an **unreleased CLI distribution candidate**, not an activated
 Agent Platform service. Target: Debian 13 **trixie, amd64**, system Python >=3.12
 (trixie supplies 3.13). Development checks continue using the established Python
-3.12 environment. No runtime Python dependencies are declared or bundled.
-The package depends on **python3 (>= 3.12), git, gh**: local inspection uses Git;
+3.12 environment. The reviewed AP-AS/1 dependency is cryptography; it is supplied
+by Debian, never vendored or installed through pip at runtime. The package depends
+on **python3 (>= 3.12), python3-cryptography (>= 43.0.0, << 51), git, gh**:
+local inspection uses Git;
 explicit read-only GitHub operations use gh. No authentication is configured.
 Bubblewrap, Codex, runtime images, privileged helpers and API credentials are
 neither dependencies nor included. Missing optional runtime prerequisites remain
@@ -34,7 +36,11 @@ copyright and a small stdlib staging recipe are version controlled. This is a
 binary-package recipe, **not** a claim of a Debian archive-ready source upload,
 .dsc/.buildinfo/signature or complete debhelper/dpkg-buildpackage integration.
 The source metadata also supplies autopkgtest's test tree. Keep packaging logic
-small; reevaluate debhelper/dh-python if Python dependencies or services appear.
+small; the one exact cryptography dependency mapping is explicitly checked.
+Unknown dependency declarations remain rejected; broader dependency or service
+changes require a new packaging review. uv.lock is included in provenance.
+Lifecycle smoke tests generate a disposable RSA key and verify an authenticated
+AP-AS/1 socket exchange without credentials, networking or activation.
 
 Application version stays **0.1.0**, with no epoch. Debian mapping is
 `<application SemVer>-<positive packaging revision>`; current reviewed revisions

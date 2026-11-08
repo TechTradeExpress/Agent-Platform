@@ -37,7 +37,95 @@ def digest(path):
     ]
 
 
+def signer_smoke():
+    # Only generated throwaway keys inside guard()'s approved disposable fixture.
+    sys.path.insert(0, "/usr/lib/agent-platform")
+    import socket
+    import threading
+    import time
+
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from agent_platform import app_signer as signer
+    from agent_platform import app_signer_ipc as ipc
+    from agent_platform.app_api_adapter import Claims
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    peer = signer.Peer(os.getpid(), os.getuid(), os.getgid())
+    policy = signer.Policy(
+        12345, "a" * 64, signer.public_fingerprint(key.public_key()), peer, peer
+    )
+    now = int(time.time())
+    admission = signer.Admission(
+        "b" * 64,
+        "c" * 64,
+        policy.digest,
+        now,
+        now + 300,
+        (signer.Pass("d" * 64, "e" * 64), signer.Pass("f" * 64, "1" * 64)),
+    )
+
+    class Credentials:
+        def private_key(self, app_id, key_sha256):
+            return key
+
+    class OfflineAuthority:
+        used = False
+
+        def lookup(self, run_id):
+            assert run_id == admission.run_id
+            return admission
+
+        def consume(self, approved, request, actual_peer):
+            assert approved == admission and actual_peer == peer and not self.used
+            self.used = True
+
+        def finish(self, approved, request, outcome):
+            assert outcome == "SIGNED" and self.used
+
+    authority = OfflineAuthority()
+    session = signer.SignerSession(
+        policy=policy,
+        approved_run_id=admission.run_id,
+        authority=authority,
+        credentials=Credentials(),
+    )
+    client = ipc.SignerClient(policy=policy, public_key=key.public_key())
+    server_socket, client_socket = socket.socketpair()
+    outcome = []
+
+    def run():
+        try:
+            ipc.serve_one(server_socket, session, timeout=2)
+            outcome.append("OK")
+        except signer.SignerError:
+            outcome.append("BLOCKED")
+
+    worker = threading.Thread(target=run)
+    worker.start()
+    try:
+        request = signer.Request(
+            admission.run_id,
+            admission.nonce,
+            "d" * 64,
+            "e" * 64,
+            policy.digest,
+            Claims(12345, now - 30, now + 250),
+        )
+        token = client.exchange(client_socket, request, timeout=2)
+        assert "eyJ" not in repr(
+            token
+        )  # Client has independently verified the RSA signature.
+        assert token.take_for_custody()
+    finally:
+        client_socket.close()
+        worker.join(3)
+        session.close()
+    assert not worker.is_alive() and outcome == ["OK"]
+
+
 def smoke():
+    signer_smoke()
     for name in (
         "agent-platform",
         "agent-platform-broker",

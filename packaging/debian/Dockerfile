@@ -6,11 +6,11 @@ RUN printf 'AP-PKG-CI-DISPOSABLE-v1\n' > /ap-package-ci-fixture
 # Cache dependencies without installing them: lifecycle starts with no Python/Git/gh.
 FROM base AS lifecycle
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && apt-get update && \
-    apt-get --download-only --no-install-recommends -y install python3 git gh
+    apt-get --download-only --no-install-recommends -y install python3 python3-cryptography git gh
 COPY lifecycle.sh smoke.py /opt/ap-tests/
 ENTRYPOINT ["/bin/sh", "/opt/ap-tests/lifecycle.sh"]
 
 # Quality tools are confined to a different disposable image/container.
 FROM base AS quality
 RUN apt-get update && apt-get --no-install-recommends -y install \
-    python3 git gh lintian autopkgtest ca-certificates
+    python3 python3-cryptography git gh lintian autopkgtest ca-certificates

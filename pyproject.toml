@@ -9,6 +9,9 @@ description = "Repository inspection and explicit, safe task preparation"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
+dependencies = [
+    "cryptography>=43.0.0,<51",
+]
 
 [project.scripts]
 agent-platform = "agent_platform.cli:main"
@@ -18,6 +21,10 @@ agent-platform-native-artifact = "agent_platform.native_artifact:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
 
 [tool.ruff]
 target-version = "py312"
