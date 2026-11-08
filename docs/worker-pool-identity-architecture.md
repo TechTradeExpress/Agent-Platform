@@ -509,3 +509,8 @@ incident ownership. If those cannot be independently established, preserve NO-GO
 and return the capability decision to the human. No host access, provisioning,
 network changes, App operation, daemon, dependency/package/workflow change,
 writer, native activation or deployment is delivered by this design milestone.
+
+B-stage companion: [Worker Pool B1 inventory and template contract](worker-inventory-and-template.md)
+specifies future read-only B2 collection and separately authorized B3 clean-image/
+worker02 gates. It is **DESIGN_ONLY / NO_HOST_ACCESS**, not a collected inventory,
+image build, host probe or provisioning approval.
