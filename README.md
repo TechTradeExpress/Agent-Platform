@@ -472,3 +472,8 @@ gates; no signer, service, live App operation or runtime is activated.
 with generated disposable keys and bounded authenticated offline socket handlers.
 There is no admission producer, production key loader, listener or enabled Adapter
 bridge: **NOT_DEPLOYED / LIVE_BLOCKED**. Existing runtime gates are unchanged.
+
+[Architecture v0.1: symmetric worker pool and identities](docs/worker-pool-identity-architecture.md)
+designs publisher01 as Control Plane and two interchangeable, isolated workers.
+It records role/identity, network, review, recovery and staged provisioning gates:
+**DESIGN_ONLY / NO_HOST_CHANGE**, with native execution still blocked at exit 13.
