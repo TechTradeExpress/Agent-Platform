@@ -369,3 +369,14 @@ CLI/default provider, enabled entrypoint, service, worker or repository writer.
 LoadCredential copies are readable by unit User= processes and do not separate a
 signer from untrusted same-unit/UID processes. Follow docs/app-api-adapter.md; real
 App operations/host access require separate approval, and all existing gates stay.
+
+Issue #78 adds AP-AJ/1 SQLite Journal with explicit empty-directory provisioning,
+no runtime create/replace, approved namespace/store identity/external anchor,
+full-session nonblocking directory flock and rollback/EXTRA commit confirmation.
+Reuse AP-AL/1 history validation; uncertain writes poison, retained UNKNOWN and
+replay evidence stay. No hot-journal recovery, cleanup, repair, reset or eviction.
+SQLite/hash/inode checks cannot establish independent rollback/deletion protection
+or trust in custody UID; future external continuity/storage assurance remains gated.
+Custody must own AP-AM observe and injected clients, exporting only redacted facts.
+No signer/IPC/unit/user/host activation, credentials or native gate change. Follow
+docs/custody-journal-and-host-isolation.md; 8f/8g require separate authorization.

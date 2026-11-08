@@ -200,3 +200,14 @@ proxy/host/TLS/domain failures, arbitrary/narrowed routes, token shapes/lifetime
 claim corruption, UNKNOWN-before-POST, cleanup failure/cancel, replay/rotation,
 source drift, lost history, scope/Bot mismatch and unchanged metadata semantics.
 Offline PASS establishes no live credential, OS isolation or production assurance.
+
+## MVP.8e concrete journal and process-boundary refinement
+
+Issue #78 adds [AP-AJ/1 SQLite storage](custody-journal-and-host-isolation.md) behind
+the existing Journal interface, with explicit provisioning/identity/continuity,
+full-session OS locking, rollback/EXTRA commits and offline fault/crash tests.
+There is still no enabled runtime, real signer, IPC server or deployment. External
+anti-rollback continuity and host/power-loss assurance remain operator gates.
+The future custody principal must own the actual AP-AM/1 observe call and injected
+adapter, exporting only redacted Result to a separate metadata-output principal;
+placing credential-capable objects in an untrusted observer is not isolation.

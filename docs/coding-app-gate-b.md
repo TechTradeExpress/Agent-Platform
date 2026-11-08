@@ -214,3 +214,9 @@ exclusive custody journal and trusted-host isolation/wiring still require separa
 review and live authorization. LoadCredential is not a process-isolation boundary.
 No App probe, credential access, publisher01 deployment or permission change is
 performed; the metadata-only and native/public exit-13 boundaries remain intact.
+
+MVP.8e adds the [explicit SQLite journal and host isolation blueprint](custody-journal-and-host-isolation.md),
+not activation. Local commit/lock evidence cannot prove external deletion/rollback
+protection or a trustworthy custody UID. Independent continuity, storage/reboot and
+credential-loss decisions remain operator gates. Signer/IPC (8f) and independent
+host activation/pilot (8g) require separate scope and human approval.
