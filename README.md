@@ -462,3 +462,8 @@ The [inactive GitHub App API adapter](docs/app-api-adapter.md) implements bounde
 fixed-origin wire and token custody behind the metadata contract, tested with
 mocked sockets/signing only. Real signer, journal/host integration and live runs
 remain separately gated; no credentials or runtime capability are activated.
+
+The [SQLite custody journal and host isolation blueprint](docs/custody-journal-and-host-isolation.md)
+provide explicit, exclusive nonsecret storage with offline crash/fault tests.
+External continuity and trusted-host power-loss/process assurance remain separate
+gates; no signer, service, live App operation or runtime is activated.
