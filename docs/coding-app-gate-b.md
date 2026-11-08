@@ -207,3 +207,10 @@ Metadata-only grants cannot produce an App-authored Issue comment; public Bot
 lookup cannot substitute. The next step is separately approved trusted-host
 adapter/custody review and a bounded metadata-only run, following the new handoff.
 Do not register a second App or upgrade permissions merely to satisfy old fixtures.
+
+MVP.8d's [AP-AL/1 inactive API adapter](app-api-adapter.md) now implements the bounded
+wire/token-lifecycle layer behind AP-AM/1, with offline mocks only. Signer, durable
+exclusive custody journal and trusted-host isolation/wiring still require separate
+review and live authorization. LoadCredential is not a process-isolation boundary.
+No App probe, credential access, publisher01 deployment or permission change is
+performed; the metadata-only and native/public exit-13 boundaries remain intact.
