@@ -359,3 +359,13 @@ No real HTTP client, PEM loader, token minting, service/SSH/probe, permission
 upgrade, writer or execution is authorized. Follow docs/app-metadata-observer.md;
 source metadata/source flags cannot grant downstream authority. All exit-13,
 admission, queue, review and UNKNOWN publication boundaries remain unchanged.
+
+Issue #76 implements AP-AL/1 inactive fixed GitHub App wire/custody components for
+AP-AM/1, offline mocks only. Fixed verified HTTPS origin/peer, route/auth allowlists,
+bounded reads/deadlines, fixed-purpose external RS256 signer and complete external
+durable journal are mandatory. UNKNOWN precedes token POST; never replay ambiguous
+issuance/revocation, lost history or rotated identities. No key loader, credential
+CLI/default provider, enabled entrypoint, service, worker or repository writer.
+LoadCredential copies are readable by unit User= processes and do not separate a
+signer from untrusted same-unit/UID processes. Follow docs/app-api-adapter.md; real
+App operations/host access require separate approval, and all existing gates stay.

@@ -162,3 +162,13 @@ allowlist. The next human-controlled steps are:
    permissions or bootstrap an action to satisfy AP-CI/1. Future write/publisher
    scope, actual PR author evidence, native isolation, authenticated exact-payload
    approval and durable claims require separately reviewed human-authorized work.
+
+## MVP.8d concrete inactive adapter
+
+Issue #76 adds [AP-AL/1](app-api-adapter.md) fixed-origin TLS wire and concrete
+issuer/revoker/metadata adapter, tested offline only. It implements the fixed POST
+and DELETE lifecycle behind this existing Custody interface; there is still no
+real signer/key loader, durable production journal, enabled entrypoint, service or
+live run. Existing AP-AM/1 code and non-authorizing result semantics are unchanged.
+LoadCredential copies are readable by the credential unit's User= processes; signer
+and untrusted observer/worker cannot share that credential-bearing unit/UID.

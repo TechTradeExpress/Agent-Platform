@@ -457,3 +457,8 @@ The [metadata-only App observer boundary](docs/app-metadata-observer.md) accepts
 real-shaped responses through separately typed transport/custody interfaces,
 exercised only with offline fixtures. It preserves the synthetic observer and
 never promotes metadata or a public Bot profile to App-attributed action proof.
+
+The [inactive GitHub App API adapter](docs/app-api-adapter.md) implements bounded
+fixed-origin wire and token custody behind the metadata contract, tested with
+mocked sockets/signing only. Real signer, journal/host integration and live runs
+remain separately gated; no credentials or runtime capability are activated.
