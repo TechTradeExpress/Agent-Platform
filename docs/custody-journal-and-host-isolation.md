@@ -212,3 +212,9 @@ MVP.8f may separately implement reviewed signer/restricted IPC. Independent MVP.
 must separately authorize trusted-host activation and a metadata-only live pilot.
 Neither is authorized here. No App-attributed action proof, write permission
 upgrade, publisher, native worker or API-billed fallback follows from offline PASS.
+
+## Fixed signer follow-up
+
+[AP-AS/1 (Issue #80)](app-signer-ipc.md) provides bounded offline signer and IPC
+libraries. It does not supply the trusted admission/continuity producer or deploy
+any process. The process, credential and anti-rollback gates above remain binding.

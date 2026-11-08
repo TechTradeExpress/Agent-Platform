@@ -11,7 +11,7 @@ Architecture: amd64
 Maintainer: TechTradeExpress <maintainers@techtradeexpress.com>
 Section: devel
 Priority: optional
-Depends: python3 (>= 3.12), git, gh
+Depends: python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, gh
 Homepage: https://github.com/TechTradeExpress/Agent-Platform
 Description: supervised repository tooling with fail-closed execution gates
  Offline inspection, policy and evidence tools for explicitly authorized

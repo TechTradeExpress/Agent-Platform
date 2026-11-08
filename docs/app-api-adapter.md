@@ -206,8 +206,16 @@ Offline PASS establishes no live credential, OS isolation or production assuranc
 Issue #78 adds [AP-AJ/1 SQLite storage](custody-journal-and-host-isolation.md) behind
 the existing Journal interface, with explicit provisioning/identity/continuity,
 full-session OS locking, rollback/EXTRA commits and offline fault/crash tests.
-There is still no enabled runtime, real signer, IPC server or deployment. External
+There is still no enabled runtime, deployed signer, IPC server or deployment. External
 anti-rollback continuity and host/power-loss assurance remain operator gates.
 The future custody principal must own the actual AP-AM/1 observe call and injected
 adapter, exporting only redacted Result to a separate metadata-output principal;
 placing credential-capable objects in an untrusted observer is not isolation.
+
+## MVP.8f fixed-purpose signer boundary
+
+Issue #80 adds [AP-AS/1 signer/IPC libraries](app-signer-ipc.md), real RS256
+cryptography and disposable-key tests. The Adapter API is unchanged: its legacy
+Claims-only signing call cannot establish trusted session admission and remains
+blocked by these implementations. No live bridge, admission producer, key loader
+or listener is supplied. Status remains **NOT_DEPLOYED / LIVE_BLOCKED**.

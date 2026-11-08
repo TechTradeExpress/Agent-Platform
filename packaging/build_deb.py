@@ -14,7 +14,11 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPENDENCIES = "python3 (>= 3.12), git, gh"
+DEPENDENCIES = (
+    "python3 (>= 3.12), python3-cryptography (>= 43.0.0), "
+    "python3-cryptography (<< 51), git, gh"
+)
+PYTHON_DEPENDENCIES = ["cryptography>=43.0.0,<51"]
 
 ENTRY_POINTS = {
     "agent-platform": "agent_platform.cli:main",
@@ -44,7 +48,8 @@ def build(source, output, revision, commit, epoch):
     project = tomllib.loads(checked_file(source / "pyproject.toml").decode())["project"]
     if (
         project["version"] != "0.1.0"
-        or project.get("dependencies", [])
+        or project.get("dependencies") != PYTHON_DEPENDENCIES
+        or project.get("optional-dependencies", {})
         or project["scripts"] != ENTRY_POINTS
     ):
         raise ValueError("review_version_or_dependencies")
@@ -68,6 +73,7 @@ def build(source, output, revision, commit, epoch):
             p: hashlib.sha256(checked_file(source / p)).hexdigest()
             for p in (
                 "pyproject.toml",
+                "uv.lock",
                 "LICENSE",
                 "debian/control",
                 "debian/changelog",
@@ -92,7 +98,8 @@ def build(source, output, revision, commit, epoch):
             stage,
             metadata + "METADATA",
             b"Metadata-Version: 2.1\nName: agent-platform\n"
-            b"Version: 0.1.0\nRequires-Python: >=3.12\n",
+            b"Version: 0.1.0\nRequires-Python: >=3.12\n"
+            b"Requires-Dist: cryptography>=43.0.0,<51\n",
         )
         put(stage, metadata + "INSTALLER", b"dpkg\n")
         entry_points = "[console_scripts]\n"

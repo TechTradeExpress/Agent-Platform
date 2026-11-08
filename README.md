@@ -467,3 +467,8 @@ The [SQLite custody journal and host isolation blueprint](docs/custody-journal-a
 provide explicit, exclusive nonsecret storage with offline crash/fault tests.
 External continuity and trusted-host power-loss/process assurance remain separate
 gates; no signer, service, live App operation or runtime is activated.
+
+[AP-AS/1 fixed signer and IPC](docs/app-signer-ipc.md) adds real RS256 verification
+with generated disposable keys and bounded authenticated offline socket handlers.
+There is no admission producer, production key loader, listener or enabled Adapter
+bridge: **NOT_DEPLOYED / LIVE_BLOCKED**. Existing runtime gates are unchanged.

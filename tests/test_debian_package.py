@@ -98,6 +98,11 @@ def test_real_deb_archives_metadata_permissions_contents_and_reproducibility(tmp
                 "./usr/lib/agent-platform/agent_platform-0.1.0.dist-info/METADATA"
             ).read()
             assert b"Version: 0.1.0\n" in meta
+            assert b"Requires-Dist: cryptography>=43.0.0,<51\n" in meta
+            assert (
+                provenance["inputs"]["uv.lock"]
+                == hashlib.sha256((ROOT / "uv.lock").read_bytes()).hexdigest()
+            )
     with pytest.raises(FileExistsError):
         builder.build(ROOT, tmp_path / "one", 2, commit, 1700000000)
 
@@ -237,3 +242,23 @@ def test_workflow_inputs_match_reviewed_public_provenance():
     dockerfile = (ROOT / "packaging/debian/Dockerfile").read_text()
     assert "debian:trixie-slim@" + pins["image"]["manifest_digest"] in dockerfile
     assert pins["image"]["platform"] == "linux/amd64"
+
+
+@pytest.mark.parametrize(
+    "dependency", ["cryptography>=1", "unapproved", "cryptography>=51"]
+)
+def test_package_rejects_unreviewed_crypto_dependency(
+    tmp_path, monkeypatch, dependency
+):
+    original = builder.checked_file
+
+    def changed(path):
+        raw = original(path)
+        if path.name == "pyproject.toml":
+            return raw.replace(b"cryptography>=43.0.0,<51", dependency.encode())
+        return raw
+
+    monkeypatch.setattr(builder, "checked_file", changed)
+    with pytest.raises(ValueError, match="review_version_or_dependencies"):
+        builder.build(ROOT, tmp_path / "rejected", 2, "a" * 40, 1700000000)
+    assert not (tmp_path / "rejected").exists()
