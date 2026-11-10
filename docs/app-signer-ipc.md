@@ -125,3 +125,10 @@ publication authorization and both exit-13 barriers remain unchanged.
 | Rollback/deletion | Missing authority blocks; no repair/default | External anti-rollback witness and explicit reconciliation; local DB is insufficient |
 | Partial/late signing or lost reply | UNKNOWN/consumed intent, poisoned session/client | Supervisor termination and human reconciliation without blind retry |
 | Host isolation | Kernel peer checks and disposable process test | Distinct UIDs, trusted launch image, negative access probes, dump/swap policy |
+
+## Control Plane host contract
+
+[CP-01 (Issue #87)](control-plane-host-contract.md) specifies the proposed
+Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
+contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
+admission, independent continuity and live activation BLOCKED.

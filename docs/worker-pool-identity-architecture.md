@@ -514,3 +514,10 @@ B-stage companion: [Worker Pool B1 inventory and template contract](worker-inven
 specifies future read-only B2 collection and separately authorized B3 clean-image/
 worker02 gates. It is **DESIGN_ONLY / NO_HOST_ACCESS**, not a collected inventory,
 image build, host probe or provisioning approval.
+
+## Control Plane host contract
+
+[CP-01 (Issue #87)](control-plane-host-contract.md) specifies the proposed
+Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
+contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
+admission, independent continuity and live activation BLOCKED.

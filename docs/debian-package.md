@@ -248,3 +248,10 @@ scoped upload identity, signed Release/InRelease, rotation/revocation, transport
 and retention policy, never secrets in workers. No tag, Release, real signature,
 APT feed, new writer, deployment or auto-merge is created here. Packaging PASS is
 not native isolation, account readiness, downstream authorization or deployment GO.
+
+## Control Plane host contract
+
+[CP-01 (Issue #87)](control-plane-host-contract.md) specifies the proposed
+Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
+contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
+admission, independent continuity and live activation BLOCKED.
