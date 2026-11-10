@@ -514,3 +514,10 @@ B-stage companion: [Worker Pool B1 inventory and template contract](worker-inven
 specifies future read-only B2 collection and separately authorized B3 clean-image/
 worker02 gates. It is **DESIGN_ONLY / NO_HOST_ACCESS**, not a collected inventory,
 image build, host probe or provisioning approval.
+
+## CP-02 proposed publisher contract
+
+[Issue #88 / CP-02](github-app-publisher-contract.md) specifies per-worker App
+identities, project authorization, exact-SHA Draft/COMMENT publication, bootstrap
+and recovery as DESIGN_ONLY / OFFLINE_ONLY. It adds no publisher implementation,
+credential access or live authority; existing APIs and exit-13 gates are unchanged.
