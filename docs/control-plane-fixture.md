@@ -47,8 +47,12 @@ claims are refused because this harness cannot authenticate them. Operator
 reports never turn into independently verified host evidence. In particular the
 historical `mount: ABSENT` typo is not missing `mnt` namespace evidence.
 
-The suite requires exactly one of every enumerated case, in canonical order.
-Missing, duplicated, unknown or reordered cases block. Input types, peer lifetime,
+The suite requires exactly one of every enumerated case, in canonical order,
+with each complete Stimulus exactly matching scenarios(config).
+Missing, duplicated, unknown, reordered or substituted controls block before
+simulated execution. A denial from a different stimulus cannot cover the named
+case. Ad-hoc negative variants remain available through run_case, without a full
+canonical-suite PASS claim. Input types, peer lifetime,
 collector/fixture pins and SHA-256 of the complete immutable configuration,
 completeness and bounds are checked before simulated
 child creation. Malformed/partial evidence is BLOCKED. An observed violation is
@@ -73,7 +77,10 @@ A Plan has fixed symbolic argv `("CP06_MODEL_ONLY", case.value)`, shell=false,
 empty environment/pass_fds, close_fds=true and **executable=None**. No strings
 become commands, syscalls or paths. Default probe budget is 5,000 ms, case budget
 60,000 ms, each may be reduced, never widened. Combined fake stdout+stderr is
-at most 64 KiB, and at most four fabricated children are accepted per case.
+at most 64 KiB, and one to four fabricated children are required per executed case. Zero children
+or incomplete evidence cannot prove execution. Started/reaped deltas and the
+recorded plan must account for the exact requested children before a model result
+is accepted; a bare adapter return value is insufficient.
 The deterministic adapter records exactly one attempt and reaps its complete
 owned child/group model before returning, including timeout and cancellation.
 Unreapable children FAIL without a second attempt. There is no generic injected
@@ -172,3 +179,23 @@ change permissions/sysctls/firewall, register Apps, load keys or probe secrets t
 fill gaps. Authenticated admission, independent anti-rollback witness, safe signer
 loading, writer, enforced policies, crash/reboot recovery, E2E and #73 decisions
 remain deferred. Native SUBSCRIPTION_ISOLATION_BLOCKED and exit 13 remain unchanged.
+
+
+## Review repair: execution and serialized evidence consistency
+
+Serialization revalidates exact schema version, LIVE_NO_GO, gate_73=BLOCKED,
+launch_allowed=false (strict bool) and every case's HOST_NOT_RUN field, including
+otherwise empty refusal reports. Codes have closed disposition rules:
+model_match requires the expected PASS/DENIED and model_matches=true;
+model_mismatch requires an unequal model disposition and false; invalid_evidence
+requires BLOCKED; owned_children_unreaped/execution_incomplete require FAIL;
+cleanup_incomplete/cancelled/deadline require UNKNOWN; after_stop requires
+HOST_NOT_RUN. After the first nonmatching result, every remaining case must be
+after_stop; an uncaused stop, later execution or a resumed PASS refuses encoding.
+
+Tests explicitly mutate frozen objects via object.__setattr__ and verify that
+encoding rejects broken safety invariants. Frozen dataclasses are not an
+integrity, cryptographic or authenticated evidence boundary. These checks prove
+structural consistency of synthetic records only: a caller controlling Python
+can still fabricate a structurally valid fixture report. No record authorizes
+host activity or establishes production enforcement, execution or isolation.

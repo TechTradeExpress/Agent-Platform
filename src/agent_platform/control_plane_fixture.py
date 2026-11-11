@@ -270,8 +270,12 @@ def _digest(value):
 
 
 def _config(c):
-    _require(type(c) is Config and c.version == VERSION)
-    _require(type(c.identity) is Identity and c.identity.version == VERSION)
+    _require(type(c) is Config and type(c.version) is str and c.version == VERSION)
+    _require(
+        type(c.identity) is Identity
+        and type(c.identity.version) is str
+        and c.identity.version == VERSION
+    )
     i = c.identity
     _require(
         all(
@@ -356,7 +360,7 @@ def _step(s, c):
     for v in (t.ancillary_fds, t.leaked_fds, t.leaked_env):
         _require(type(v) is int and 0 <= v <= 64)
     _require(type(s.elapsed_ms) is int and 0 <= s.elapsed_ms <= 60001)
-    _require(type(s.children) is int and 0 <= s.children <= MAX_CHILDREN)
+    _require(type(s.children) is int and 1 <= s.children <= MAX_CHILDREN)
     _require(type(s.stdout) is bytes and type(s.stderr) is bytes)
     _require(len(s.stdout) <= c.output_bytes and len(s.stderr) <= c.output_bytes)
     _require(len(s.stdout) + len(s.stderr) <= c.output_bytes)
@@ -411,6 +415,13 @@ def run_case(config: Config, step: Step, adapter: FakeAdapter) -> CaseResult:
         _config(config)
         _step(step, config)
         _require(type(adapter) is FakeAdapter)
+        _require(
+            type(adapter.started) is int
+            and type(adapter.reaped) is int
+            and adapter.started == adapter.reaped
+            and adapter.started >= 0
+        )
+        _require(type(adapter.plans) is list)
     except (FixtureError, TypeError, ValueError, AttributeError):
         return result(Disposition.BLOCKED, "invalid_evidence")
     plan = Plan(
@@ -420,7 +431,20 @@ def run_case(config: Config, step: Step, adapter: FakeAdapter) -> CaseResult:
         config.output_bytes,
     )
     # Fake children are always reaped before evaluating timeout/cancellation/results.
+    before_started, before_reaped = adapter.started, adapter.reaped
+    before_plans = len(adapter.plans)
     reaped = adapter.execute(plan, step)
+    if (
+        type(reaped) is not bool
+        or type(adapter.started) is not int
+        or type(adapter.reaped) is not int
+        or type(adapter.plans) is not list
+        or adapter.started - before_started != step.children
+        or adapter.reaped - before_reaped != (step.children if reaped else 0)
+        or len(adapter.plans) != before_plans + 1
+        or adapter.plans[-1] is not plan
+    ):
+        return result(Disposition.FAIL, "execution_incomplete")
     if not reaped:
         return result(Disposition.FAIL, "owned_children_unreaped")
     if not step.cleanup_complete:
@@ -488,6 +512,13 @@ def run(config: Config, steps: tuple[Step, ...]) -> Report:
         _require(type(steps) is tuple and len(steps) == len(Case))
         _require(all(type(s) is Step and type(s.case) is Case for s in steps))
         _require(tuple(s.case for s in steps) == tuple(Case))
+        # Case labels and a denial alone cannot prove the named control was tested.
+        canonical = scenarios(config)
+        for supplied, expected in zip(steps, canonical, strict=True):
+            # Validate nested types before equality can dispatch to supplied objects.
+            # Execution fault metadata is evaluated later by run_case, unchanged.
+            _step(replace(expected, stimulus=supplied.stimulus), config)
+            _require(supplied.stimulus == expected.stimulus)
     except (FixtureError, TypeError, ValueError, AttributeError):
         return Report("BLOCKED", "invalid_evidence", None, ())
     adapter = FakeAdapter()
@@ -524,6 +555,7 @@ RESULT_CODES = frozenset(
     {
         "invalid_evidence",
         "owned_children_unreaped",
+        "execution_incomplete",
         "cleanup_incomplete",
         "cancelled",
         "deadline",
@@ -537,6 +569,11 @@ RESULT_CODES = frozenset(
 def _report(r):
     _require(type(r) is Report and type(r.cases) is tuple)
     _require(type(r.status) is str and type(r.code) is str)
+    # frozen=True is an API convenience, not an integrity or authentication proof.
+    _require(type(r.version) is str and r.version == VERSION)
+    _require(type(r.live) is str and r.live == "LIVE_NO_GO")
+    _require(type(r.gate_73) is str and r.gate_73 == "BLOCKED")
+    _require(r.launch_allowed is False)
     if r.identity is None:
         _require(
             r.status == "BLOCKED"
@@ -546,7 +583,9 @@ def _report(r):
         )
         return
     _config(r.configuration)
-    _require(type(r.identity) is Identity and r.configuration.identity == r.identity)
+    _require(type(r.identity) is Identity)
+    _config(Config(r.identity))
+    _require(r.configuration.identity == r.identity)
     _require(len(r.cases) == len(Case))
     _require(
         all(
@@ -557,18 +596,48 @@ def _report(r):
             and type(c.model_matches) is bool
             and type(c.code) is str
             and c.code in RESULT_CODES
+            and type(c.host) is Disposition
+            and c.host is Disposition.HOST_NOT_RUN
             for c in r.cases
         )
     )
     _require(tuple(c.case for c in r.cases) == tuple(Case))
-    _require(
-        all(
+    stopped = False
+    for c in r.cases:
+        _require(
             c.expected
             == (Disposition.PASS if c.case in POSITIVE else Disposition.DENIED)
-            and c.model_matches == (c.expected == c.observed)
-            for c in r.cases
         )
-    )
+        _require(c.model_matches == (c.expected == c.observed))
+        if stopped:
+            _require(c.code == "after_stop")
+        else:
+            _require(c.code != "after_stop")
+        if c.code == "model_match":
+            _require(c.model_matches)
+        elif c.code == "model_mismatch":
+            _require(
+                not c.model_matches
+                and c.observed
+                in {
+                    Disposition.PASS,
+                    Disposition.DENIED,
+                    Disposition.FAIL,
+                    Disposition.UNSUPPORTED,
+                }
+            )
+        else:
+            observed = {
+                "invalid_evidence": Disposition.BLOCKED,
+                "owned_children_unreaped": Disposition.FAIL,
+                "execution_incomplete": Disposition.FAIL,
+                "cleanup_incomplete": Disposition.UNKNOWN,
+                "cancelled": Disposition.UNKNOWN,
+                "deadline": Disposition.UNKNOWN,
+                "after_stop": Disposition.HOST_NOT_RUN,
+            }[c.code]
+            _require(c.observed is observed and not c.model_matches)
+        stopped = stopped or not c.model_matches
     status = (
         "VERIFIED_OFFLINE_FIXTURE"
         if all(c.model_matches for c in r.cases)

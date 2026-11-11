@@ -457,3 +457,203 @@ def test_suite_stops_after_uncertainty_and_retains_unexecuted_cases(monkeypatch)
         for r in report.cases[1:]
     )
     assert json.loads(report.encode())["status"] == "BLOCKED"
+
+
+def test_full_suite_rejects_wrong_uid_case_replaced_by_wrong_gid_stimulus():
+    c = config()
+    steps = cf.scenarios(c)
+    gid_stimulus = next(s.stimulus for s in steps if s.case == cf.Case.WRONG_GID)
+    changed = tuple(
+        replace(s, stimulus=gid_stimulus) if s.case == cf.Case.WRONG_UID else s
+        for s in steps
+    )
+    variant = next(s for s in changed if s.case == cf.Case.WRONG_UID)
+    # Ad-hoc variants are allowed, but this denial did not exercise WRONG_UID.
+    assert variant.stimulus.peer.uid == cf.MODEL_PEER.uid
+    assert variant.stimulus.peer.gid != cf.MODEL_PEER.gid
+    assert cf.run_case(c, variant, cf.FakeAdapter()).observed == cf.Disposition.DENIED
+    assert cf.run(c, changed).status == "BLOCKED"
+
+
+@pytest.mark.parametrize("case", [cf.Case.OWN_READ, cf.Case.WRONG_UID])
+def test_zero_children_never_proves_case_execution(case):
+    c = config()
+    s = replace(step(case), children=0)
+    adapter = cf.FakeAdapter()
+    r = cf.run_case(c, s, adapter)
+    assert r.observed == cf.Disposition.BLOCKED and not r.model_matches
+    assert not adapter.started and not adapter.plans
+    steps = tuple(s if old.case == case else old for old in cf.scenarios(c))
+    assert cf.run(c, steps).status == "BLOCKED"
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "invalid_evidence",
+        "owned_children_unreaped",
+        "cleanup_incomplete",
+        "cancelled",
+        "deadline",
+        "model_mismatch",
+        "after_stop",
+    ],
+)
+def test_report_rejects_failure_code_on_successful_disposition(code):
+    c = config()
+    report = cf.run(c, cf.scenarios(c))
+    first = replace(report.cases[0], code=code)
+    report = replace(report, cases=(first, *report.cases[1:]))
+    with pytest.raises(cf.FixtureError):
+        report.encode()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("live", "LIVE_GO"),
+        ("gate_73", "PASS"),
+        ("launch_allowed", True),
+        ("launch_allowed", 0),
+        ("version", "AP-CF/unknown"),
+    ],
+)
+@pytest.mark.parametrize("blocked", [False, True])
+def test_serialization_rechecks_security_fields_even_on_frozen_objects(
+    field, value, blocked
+):
+    c = config()
+    report = cf.run(c, () if blocked else cf.scenarios(c))
+    object.__setattr__(report, field, value)
+    with pytest.raises(cf.FixtureError):
+        report.encode()
+
+
+def test_report_rejects_mutated_case_host_disposition():
+    c = config()
+    report = cf.run(c, cf.scenarios(c))
+    object.__setattr__(report.cases[0], "host", cf.Disposition.PASS)
+    with pytest.raises(cf.FixtureError):
+        report.encode()
+
+
+def test_report_rejects_resumed_results_after_stop():
+    c = config()
+    steps = cf.scenarios(c)
+    good = cf.run(c, steps)
+    stopped = cf.run(c, (replace(steps[0], elapsed_ms=5001), *steps[1:]))
+    # Every row after the first failure must remain after_stop, not a later PASS.
+    resumed = replace(stopped, cases=(stopped.cases[0], *good.cases[1:]))
+    with pytest.raises(cf.FixtureError):
+        resumed.encode()
+
+
+def test_execution_must_account_for_started_and_reaped_children(monkeypatch):
+    # A return value alone must not fabricate completed execution.
+    monkeypatch.setattr(cf.FakeAdapter, "execute", lambda *a: True)
+    result = cf.run_case(config(), step(), cf.FakeAdapter())
+    assert not result.model_matches and result.observed == cf.Disposition.FAIL
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("elapsed_ms", 5001),
+        ("cleanup_complete", False),
+        ("cancelled", True),
+        ("complete", False),
+        ("children", 0),
+        ("can_reap", False),
+    ],
+)
+def test_valid_failure_report_encodes_closed_dispositions_and_stop_suffix(field, value):
+    c = config()
+    steps = cf.scenarios(c)
+    report = cf.run(c, (replace(steps[0], **{field: value}), *steps[1:]))
+    assert report.status == "BLOCKED"
+    assert report.cases[0].code != "after_stop"
+    assert all(r.code == "after_stop" for r in report.cases[1:])
+    assert json.loads(report.encode())["status"] == "BLOCKED"
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("code", "invalid_evidence"),
+        ("code", "owned_children_unreaped"),
+        ("code", "model_match"),
+        ("code", "model_mismatch"),
+        ("observed", cf.Disposition.FAIL),
+        ("model_matches", True),
+    ],
+)
+def test_report_rejects_inconsistent_first_failure(field, value):
+    c = config()
+    steps = cf.scenarios(c)
+    report = cf.run(c, (replace(steps[0], elapsed_ms=5001), *steps[1:]))
+    first = replace(report.cases[0], **{field: value})
+    with pytest.raises(cf.FixtureError):
+        replace(report, cases=(first, *report.cases[1:])).encode()
+
+
+def test_after_stop_cannot_appear_before_failure_or_be_replaced_by_second_failure():
+    c = config()
+    steps = cf.scenarios(c)
+    report = cf.run(c, (replace(steps[0], elapsed_ms=5001), *steps[1:]))
+    uncaused = replace(
+        report.cases[0], observed=cf.Disposition.HOST_NOT_RUN, code="after_stop"
+    )
+    with pytest.raises(cf.FixtureError):
+        replace(report, cases=(uncaused, *report.cases[1:])).encode()
+    second_failure = replace(
+        report.cases[1], observed=cf.Disposition.UNKNOWN, code="deadline"
+    )
+    with pytest.raises(cf.FixtureError):
+        replace(
+            report, cases=(report.cases[0], second_failure, *report.cases[2:])
+        ).encode()
+
+
+@pytest.mark.parametrize(
+    "fault", ["started", "reaped", "plans", "boolean_counter", "non_boolean_return"]
+)
+def test_partial_execution_accounting_never_produces_model_pass(monkeypatch, fault):
+    original = cf.FakeAdapter.execute
+
+    def incomplete(self, plan, step):
+        original(self, plan, step)
+        if fault == "started":
+            self.started += 1
+        elif fault == "reaped":
+            self.reaped -= 1
+        elif fault == "plans":
+            self.plans.clear()
+        elif fault == "boolean_counter":
+            self.started = True
+        else:
+            return 1
+        return True
+
+    monkeypatch.setattr(cf.FakeAdapter, "execute", incomplete)
+    result = cf.run_case(config(), step(), cf.FakeAdapter())
+    assert result.observed == cf.Disposition.FAIL
+    assert result.code == "execution_incomplete" and not result.model_matches
+
+
+def test_complete_multi_child_variant_is_still_bounded_and_accounted():
+    adapter = cf.FakeAdapter()
+    r = cf.run_case(config(), replace(step(), children=4), adapter)
+    assert r.model_matches and adapter.started == adapter.reaped == 4
+
+
+def test_canonical_comparison_validates_nested_types_before_equality():
+    class UntrustedPeer:
+        def __eq__(self, other):
+            pytest.fail("invalid nested object must not participate in comparison")
+
+    c = config()
+    steps = cf.scenarios(c)
+    malformed = replace(
+        steps[0], stimulus=replace(steps[0].stimulus, peer=UntrustedPeer())
+    )
+    assert cf.run(c, (malformed, *steps[1:])).status == "BLOCKED"
