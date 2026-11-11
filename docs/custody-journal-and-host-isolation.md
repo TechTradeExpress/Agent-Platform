@@ -218,3 +218,10 @@ upgrade, publisher, native worker or API-billed fallback follows from offline PA
 [AP-AS/1 (Issue #80)](app-signer-ipc.md) provides bounded offline signer and IPC
 libraries. It does not supply the trusted admission/continuity producer or deploy
 any process. The process, credential and anti-rollback gates above remain binding.
+
+## Control Plane host contract
+
+[CP-01 (Issue #87)](control-plane-host-contract.md) specifies the proposed
+Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
+contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
+admission, independent continuity and live activation BLOCKED.

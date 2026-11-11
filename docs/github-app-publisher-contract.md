@@ -7,21 +7,31 @@ non-authorizing. Completion permits independent contract review only.
 
 ## Baseline and governing boundaries
 
-Source base: `e19c0b3b124ac5689d0c31c60a5ea5e7330c11af`, freshly verified
-`origin/main`. [ADR 006 / AP-WP/0.1](worker-pool-identity-architecture.md),
+Historical CP-02 source base: `e19c0b3b124ac5689d0c31c60a5ea5e7330c11af`.
+The original local CP-02 commit was
+`88e1d6c6278b0025483d68f3e0a4fe6943e0eea5`. This integration uses
+`origin/main` at `1e77100e04f29fb0475a2bcc18100726f6d86692`.
+[ADR 006 / AP-WP/0.1](worker-pool-identity-architecture.md),
 [AP-SM/2](solo-maintainer-policy.md), [development](development.md),
 [AP-TP/1](target-project-policy.md), [Gate B](coding-app-gate-b.md),
 [governance](github-governance.md), [AP-AL/1](app-api-adapter.md),
 [AP-AJ/1](custody-journal-and-host-isolation.md) and
 [AP-AS/1](app-signer-ipc.md) retain their existing invariants.
 
-CP-01 / #87 is a **local-only, unreviewed candidate** at
-`2e14c76a3a9c73133461e8a212ebe4882e6a3b2c`, preserved in its separate
-`feature/issue-87-control-plane-host-contract` worktree. Its proposed
-`docs/control-plane-host-contract.md` is not on this base; no dependency file is
-copied or cherry-picked here. CP-02 may be reviewed independently; deployment
-cannot precede CP-01 independent review and gate completion. Neither that commit
-nor this one is evidence that a bot authored, pushed or published anything.
+CP-01 / #87 originated as a local candidate at
+`2e14c76a3a9c73133461e8a212ebe4882e6a3b2c`.
+[PR #89](https://github.com/TechTradeExpress/Agent-Platform/pull/89) has since
+been merged by the maintainer; [CP-01](control-plane-host-contract.md) is now on
+main and included through this merge. Its inclusion does not complete host,
+independent assurance or live activation gates.
+
+The maintainer published CP-02 from a laptop as
+[Draft PR #90](https://github.com/TechTradeExpress/Agent-Platform/pull/90).
+This human-controlled source delivery is not a deployed production GitHub App
+publisher and proves no worker App publication capability. Issue #88 remains
+OPEN pending final review. These remote-state facts are operator-reported;
+this local integration performs no network verification or publication.
+Deployment still requires CP-01 independent assurance and all gate completion.
 Issue #73 remains an open operator governance/custody/live-identity gate. Its
 historical publisher01 proposal supplies no control01 admission or current proof.
 ADR 006's publisher01 denotes the proposed Control Plane role; CP-01/CP-02 use
@@ -29,7 +39,7 @@ control01 for the proposed host. No rename, host observation or migration follow
 
 | Capability | Existing support | CP-02 status |
 | --- | --- | --- |
-| Human-invoked source contributor and separate ChatGPT review | Documented AP-SM/2 workflow; direct human instruction controls actual scope | Unchanged; this task stops at one local commit |
+| Human-invoked source contributor and separate ChatGPT review | Documented AP-SM/2 workflow; direct human instruction controls actual scope | Unchanged; Draft #90 was published by the maintainer; this update stops at one local integration commit |
 | `publisher.plan` | Offline inspection, `publish_authorized=false` | No commit/ref/PR writer added |
 | #49 / #59 / #62 evidence and COMMENT | Trusted-caller/synthetic interfaces, exact-SHA/project rules | No live client or new Receipt bridge |
 | AP-AL / AP-AJ / AP-AS | Inactive bounded libraries; explicit journal and injected signer/IPC | Not a deployed composition; claims-only signer bridge stays blocked |
@@ -258,20 +268,24 @@ The human alone decides and performs final protected-base merge.
 Bootstrap cycle: supervised Codex can implement and commit locally while credentials
 are withheld, but it cannot push or bootstrap its own trusted publisher. A local
 commit, developer Git identity or old gh setup grants no writer authority.
-No bootstrap path is authorized now. Compare future human-controlled choices:
+The maintainer used a separate laptop to publish Draft #90. That supervised
+source-delivery path does not deploy or authorize a production App publisher.
+This update is local-only; no further publication is authorized here. Compare
+human-controlled choices for future separately approved delivery:
 
 | Candidate path | Benefit | Preconditions and remaining risk |
 | --- | --- | --- |
 | Human publishes reviewed exact local commit from a separate trusted workstation | Breaks cycle without worker credentials or publisher dependency | Explicit delivery approval; immutable artifact/commit/base verification; no executing transferred hooks/config; actual human push/PR attribution |
 | Human transfers inert candidate to a separately reviewed minimal trusted publisher on control01 | Establishes eventual App-mediated route | CP-01, authority/continuity, governance and publisher implementation/identity gates first; cannot use this route to approve/deploy itself |
-| Keep local-only pending gates | No live authority introduced | Preserve work and record delivery blocked; this is the selected boundary for #88 |
+| Keep local-only pending gates | No live authority introduced | Preserve work and record delivery blocked; this is the boundary for the current local integration update |
 
 Never copy administrator PAT/gh login, PEM/JWT/token or signing handle onto a
 worker, even temporarily. Never upgrade techtradeexpress-agent for bootstrap.
-Preserve #87's exact local commit/worktree and actual provenance. A later human
-may authorize safe publication, independent review and manual merge of that exact
-candidate; any change needs new exact-SHA evidence. Source delivery transitions
-to App mediation only after individually reviewed gates and a fresh human-approved
+Preserve #87's original commit/worktree and actual provenance: its source was
+merged through PR #89. CP-02 is delivered as Draft #90, with #88 still open for
+final review. Any changed candidate needs fresh exact-SHA review evidence and
+separate human authorization for subsequent publication or manual merge.
+Source delivery transitions to App mediation only after individually reviewed gates and a fresh human-approved
 exact target/action, never merely because the publisher source was merged.
 
 Proposed publisher ledger is separate from task checkpoints and existing AP-AJ

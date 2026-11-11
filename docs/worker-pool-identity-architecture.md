@@ -515,6 +515,13 @@ specifies future read-only B2 collection and separately authorized B3 clean-imag
 worker02 gates. It is **DESIGN_ONLY / NO_HOST_ACCESS**, not a collected inventory,
 image build, host probe or provisioning approval.
 
+## Control Plane host contract
+
+[CP-01 (Issue #87)](control-plane-host-contract.md) specifies the proposed
+Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
+contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
+admission, independent continuity and live activation BLOCKED.
+
 ## CP-02 proposed publisher contract
 
 [Issue #88 / CP-02](github-app-publisher-contract.md) specifies per-worker App
