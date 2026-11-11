@@ -521,3 +521,10 @@ image build, host probe or provisioning approval.
 Debian 13/systemd 257 principal, filesystem, IPC and future negative-test
 contract. It is DESIGN_ONLY / HOST_NOT_RUN, installs no services and leaves
 admission, independent continuity and live activation BLOCKED.
+
+## CP-02 proposed publisher contract
+
+[Issue #88 / CP-02](github-app-publisher-contract.md) specifies per-worker App
+identities, project authorization, exact-SHA Draft/COMMENT publication, bootstrap
+and recovery as DESIGN_ONLY / OFFLINE_ONLY. It adds no publisher implementation,
+credential access or live authority; existing APIs and exit-13 gates are unchanged.
