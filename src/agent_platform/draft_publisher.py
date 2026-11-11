@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
+from enum import Enum
 from time import monotonic
 from typing import Protocol
 
@@ -138,7 +139,8 @@ class State:
 
     @property
     def uncertain(self):
-        return self.phase in {"CLAIMING", "UNKNOWN"} or self.completed_writes > 0
+        # Claim intent/history is itself irreversible, even without GitHub writes.
+        return self.phase != "VALIDATED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -278,6 +280,124 @@ def validate(candidate: pc.Candidate, policy: Policy, now: int) -> Request | Non
         )
     except Exception:
         return None
+
+
+class RouteOperation(Enum):
+    REPOSITORY = "repository"
+    ISSUE = "issue"
+    INSTALLATION = "installation"
+    BASE = "base"
+    FEATURE = "feature"
+    LIST_PRS = "list_prs"
+    READ_OBJECT = "read_object"
+    CREATE_BLOB = "create_blob"
+    CREATE_TREE = "create_tree"
+    CREATE_COMMIT = "create_commit"
+    CREATE_REF = "create_ref"
+    CREATE_DRAFT = "create_draft"
+    READ_PR = "read_pr"
+
+
+@dataclass(frozen=True, slots=True)
+class Route:
+    """Synthetic route metadata only; NOT an HTTP request or payload adapter."""
+
+    operation: RouteOperation
+    method: str
+    path: str
+    origin: str = "https://api.github.com"
+    query: tuple[tuple[str, str], ...] = ()
+    ref: str | None = None
+    sha: str | None = None
+    draft: bool | None = None
+    force: bool | None = None  # always forbidden, even False
+    version: str = field(default=VERSION, init=False)
+    semantics_verified: bool = field(default=False, init=False)
+
+
+def allowed_routes(
+    candidate: pc.Candidate, policy: Policy, *, now: int, pr_number: int | None = None
+) -> tuple[Route, ...]:
+    """Closed synthetic method/path profile, without I/O or publication authority.
+
+    PR number is a separately observed exact pin, never an arbitrary URL. Unknown
+    payloads cannot be expressed here. Object wire encoding, native Issue linkage,
+    atomic create semantics and complete observation transport remain UNVERIFIED.
+    """
+    request = validate(candidate, policy, now)
+    if request is None:
+        return ()
+    if pr_number is not None and not (type(pr_number) is int and 0 < pr_number < 2**63):
+        return ()
+    p = policy.candidate
+    # Conservative path-segment grammar; even caller pins cannot insert traversal.
+    if len(p.repository) > 201 or not re.fullmatch(
+        r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*", p.repository
+    ):
+        return ()
+    root = f"/repos/{p.repository}"
+    op = RouteOperation
+    routes = [
+        Route(op.REPOSITORY, "GET", root),
+        Route(op.ISSUE, "GET", f"{root}/issues/{p.issue}"),
+        Route(op.INSTALLATION, "GET", f"/app/installations/{policy.installation_id}"),
+        Route(op.BASE, "GET", f"{root}/git/ref/heads/main"),
+        Route(op.FEATURE, "GET", f"{root}/git/ref/{p.feature_ref[5:]}"),
+        Route(op.CREATE_BLOB, "POST", f"{root}/git/blobs"),
+        Route(op.CREATE_TREE, "POST", f"{root}/git/trees"),
+        Route(op.CREATE_COMMIT, "POST", f"{root}/git/commits"),
+        Route(
+            op.CREATE_REF,
+            "POST",
+            f"{root}/git/refs",
+            ref=p.feature_ref,
+            sha=request.commit,
+        ),
+        Route(
+            op.CREATE_DRAFT,
+            "POST",
+            f"{root}/pulls",
+            ref=p.feature_ref,
+            sha=request.commit,
+            draft=True,
+        ),
+    ]
+    for page in range(1, 4):
+        routes.append(
+            Route(
+                op.LIST_PRS,
+                "GET",
+                f"{root}/pulls",
+                query=(
+                    ("state", "all"),
+                    ("per_page", "20"),
+                    ("page", str(page)),
+                ),
+            )
+        )
+    for obj in candidate.objects:
+        kind = obj.canonical.split(b" ", 1)[0].decode()
+        routes.append(Route(op.READ_OBJECT, "GET", f"{root}/git/{kind}s/{obj.oid}"))
+    if pr_number is not None:
+        routes.append(Route(op.READ_PR, "GET", f"{root}/pulls/{pr_number}"))
+    return tuple(routes)
+
+
+def route_allowed(
+    candidate: pc.Candidate,
+    policy: Policy,
+    route: Route,
+    *,
+    now: int,
+    pr_number: int | None = None,
+) -> bool:
+    """Deny unknown methods, origins, paths, query fields and metadata by default."""
+    if type(route) is not Route:
+        return False
+    return any(
+        _same(route, expected)
+        for expected in allowed_routes(candidate, policy, now=now, pr_number=pr_number)
+    )
 
 
 def publish(

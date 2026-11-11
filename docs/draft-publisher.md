@@ -72,7 +72,7 @@ history. All attempts, even successful ones, remain non-replayable. The publishe
 provides no automatic reconciliation, retry, reset, cleanup or rollback. It never
 adopts an existing branch or PR. Losing claim/UNKNOWN/result confirmation returns
 UNKNOWN_NEEDS_HUMAN; an uncertain journal claim also requires human reconciliation.
-Precondition refusal before any effect returns BLOCKED. A failure after any
+Candidate/policy or admission refusal before claim returns BLOCKED. A failure after any
 confirmed partial effect returns UNKNOWN_NEEDS_HUMAN, retaining prior facts.
 Process death leaves durable UNKNOWN/claim history; BaseException propagates.
 Human reconciliation must inspect remote and local facts without automatically
@@ -111,3 +111,34 @@ App/Issue/grant mismatch, base/ref drift, existing/duplicate PRs, durable UNKNOW
 result-confirmation failures, timeouts/crash/replay, author/PR/API mismatches, deadlines
 and absence of arbitrary or prohibited write methods. Full existing tests preserve
 legacy/native quarantine. No real GitHub App, control01, worker02 or Proxmox is used.
+
+## Review repair: retained claim and synthetic route contract
+
+A confirmed claim is retained history even when zero GitHub writes completed.
+After entering CLAIMING, every unsuccessful return requires reconciliation,
+including a failed first observation or admission revocation after claim. Such
+results are UNKNOWN_NEEDS_HUMAN with completed_writes=0; BLOCKED is reserved for
+candidate/policy rejection or admission refusal before claim. A repaired external
+observation does not release, reset or reuse the claim on another invocation.
+
+`RouteOperation`, frozen `Route`, `allowed_routes` and `route_allowed` provide a
+pure synthetic method/origin/path profile. Routes bind the validated candidate's
+repository, Issue, installation, base/feature ref, exact object IDs and optionally
+a separately observed PR number. The fixed origin is https://api.github.com.
+Only the enumerated GETs and initial object/ref/Draft POSTs are represented.
+PR enumeration has exactly state=all, per_page=20 and pages 1–3. Unknown verbs,
+URLs, paths, query fields or route metadata refuse by default; main/tag writes,
+merge, reviews/APPROVE, deletion, updates/force and repository settings are absent.
+Ref/Draft metadata pins exact feature ref and HEAD; Draft must be true. The
+synthetic transaction fixture checks its write/object/PR routes against this
+profile. It does not make HTTP requests.
+
+Every Route has init-disabled semantics_verified=false. This is deliberately
+route metadata, not an HTTP body encoder, authenticated permission gate or a
+complete observation adapter. Git object wire encoding, native Issue association
+queries, effective App/grant evidence, pagination completeness, response schemas
+and atomic create-if-absent semantics still require separately reviewed official
+API/schema evidence before any future live adapter. In particular no generic
+GraphQL endpoint, arbitrary body, network sender or live-safe claim is introduced.
+The profile cannot grant authority or replace admission, journal continuity,
+independent remote observations or the existing live NO-GO gates.
