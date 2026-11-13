@@ -1,0 +1,67 @@
+{
+  "isolation": {
+    "repo_id": 1436076348,
+    "ref": "",
+    "head": "",
+    "observed_at": 0,
+    "expires": 0,
+    "verdict": "NOT_VERIFIED",
+    "method": "NOT_VERIFIED",
+    "app_id": 0,
+    "installation_id": 0,
+    "worker": "",
+    "job": ""
+  },
+  "independent_custody": {
+    "repo_id": 1436076348,
+    "ref": "",
+    "head": "",
+    "observed_at": 0,
+    "expires": 0,
+    "verdict": "NOT_VERIFIED",
+    "method": "NOT_VERIFIED",
+    "app_id": 0,
+    "installation_id": 0,
+    "worker": "",
+    "job": ""
+  },
+  "continuity": {
+    "repo_id": 1436076348,
+    "ref": "",
+    "head": "",
+    "observed_at": 0,
+    "expires": 0,
+    "verdict": "NOT_VERIFIED",
+    "method": "NOT_VERIFIED",
+    "app_id": 0,
+    "installation_id": 0,
+    "worker": "",
+    "job": ""
+  },
+  "main_app_merge_denied": {
+    "repo_id": 1436076348,
+    "ref": "",
+    "head": "",
+    "observed_at": 0,
+    "expires": 0,
+    "verdict": "NOT_VERIFIED",
+    "method": "NOT_VERIFIED",
+    "app_id": 0,
+    "installation_id": 0,
+    "worker": "",
+    "job": ""
+  },
+  "disposable_pilot": {
+    "repo_id": 1436076348,
+    "ref": "",
+    "head": "",
+    "observed_at": 0,
+    "expires": 0,
+    "verdict": "NOT_VERIFIED",
+    "method": "NOT_VERIFIED",
+    "app_id": 0,
+    "installation_id": 0,
+    "worker": "",
+    "job": ""
+  }
+}

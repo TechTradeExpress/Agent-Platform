@@ -400,3 +400,10 @@ synthetic existing-Draft update model. It proposes worker-local separately
 privileged publishers without deploying or replacing CP-02 control01 custody.
 CP-03 update refusal, CP-05 create-only behavior and all live gates remain.
 Official CAS/permission evidence and effective App merge denial remain BLOCKED.
+
+## PUB-02 separate operator executable
+
+[Issue #108](worker-publisher.md) implements a separate one-shot operator publisher
+with full-tree byte intake, real fixed GitHub wire code and distinct signer custody.
+It does not convert PUB-01 fixtures or activate native/autonomous runtime. Host
+installation, credentials and exact first pilot remain separately authorized.
