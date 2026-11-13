@@ -81,9 +81,15 @@ def test_real_deb_archives_metadata_permissions_contents_and_reproducibility(tmp
             provenance = json.loads(
                 archive.extractfile("./usr/share/doc/agent-platform/build.json").read()
             )
-            # Newly merged modules must ship byte-for-byte in both profiles,
+            assert not any(
+                "publisher_handoff" in n or "publisher-handoff" in n for n in names
+            )
+            assert "src/agent_platform/publisher_handoff.py" not in provenance["inputs"]
+            # Deployable modules must ship byte-for-byte in both profiles,
             # with source hashes, without changing admission or entry points.
             for source in (ROOT / "src/agent_platform").glob("*.py"):
+                if source.name == "publisher_handoff.py":
+                    continue
                 installed = "./usr/lib/agent-platform/agent_platform/" + source.name
                 assert archive.extractfile(installed).read() == source.read_bytes()
                 relative = str(source.relative_to(ROOT))

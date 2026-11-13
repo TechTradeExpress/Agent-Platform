@@ -392,3 +392,11 @@ and never grants native execution, automatic scheduling/transitions or merge.
 Stock subscription-authenticated Codex remains the intended engine; complete
 trusted-Codex/untrusted-tool separation remains independently BLOCKED. Preserve
 SUBSCRIPTION_ISOLATION_BLOCKED / exit 13 and public legacy quarantine unchanged.
+
+## PUB-01 worker-local handoff proposal
+
+[Issue #104 / AP-PH/1](publisher-handoff.md) adds byte-only intake and a separate
+synthetic existing-Draft update model. It proposes worker-local separately
+privileged publishers without deploying or replacing CP-02 control01 custody.
+CP-03 update refusal, CP-05 create-only behavior and all live gates remain.
+Official CAS/permission evidence and effective App merge denial remain BLOCKED.

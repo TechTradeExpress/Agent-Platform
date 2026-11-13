@@ -88,6 +88,9 @@ def build(source, output, revision, commit, epoch):
             put(stage, destination, data, mode)
 
         for path in sorted((source / "src/agent_platform").glob("*.py")):
+            # PUB-01 is source-only; no deployed handoff/activation component.
+            if path.name == "publisher_handoff.py":
+                continue
             copy(
                 str(path.relative_to(source)),
                 "usr/lib/agent-platform/agent_platform/" + path.name,
