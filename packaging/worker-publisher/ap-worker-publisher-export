@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I
+import sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, '/usr/lib/ap-worker-publisher')
+from agent_platform.worker_publish_export import main
+raise SystemExit(main())

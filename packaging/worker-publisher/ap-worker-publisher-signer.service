@@ -1,0 +1,51 @@
+[Unit]
+Description=Operator-triggered single App JWT signer (no installation token)
+ConditionPathExists=/etc/ap-publisher/job.json
+
+[Service]
+Type=oneshot
+User=ap-publisher-signer
+Group=ap-publisher-signer
+SupplementaryGroups=
+UMask=0077
+UnsetEnvironment=GH_TOKEN GITHUB_TOKEN GIT_ASKPASS SSH_AUTH_SOCK SSLKEYLOGFILE SSL_CERT_FILE SSL_CERT_DIR OPENSSL_CONF OPENSSL_MODULES HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+ExecStart=/usr/libexec/ap-worker-publisher-signer
+LoadCredential=app-key:/etc/ap-publisher-keys/worker.pem
+AppArmorProfile=ap-worker-publisher-signer
+RuntimeDirectory=ap-publisher-signer
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX
+ReadOnlyPaths=/etc/ap-publisher /usr/lib/ap-worker-publisher
+ReadWritePaths=/var/lib/ap-publisher-signer/journal /run/ap-publisher-signer
+InaccessiblePaths=/var/lib/ap-publisher
+LimitCORE=0
+LimitNOFILE=32
+TasksMax=1
+MemoryMax=128M
+CPUQuota=100%
+TimeoutStartSec=10
+TimeoutStopSec=5
+KillMode=control-group
+Restart=no
+StandardOutput=journal
+StandardError=null
+# No [Install]; operator starts signer and publisher separately after fresh approval.

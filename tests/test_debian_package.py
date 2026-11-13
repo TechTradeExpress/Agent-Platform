@@ -84,11 +84,16 @@ def test_real_deb_archives_metadata_permissions_contents_and_reproducibility(tmp
             assert not any(
                 "publisher_handoff" in n or "publisher-handoff" in n for n in names
             )
+            assert not any(
+                "worker_publish" in n or "worker-publisher" in n for n in names
+            )
             assert "src/agent_platform/publisher_handoff.py" not in provenance["inputs"]
             # Deployable modules must ship byte-for-byte in both profiles,
             # with source hashes, without changing admission or entry points.
             for source in (ROOT / "src/agent_platform").glob("*.py"):
-                if source.name == "publisher_handoff.py":
+                if source.name == "publisher_handoff.py" or source.name.startswith(
+                    "worker_publish"
+                ):
                     continue
                 installed = "./usr/lib/agent-platform/agent_platform/" + source.name
                 assert archive.extractfile(installed).read() == source.read_bytes()
