@@ -1,5 +1,11 @@
 > **Current 2026-11-14 maintainer amendment:** Codex CLI is fetched and verified directly from the **official upstream** during an explicit worker provisioning command, **not** redistributed in `agent-platform-codex.deb`. Exactly two Agent Platform role packages remain. [Current decision](codex-upstream-provisioning-decision.md) amends [ADR 007](debian-role-package-architecture.md). Historic Codex third-package milestones below are retained as old planning, **not current implementation instructions**. Replace #110 with [#116](https://github.com/TechTradeExpress/Agent-Platform/issues/116), and implement #102 independently of any Codex APT dependency. #110 and PR #115 were closed unmerged, without host changes. `LIVE_NO_GO` / exit 13 remains unchanged.
 
+Current PKG-02 implements the two inert P0 artifacts described in
+[debian-package.md](debian-package.md). AP-PKG/2 supersedes the historical
+third Codex package/dependency discussion below; there is no Codex .deb or APT
+Depends. Explicit upstream provisioning remains #116, outside P0.
+
+
 # Agent Platform: package-first Control/Worker distribution and rollout roadmap
 
 **Status:** MAINTAINER DECISION / PLANNED. **Date:** 2026-11-14. **Scope:** Debian 13 trixie amd64, `control01`, `worker01`, `worker02`. This is a tracked plan and reviewable source document, **not installation, live authentication, service activation, or a GitHub write permission grant**. [Canonical tracker #35](https://github.com/TechTradeExpress/Agent-Platform/issues/35).

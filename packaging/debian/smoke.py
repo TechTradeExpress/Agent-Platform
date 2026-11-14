@@ -3,11 +3,12 @@
 import hashlib
 import json
 import os
-import shutil
 import stat
 import subprocess
 import sys
 from pathlib import Path
+
+sys.dont_write_bytecode = True
 
 
 def guard():
@@ -39,7 +40,7 @@ def digest(path):
 
 def signer_smoke():
     # Only generated throwaway keys inside guard()'s approved disposable fixture.
-    sys.path.insert(0, "/usr/lib/agent-platform")
+    sys.path.insert(0, "/usr/lib/agent-platform-control")
     import socket
     import threading
     import time
@@ -124,33 +125,58 @@ def signer_smoke():
     assert not worker.is_alive() and outcome == ["OK"]
 
 
-def smoke():
-    signer_smoke()
-    for name in (
-        "agent-platform",
-        "agent-platform-broker",
-        "agent-platform-native-canary",
-        "agent-platform-native-artifact",
-    ):
-        call([name, "--help"])
-        assert "0.1.0 (Debian 0.1.0-" in call([name, "--version"])
-    for command in ("run", "resume", "doctor"):
-        result = json.loads(call(["agent-platform", command, "--issue", "1"], 13))
-        assert result["reason"] == "legacy_execution_quarantined"
-        assert result["launch_allowed"] is result["resume_authorized"] is False
-    result = json.loads(call(["agent-platform", "subscription"], 13))
-    assert "SUBSCRIPTION_ISOLATION_BLOCKED" in json.dumps(result)
-    # The separate canary's default is successful NOT_RUN presentation, not
-    # the native runtime gate. Never opt into kernel probes here.
-    inert = json.loads(call(["agent-platform-native-canary"]))
-    assert inert["status"] == "NOT_RUN" and inert["checks"] == {}
-    assert inert["launch_allowed"] is False
-    assert inert["reason"] == "explicit_opt_in_required"
-    assert inert["authentication"] == "AUTH_E2E_NOT_RUN"
-    assert not Path("/var/lib/agent-platform").exists()
-    assert not Path("/run/agent-platform").exists()
-    files = call(["dpkg-query", "-L", "agent-platform"]).splitlines()
-    assert not any("/systemd/" in name or "/init.d/" in name for name in files)
+ROLES = ("control", "worker")
+COMMANDS = {
+    "control": ("agent-platform-control",),
+    "worker": ("agent-platform-worker", "agent-platform-worker-native-artifact"),
+}
+
+
+def smoke(roles=ROLES):
+    if "control" in roles:
+        signer_smoke()
+        result = json.loads(call(["agent-platform-control", "subscription"], 13))
+        assert "SUBSCRIPTION_ISOLATION_BLOCKED" in json.dumps(result)
+    for role in roles:
+        # Import the whole installed closure in a fresh isolated interpreter.
+        # No checkout/PYTHONPATH, global wheel or other role may satisfy imports.
+        script = """import hashlib,importlib,json,stat,sys
+from pathlib import Path
+root=Path('/usr/lib/agent-platform-')
+role=sys.argv[1]
+private=Path(str(root)+role)
+sys.dont_write_bytecode=True
+sys.path.insert(0,str(private))
+report=json.loads(Path('/usr/share/doc/agent-platform-'+role+'/build.json').read_text())
+for name in report['modules']:
+    module=importlib.import_module('agent_platform.'+name)
+    assert Path(module.__file__).is_relative_to(private)
+manifest=json.loads(Path('/usr/share/doc/agent-platform-'+role+'/manifest.json').read_text())
+for item in manifest['files']:
+    file=Path(item['path'])
+    assert file.is_file() and not file.is_symlink()
+    if str(file).startswith('/etc/'):
+        continue  # Administrator conffile content/modes may differ.
+    assert file.stat().st_uid == file.stat().st_gid == 0
+    assert stat.S_IMODE(file.stat().st_mode) == item['mode']
+    if item['sha256'] is not None:
+        assert hashlib.sha256(file.read_bytes()).hexdigest() == item['sha256']
+assert not list(private.rglob('*.pyc'))
+"""
+        call(["/usr/bin/python3", "-I", "-c", script, role])
+        for name in COMMANDS[role]:
+            call([name, "--help"])
+            assert "0.1.0 (Debian 0.1.0-" in call([name, "--version"])
+        for command in ("run", "resume", "doctor"):
+            result = json.loads(
+                call(["agent-platform-" + role, command, "--issue", "1"], 13)
+            )
+            assert result["reason"] == "legacy_execution_quarantined"
+            assert result["launch_allowed"] is result["resume_authorized"] is False
+        files = call(["dpkg-query", "-L", "agent-platform-" + role]).splitlines()
+        assert not any("/systemd/" in name or "/init.d/" in name for name in files)
+        assert not Path("/var/lib/agent-platform-" + role).exists()
+    assert not Path("/usr/bin/codex").exists()
     assert not Path("/tmp/ap-forbidden-call").exists()
 
 
@@ -168,114 +194,225 @@ def lifecycle():
     evidence = Path("/evidence")
     assert evidence.is_dir()
     phases = []
-    # Initial apt install already ran with the container-only fake tripwires.
-    assert shutil.which("codex") == "/usr/local/bin/codex"
-    smoke()
-    phases.append("clean_install_and_gates")
-    cfg = Path("/etc/agent-platform/package.conf")
-    cfg.write_text(cfg.read_text() + "# administrator edit retained\n")
-    cfg.chmod(0o640)
-    config = digest(cfg)
-    notes = Path("/etc/agent-platform/operator-notes")
-    notes.write_text("unowned administrator note\n")
-    state = Path("/opt/operator-fixture")
-    fixture(state)
     retained = {}
-    for name in ("checkpoint.json", "unknown-journal.json", "backup.json"):
-        file = Path("/opt") / name
+    for path in (
+        "/opt/checkpoint.json",
+        "/opt/unknown-journal.json",
+        "/opt/backup.json",
+        "/var/lib/agent-platform/custody/unknown.json",
+        "/opt/operator-home/.local/bin/codex",
+    ):
+        file = Path(path)
+        file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text('{"synthetic":true,"state":"UNKNOWN"}\n')
         file.chmod(0o640)
-        retained[str(file)] = digest(file)
+        retained[path] = digest(file)
+    passwd = Path("/etc/passwd").read_bytes()
+    group = Path("/etc/group").read_bytes()
 
     def retained_ok():
         assert all(digest(Path(p)) == expected for p, expected in retained.items())
+        assert Path("/etc/passwd").read_bytes() == passwd
+        assert Path("/etc/group").read_bytes() == group
+        assert not Path("/tmp/ap-forbidden-call").exists()
 
-    before = (state / "example.json").read_bytes()
-    newer = "/packages/next/agent-platform_0.1.0-2_amd64.deb"
-    # Real rejected archive operation must leave configured N and all data intact.
-    bad = Path("/tmp/corrupt.deb")
-    bad.write_bytes(b"not a Debian archive\n")
-    result = subprocess.run(["dpkg", "--unpack", str(bad)], capture_output=True)
-    assert result.returncode != 0
-    assert call(["dpkg-query", "-W", "-f=${Version}", "agent-platform"]) == "0.1.0-1"
-    assert digest(cfg) == config
-    retained_ok()
-    phases.append("corrupt_archive_rejected")
-    # Stop at a real unpacked state, then explicitly recover with configure.
-    call(["dpkg", "--force-confdef", "--force-confold", "--unpack", newer])
-    assert (
-        call(["dpkg-query", "-W", "-f=${Status}", "agent-platform"])
-        == "install ok unpacked"
-    )
-    assert digest(cfg) == config and (state / "example.json").read_bytes() == before
-    call(
-        ["dpkg", "--force-confdef", "--force-confold", "--configure", "agent-platform"]
-    )
-    assert (
-        call(["dpkg-query", "-W", "-f=${Status}", "agent-platform"])
-        == "install ok installed"
-    )
-    assert call(["dpkg-query", "-W", "-f=${Version}", "agent-platform"]) == "0.1.0-2"
-    retained_ok()
-    phases.append("n_to_next_unpacked_recovery")
-    # Package manager NEVER migrates this data. Explicit synthetic operation only.
-    helper = ["/usr/lib/agent-platform/migrate-example", "--directory", str(state)]
-    assert json.loads(call(helper))["outcome"] == "migrated"
-    assert json.loads((state / "example.json").read_text())["schema"] == 2
-    assert (state / "v1.backup").read_bytes() == before
-    migrated = {p.name: digest(p) for p in state.iterdir()}
-    assert json.loads(call(helper))["outcome"] == "already_migrated"
-    assert {p.name: digest(p) for p in state.iterdir()} == migrated
-    # Unsupported schema: fail closed without writes, then restore explicit backup.
-    bad_state = Path("/opt/rejected-example")
-    fixture(bad_state)
-    (bad_state / "example.json").write_text(
-        '{"format":"AP-PKG-SYNTHETIC","schema":99}\n'
-    )
-    rejected = {p.name: digest(p) for p in bad_state.iterdir()}
-    call(["/usr/lib/agent-platform/migrate-example", "--directory", str(bad_state)], 13)
-    assert {p.name: digest(p) for p in bad_state.iterdir()} == rejected
-    retained_ok()
-    phases.append("explicit_migration_idempotent_and_rejection")
+    def package(role, revision):
+        folder = "n" if revision == 3 else "next"
+        return f"/packages/{folder}/agent-platform-{role}_0.1.0-{revision}_amd64.deb"
+
+    def install(*paths):
+        call(
+            [
+                "apt-get",
+                "--no-install-recommends",
+                "-o",
+                "Dpkg::Options::=--force-confold",
+                "-y",
+                "install",
+                *paths,
+            ]
+        )
+
+    def status(name):
+        return call(["dpkg-query", "-W", "-f=${Status}", name])
+
+    # Each role works alone without Codex. Worker precedes crypto/Git/gh.
+    for role in ("worker", "control"):
+        install(package(role, 3))
+        smoke((role,))
+        assert not any(
+            Path("/usr/bin/" + command).exists()
+            for other in ROLES
+            if other != role
+            for command in COMMANDS[other]
+        )
+        call(["apt-get", "-y", "purge", "agent-platform-" + role])
+        retained_ok()
+    phases.append("independent_install_without_codex")
+    install(*(package(role, 3) for role in ROLES))
     smoke()
-    call(["apt-get", "--no-download", "-y", "remove", "agent-platform"])
-    assert not Path("/usr/bin/agent-platform").exists() and digest(cfg) == config
-    assert {p.name: digest(p) for p in state.iterdir()} == migrated
-    retained_ok()
-    phases.append("remove_retains_configuration_and_data")
-    call(["apt-get", "-y", "install", newer])
-    assert digest(cfg) == config
-    retained_ok()
-    phases.append("reinstall_after_remove_keeps_configuration")
-    call(["apt-get", "--no-download", "-y", "purge", "agent-platform"])
-    assert not cfg.exists() and notes.read_text() == "unowned administrator note\n"
-    assert {p.name: digest(p) for p in state.iterdir()} == migrated
-    retained_ok()
-    phases.append("purge_retains_unowned_data")
-    call(["apt-get", "-y", "install", newer])
-    assert (
-        "package_schema=2" in cfg.read_text()
-        and "# administrator" not in cfg.read_text()
-    )
-    assert {p.name: digest(p) for p in state.iterdir()} == migrated
-    # Restore to a NEW explicit directory; never overwrite retained/uncertain data.
-    restored = Path("/opt/restored-example")
-    fixture(restored)
-    (restored / "example.json").write_bytes((state / "v1.backup").read_bytes())
-    call(["/usr/lib/agent-platform/migrate-example", "--directory", str(restored)])
-    assert (restored / "example.json").read_bytes() == (
-        state / "example.json"
-    ).read_bytes()
-    assert all(digest(Path(p)) == snapshot for p, snapshot in retained.items())
+    configs = {}
+    migrated = {}
+    for role in ROLES:
+        pkg = "agent-platform-" + role
+        cfg = Path("/etc/" + pkg + "/package.conf")
+        cfg.write_text(cfg.read_text() + "# administrator edit retained\n")
+        cfg.chmod(0o640)
+        configs[role] = digest(cfg)
+        note = cfg.parent / "operator-notes"
+        note.write_text("foreign note\n")
+        retained[str(note)] = digest(note)
+        state = Path("/opt/example-" + role)
+        fixture(state)
+        before = (state / "example.json").read_bytes()
+        bad = Path("/tmp/corrupt.deb")
+        bad.write_bytes(b"not a Debian archive\n")
+        assert (
+            subprocess.run(
+                ["dpkg", "--unpack", str(bad)], capture_output=True
+            ).returncode
+            != 0
+        )
+        assert call(["dpkg-query", "-W", "-f=${Version}", pkg]) == "0.1.0-3"
+        assert digest(cfg) == configs[role]
+        call(
+            ["dpkg", "--force-confdef", "--force-confold", "--unpack", package(role, 4)]
+        )
+        assert status(pkg) == "install ok unpacked"
+        assert digest(cfg) == configs[role]
+        assert (state / "example.json").read_bytes() == before
+        retained_ok()
+        call(["dpkg", "--force-confdef", "--force-confold", "--configure", pkg])
+        assert status(pkg) == "install ok installed"
+        assert call(["dpkg-query", "-W", "-f=${Version}", pkg]) == "0.1.0-4"
+        assert digest(cfg) == configs[role]
+        helper = ["/usr/lib/" + pkg + "/migrate-example", "--directory", str(state)]
+        assert json.loads(call(helper))["outcome"] == "migrated"
+        assert (state / "v1.backup").read_bytes() == before
+        assert json.loads((state / "example.json").read_bytes())["schema"] == 2
+        migrated[role] = {p.name: digest(p) for p in state.iterdir()}
+        assert json.loads(call(helper))["outcome"] == "already_migrated"
+        assert {p.name: digest(p) for p in state.iterdir()} == migrated[role]
+        rejected = Path("/opt/rejected-" + role)
+        fixture(rejected)
+        (rejected / "example.json").write_text(
+            '{"format":"AP-PKG-SYNTHETIC","schema":99}\n'
+        )
+        prior = {p.name: digest(p) for p in rejected.iterdir()}
+        call([helper[0], "--directory", str(rejected)], 13)
+        assert {p.name: digest(p) for p in rejected.iterdir()} == prior
+        # Retained uncertain temporary state refuses without cleanup or blind replay.
+        uncertain = Path("/opt/uncertain-" + role)
+        fixture(uncertain)
+        (uncertain / "next.tmp").write_text("unknown\n")
+        (uncertain / "next.tmp").chmod(0o600)
+        prior = {p.name: digest(p) for p in uncertain.iterdir()}
+        call([helper[0], "--directory", str(uncertain)], 13)
+        assert {p.name: digest(p) for p in uncertain.iterdir()} == prior
+        # Explicit downgrade changes code only; no reverse data/schema migration.
+        call(["dpkg", "--force-confdef", "--force-confold", "-i", package(role, 3)])
+        assert not Path(helper[0]).exists()
+        assert {p.name: digest(p) for p in state.iterdir()} == migrated[role]
+        call(["dpkg", "--force-confdef", "--force-confold", "-i", package(role, 4)])
+        retained_ok()
+    phases.append("coinstall_upgrade_interrupted_configure_corrupt_and_migration")
     smoke()
+    # Both removal orders: peer remains fully usable and import independent.
+    for order in (ROLES, tuple(reversed(ROLES))):
+        for index, role in enumerate(order):
+            call(["apt-get", "-y", "remove", "agent-platform-" + role])
+            assert (
+                digest(Path("/etc/agent-platform-" + role + "/package.conf"))
+                == configs[role]
+            )
+            if index == 0:
+                smoke((order[1],))
+            retained_ok()
+        call(
+            [
+                "apt-get",
+                "-o",
+                "Dpkg::Options::=--force-confold",
+                "-y",
+                "install",
+                *(package(role, 4) for role in ROLES),
+            ]
+        )
+        smoke()
+    phases.append("both_removal_orders_and_reinstall")
+    # New roles reject old experimental artifacts while either role is installed.
+    for revision in (1, 2):
+        old = f"/packages/legacy-{revision}/agent-platform_0.1.0-{revision}_amd64.deb"
+        assert (
+            subprocess.run(["dpkg", "--unpack", old], capture_output=True).returncode
+            != 0
+        )
+        assert all(
+            status("agent-platform-" + role) == "install ok installed" for role in ROLES
+        )
+    for role in ROLES:
+        call(["apt-get", "-y", "purge", "agent-platform-" + role])
+        assert not Path("/etc/agent-platform-" + role + "/package.conf").exists()
+        retained_ok()
+    # Exact old candidate -> explicit remove (not purge) -> split for both revisions.
+    for revision in (1, 2):
+        old = f"/packages/legacy-{revision}/agent-platform_0.1.0-{revision}_amd64.deb"
+        install(old)
+        oldcfg = Path("/etc/agent-platform/package.conf")
+        oldcfg.write_text(oldcfg.read_text() + "# legacy administrator config\n")
+        oldcfg.chmod(0o640)
+        retained[str(oldcfg)] = digest(oldcfg)
+        for role in ROLES:
+            assert (
+                subprocess.run(
+                    ["dpkg", "--unpack", package(role, 3)], capture_output=True
+                ).returncode
+                != 0
+            )
+            assert status("agent-platform") == "install ok installed"
+        call(["apt-get", "-y", "remove", "agent-platform"])
+        retained_ok()
+        install(*(package(role, 3) for role in ROLES))
+        smoke()
+        assert not Path("/usr/bin/agent-platform").exists()
+        assert all(
+            "legacy administrator"
+            not in Path("/etc/agent-platform-" + role + "/package.conf").read_text()
+            for role in ROLES
+        )
+        for role in ROLES:
+            call(["apt-get", "-y", "purge", "agent-platform-" + role])
+        retained_ok()
+    phases.append(
+        "both_legacy_conflict_directions_and_explicit_residual_config_transition"
+    )
+    install(*(package(role, 4) for role in ROLES))
+    smoke()
+    for role in ROLES:
+        state = Path("/opt/example-" + role)
+        assert {p.name: digest(p) for p in state.iterdir()} == migrated[role]
+        # Restore only into a new, marked synthetic directory.
+        restored = Path("/opt/restored-" + role)
+        fixture(restored)
+        (restored / "example.json").write_bytes((state / "v1.backup").read_bytes())
+        call(
+            [
+                "/usr/lib/agent-platform-" + role + "/migrate-example",
+                "--directory",
+                str(restored),
+            ]
+        )
+        assert (restored / "example.json").read_bytes() == (
+            state / "example.json"
+        ).read_bytes()
     retained_ok()
-    phases.append("reinstall_and_restore_reconciliation")
-    assert len(phases) == 8
+    phases.append("purge_foreign_state_and_restore_preservation")
     (evidence / "lifecycle.json").write_text(
         json.dumps(
             {
                 "status": "PASS",
                 "phases": phases,
+                "codex_installed": False,
                 "systemd_boot": "NOT_RUN",
                 "piuparts": "NOT_RUN",
                 "live_runtime": "NOT_RUN",

@@ -1,7 +1,9 @@
 # Official library/debian trixie-slim, observed 2026-11-04; amd64 manifest.
 FROM debian:trixie-slim@sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d AS base
 ENV DEBIAN_FRONTEND=noninteractive
-RUN printf 'AP-PKG-CI-DISPOSABLE-v1\n' > /ap-package-ci-fixture
+# Keep docs/manuals so installed manifests and provenance can be tested.
+RUN rm -f /etc/dpkg/dpkg.cfg.d/docker && \
+    printf 'AP-PKG-CI-DISPOSABLE-v1\n' > /ap-package-ci-fixture
 
 # Cache dependencies without installing them: lifecycle starts with no Python/Git/gh.
 FROM base AS lifecycle
@@ -14,3 +16,5 @@ ENTRYPOINT ["/bin/sh", "/opt/ap-tests/lifecycle.sh"]
 FROM base AS quality
 RUN apt-get update && apt-get --no-install-recommends -y install \
     python3 python3-cryptography git gh lintian autopkgtest ca-certificates
+
+COPY quality.sh /opt/ap-tests/
