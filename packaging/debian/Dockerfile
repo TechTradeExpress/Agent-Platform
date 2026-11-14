@@ -18,3 +18,17 @@ RUN apt-get update && apt-get --no-install-recommends -y install \
     python3 python3-cryptography git gh lintian autopkgtest ca-certificates
 
 COPY quality.sh /opt/ap-tests/
+
+# P1 tools are configured in the disposable image, before any project units exist.
+# Deny baseline dependency service activation too; never load host kernel profiles.
+FROM base AS worker-p1
+ARG P1_CASE=clean
+RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbin/policy-rc.d && \
+    apt-get update && apt-get --no-install-recommends -y install passwd && \
+    if [ "$P1_CASE" = existing ]; then groupadd --gid 989 ap-publisher && useradd --uid 999 --gid ap-publisher --system --no-create-home --home-dir /var/lib/ap-publisher --shell /usr/sbin/nologin ap-publisher; fi && \
+    groupadd --gid 2000 agentdev && useradd --uid 2000 --gid agentdev --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin agentdev && \
+    printf '%s\n' "$P1_CASE" > /ap-worker-p1-case && \
+    apt-get --no-install-recommends -y install \
+    python3 python3-cryptography git ca-certificates systemd apparmor apparmor-utils acl passwd
+COPY worker_p1_lifecycle.py /opt/ap-tests/
+ENTRYPOINT ["/usr/bin/python3", "-IB", "/opt/ap-tests/worker_p1_lifecycle.py"]

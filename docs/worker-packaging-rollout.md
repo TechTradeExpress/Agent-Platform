@@ -4,6 +4,11 @@ Current PKG-02 implements the two inert P0 artifacts described in
 [debian-package.md](debian-package.md). AP-PKG/2 supersedes the historical
 third Codex package/dependency discussion below; there is no Codex .deb or APT
 Depends. Explicit upstream provisioning remains #116, outside P0.
+PKG-04 now provides Worker P1 synthetic -5/-6 payload and an explicit root-only
+configuration command; see [worker provisioning](worker-provisioning.md).
+Installation does not create accounts, acquire Codex or activate units. The
+older manual/third-package recipes below remain historical; real host rollout,
+profile attachment and both Publisher pilots are NOT_RUN.
 
 
 # Agent Platform: package-first Control/Worker distribution and rollout roadmap

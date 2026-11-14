@@ -1,3 +1,16 @@
+agent-platform (0.1.0-6) trixie; urgency=medium
+
+  * Synthetic P1 upgrade profile; preserve explicit provisioning and state.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Sat, 14 Nov 2026 02:00:00 +0000
+
+agent-platform (0.1.0-5) trixie; urgency=medium
+
+  * Worker P1 code/profiles installed inert; operator-only provisioning.
+  * No account, Codex download or service activation from maintainer scripts.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Sat, 14 Nov 2026 01:00:00 +0000
+
 agent-platform (0.1.0-4) trixie; urgency=medium
 
   * Synthetic split-role N+1; explicit example migration helper only.
