@@ -5,6 +5,16 @@ This is a proposed contract, not an accepted wire schema, executable publisher,
 credential service or worker adapter. All examples below are fabricated and
 non-authorizing. Completion permits independent contract review only.
 
+Packaging specialization: [ADR 007 / AP-PKG/1](debian-role-package-architecture.md)
+records the approved direction of PUB-02's **worker-local**, separately confined
+App signer/Publisher rather than treating the Control-only custody placement
+below as the only future topology. This applies solely to each worker's own
+App and operator-initiated exact feature/Draft operation. Untrusted Codex/tools
+still receive no credential or handle; Control credentials stay on Control.
+The original CP-02 protocol, AP-AL/AP-AS interfaces and synthetic publication
+gates are unchanged. PR #109 must be reviewed/merged before #111 packages its
+implementation; no host activation or live evidence follows from this ADR.
+
 ## Baseline and governing boundaries
 
 Historical CP-02 source base: `e19c0b3b124ac5689d0c31c60a5ea5e7330c11af`.
@@ -392,3 +402,18 @@ and never grants native execution, automatic scheduling/transitions or merge.
 Stock subscription-authenticated Codex remains the intended engine; complete
 trusted-Codex/untrusted-tool separation remains independently BLOCKED. Preserve
 SUBSCRIPTION_ISOLATION_BLOCKED / exit 13 and public legacy quarantine unchanged.
+
+## PUB-01 worker-local handoff proposal
+
+[Issue #104 / AP-PH/1](publisher-handoff.md) adds byte-only intake and a separate
+synthetic existing-Draft update model. It proposes worker-local separately
+privileged publishers without deploying or replacing CP-02 control01 custody.
+CP-03 update refusal, CP-05 create-only behavior and all live gates remain.
+Official CAS/permission evidence and effective App merge denial remain BLOCKED.
+
+## PUB-02 separate operator executable
+
+[Issue #108](worker-publisher.md) implements a separate one-shot operator publisher
+with full-tree byte intake, real fixed GitHub wire code and distinct signer custody.
+It does not convert PUB-01 fixtures or activate native/autonomous runtime. Host
+installation, credentials and exact first pilot remain separately authorized.

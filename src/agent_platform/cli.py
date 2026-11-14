@@ -107,8 +107,8 @@ def inspect(cwd: Path) -> dict:
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(*, prog=None) -> int:
+    parser = argparse.ArgumentParser(prog=prog, description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("inspect", help="Inspect the current Git working-tree root")
     commands.add_parser(

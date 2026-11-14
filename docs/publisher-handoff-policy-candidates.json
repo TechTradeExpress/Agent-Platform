@@ -1,0 +1,66 @@
+{
+  "version": "AP-PH/1",
+  "status": "DESIGN_ONLY",
+  "installable": false,
+  "host": "HOST_NOT_RUN",
+  "live": "LIVE_NO_GO",
+  "systemd_requirements": {
+    "principal": "separately admitted publisher UID, never agentdev",
+    "credential_custody": "separate signer/custody principal; no same-unit key copy",
+    "filesystem": "immutable reviewed code; no worker checkout access; private anchored journal",
+    "process": "verified proc/ptrace/process_vm/FD/env/dump denial in both directions",
+    "resources": "one bounded operation; tasks, memory, CPU, output and wall deadlines",
+    "privileges": "no root/set-ID/capabilities/sudo; deny privilege escalation",
+    "network": "separate fixed-origin egress transport; no generic proxy or worker access",
+    "activation": "no listener/service/auto-start implementation; separate human approval"
+  },
+  "apparmor_requirements": {
+    "attachment": "effective enforced publisher and custody profiles, verified after exec and reboot",
+    "deny": [
+      "worker checkout",
+      "other-principal proc/memory/FD",
+      "unapproved credential stores",
+      "arbitrary exec",
+      "management network",
+      "worker-to-worker access"
+    ],
+    "positive_controls": "independent fixed peer, allowed artifact bytes and exact operation",
+    "negative_controls": "separately approved disposable tests, not this offline model"
+  },
+  "cas_research": {
+    "candidate": "GraphQL updateRefs / RefUpdate beforeOid and afterOid",
+    "reference_urls": [
+      "https://docs.github.com/en/graphql/reference/git#updaterefs",
+      "https://docs.github.com/en/graphql/reference/git#refupdate",
+      "https://docs.github.com/en/rest/git/refs#update-a-reference"
+    ],
+    "retrieval_status": "RETRIEVED_PUBLIC_DOCS",
+    "official_schema_sha256": null,
+    "semantics_verified": false,
+    "permissions_verified": false,
+    "live_disposition": "BLOCKED",
+    "documentation_semantics_confirmed": true,
+    "sources": [
+      {
+        "url": "https://docs.github.com/en/graphql/reference/git",
+        "retrieved_on": "2026-11-13",
+        "bytes": 292354,
+        "sha256": "c002899a9a9b6bbf768e3d99ae16851c76f6aa5da9c631f35e8e27b62f05c2e5"
+      },
+      {
+        "url": "https://docs.github.com/en/rest/git/refs",
+        "retrieved_on": "2026-11-13",
+        "bytes": 346513,
+        "sha256": "cbb59d21990457059e3757b69dac64265ceb63f66fec06ee130fffa6872193c1"
+      }
+    ],
+    "findings": [
+      "updateRefs documents atomic batch application and beforeOid preconditions.",
+      "Zero beforeOid represents absence; zero afterOid represents deletion: neither is allowed for this existing-ref update.",
+      "RefUpdate accepts force; the proposed future profile must require false and exactly one feature ref.",
+      "UpdateRefsInput binds repositoryId and refUpdates; no generic GraphQL sender is supplied.",
+      "REST ref PATCH documents sha and force, without an expected-old SHA parameter.",
+      "Documentation does not establish this target App permissions, merge prohibition or observed concurrent-server behavior."
+    ]
+  }
+}

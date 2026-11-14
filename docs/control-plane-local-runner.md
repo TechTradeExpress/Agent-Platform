@@ -189,3 +189,88 @@ subscription and public legacy run/resume/doctor retain exit 13. No API/App
 writer, service packaging, CI privilege/secret, ruleset or production integration
 changes are included. Delivery follows [AP-SM/2](solo-maintainer-policy.md):
 Codex stops at Draft; separate ChatGPT technical review; human-only merge.
+
+## PR #103 local integration follow-up
+
+The dedicated integration branch starts at the actual PR head
+`8b2042a91fa4af8eeae5c0949c996a5fe6df0cd2` and merges verified main
+`b63beefa487005ea3e0a29116987f4e93455224e` without rewriting either history.
+The original contributor worktrees are retained. Delivery is LOCAL_ONLY; this
+work performs no push, PR mutation, authenticated GitHub access or host activation.
+That initial integration did not incorporate or predict the then-unmerged
+Publisher work from PR #109; the subsequent merge is recorded below.
+
+The closed Debian builder now classifies `control_plane_local_runner` explicitly
+as **SOURCE_ONLY**. Neither Control nor Worker receives the module. Regression
+tests inspect actual N/N+1 role archive inventories and reject imports of CP-08
+from either installed role's module closure. Unknown modules still fail closed.
+The CP-06 implementation, tests, 30 synthetic case semantics, configuration and
+policy descriptors remain unchanged.
+
+Additional local safety checks cover:
+
+- Normalize `RLIM_INFINITY` before lowering the helper's NOFILE limit; infinity
+  must not accidentally preserve an unbounded descriptor limit. Restore the
+  helper's own SIGALRM default before arming its independent alarm.
+- Reject an already exhausted case budget before fixture or process creation.
+  Unsupported platforms refuse before accessing Unix-only identity APIs.
+- Require an actual integer wait status for termination accounting. No new
+  numeric PID/PGID signalling, descendant-capable helper or group API is added.
+- Count overflow at the exact accepted-byte limit regardless of which output
+  pipe becomes readable first. Retain at most twelve stdout protocol bytes and
+  discard stderr; real repeated runs must have identical redacted reports.
+- Preserve scratch and latch uncertainty on changed marker bytes, symlink or
+  hardlink/extra-entry drift. No recursive deletion, repair or retry is added.
+
+### CI diagnosis and evidence limits
+
+The published historical CI run `43420493518` reported 84 setup errors in
+`reviewed_bytes()`, before process assertions. This is distinct from the two
+packaging failures reproduced immediately after merging current main: its
+closed manifest correctly refused the previously unclassified CP-08 module.
+The SOURCE_ONLY classification resolves those packaging regressions.
+
+The historical pin failure was **not reproduced** on either the local Python
+3.13.5 interpreter or a separately temporary Python 3.12.16 contributor test
+interpreter. The latter is a different build from the historical Actions
+interpreter; matching the minor version does not establish an exact CI-image
+reproduction. An anonymous read of that historical job's log returned HTTP 403.
+No credentials, alternative log-access route or weakened runtime admission was
+used to fill this evidence gap. Its underlying stage remains **UNKNOWN**, not
+claimed fixed, baseline or host failure.
+
+New independent tests identify the failing stage using only fixed IDs: source,
+fixture, policy, runtime_safety and runtime_bytes. They require no configuration
+fixture and suppress raw exceptions/paths. Public library errors remain fixed
+and redacted. The original regular-file/ownership/mode/capability checks, byte
+pins and 64 MiB interpreter hashing ceiling remain enforced; the diagnostic
+must never widen them or skip a safety failure. A new actual CI run is required
+to identify or rule out the historical image-specific failure after publication
+by the separately authorized reviewer. Local green checks cannot stand in for
+that unavailable exact-image evidence.
+
+Local full-suite results and any failures reproduced on unchanged main belong
+in the exact-HEAD delivery record. No full-suite PASS, independent audit,
+HOST_PASS, release authority or real host enforcement is inferred here. All
+CP-01 host rows remain HOST_NOT_RUN/BLOCKED; LIVE_NO_GO, Gate #73 and subscription
+and public legacy exit-13 barriers are unchanged.
+
+
+### Integration after PR #109 merged
+
+A subsequent local merge starts from CP-08 commit
+`67851d843dfae751319bd37311bdd9273bdcd9e5` and incorporates actual main
+`790dc17382689552bbf8f16823f7f16956ff37f5`, which contains PR #109. The
+merge preserves both histories and all PUB-02 source modules, source-only
+classifications, package exclusions and tests. No Publisher source, deployment
+source, host configuration, role authority or runtime gate is changed relative
+to that main. The CP-08 runner and stage diagnostics are unchanged from the
+previous local integration; its classification remains SOURCE_ONLY beside the
+Publisher's own source-only modules.
+
+The historical run's 84 setup failures were confirmed as reviewed_bytes()
+refusals; the specific pin stage remains UNKNOWN. This merge does not claim to
+resolve that historical CI-image failure, widen pin/capability/ownership/hash
+checks or create live evidence. Local tests and any reproduced main-baseline
+failures are reported with the exact resulting commit/tree. LOCAL_ONLY,
+HOST_NOT_RUN/BLOCKED, LIVE_NO_GO, Gate #73 and native/public exit 13 remain.

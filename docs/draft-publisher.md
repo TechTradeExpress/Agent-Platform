@@ -142,3 +142,11 @@ API/schema evidence before any future live adapter. In particular no generic
 GraphQL endpoint, arbitrary body, network sender or live-safe claim is introduced.
 The profile cannot grant authority or replace admission, journal continuity,
 independent remote observations or the existing live NO-GO gates.
+
+## PUB-01 worker-local handoff proposal
+
+[Issue #104 / AP-PH/1](publisher-handoff.md) adds byte-only intake and a separate
+synthetic existing-Draft update model. It proposes worker-local separately
+privileged publishers without deploying or replacing CP-02 control01 custody.
+CP-03 update refusal, CP-05 create-only behavior and all live gates remain.
+Official CAS/permission evidence and effective App merge denial remain BLOCKED.

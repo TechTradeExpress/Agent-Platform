@@ -1,9 +1,12 @@
 """CP-08 real benign process mechanics + synthetic failure injection, no host tests."""
 
+import ast
+import hashlib
 import json
 import os
 import subprocess
 import time
+import types
 from dataclasses import replace
 from pathlib import Path
 
@@ -396,7 +399,7 @@ def test_synthetic_late_case_completion_never_verifies(config, monkeypatch):
             started=1, reaped=1, pinned=True, output_bytes=8, code="complete"
         ),
     )
-    monkeypatch.setattr(lr.time, "monotonic", iter([0, 100]).__next__)
+    monkeypatch.setattr(lr.time, "monotonic", iter([0, 0, 100]).__next__)
     report = lr.exercise(config, lr.Case.HYGIENE)
     assert report.code == "deadline"
     check(report)
@@ -497,3 +500,142 @@ def test_inherited_capabilities_or_unknown_privilege_metadata_refuse(
     monkeypatch.setattr(lr, "_no_capabilities", unknown)
     monkeypatch.setattr(lr.subprocess, "Popen", forbidden)
     assert lr.exercise(config, lr.Case.HYGIENE).code == "privileged_identity"
+
+
+@pytest.mark.parametrize(
+    "stage", ["source", "fixture", "policy", "runtime_safety", "runtime_bytes"]
+)
+def test_current_pin_stages_fail_with_only_fixed_stage_ids(stage):
+    # No config fixture: CI identifies the failing boundary independently, without
+    # reflecting a path, environment, raw exception, token, or captured output.
+    source = Path(lr.__file__).absolute()
+    try:
+        if stage == "source":
+            lr._file_hash(source, lr.MAX_BYTES)
+        elif stage == "fixture":
+            lr._file_hash(source.with_name("control_plane_fixture.py"), lr.MAX_BYTES)
+        elif stage == "policy":
+            lr._policy_bytes(
+                source.parents[2] / "docs/control-plane-policy-candidates.json"
+            )
+        elif stage == "runtime_safety":
+            lr._runtime()
+        else:
+            lr._file_hash(lr._runtime(), 64 * 1024 * 1024)
+    except Exception:
+        pytest.fail("pin_stage_" + stage, pytrace=False)
+
+
+@pytest.mark.parametrize(
+    "soft,hard,want", [(-1, -1, 64), (32, -1, 32), (32, 128, 32), (128, 128, 64)]
+)
+def test_helper_nofile_limit_never_treats_infinity_as_unbounded(soft, hard, want):
+    # Evaluate only the exact arithmetic expression from reviewed helper AST;
+    # no process or setrlimit operation is involved in these synthetic cases.
+    tree = ast.parse(lr._HELPER)
+    expression = next(
+        node.value
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "limit" for t in node.targets)
+    )
+    result = eval(
+        compile(ast.Expression(expression), "fixed-helper-limit", "eval"),
+        {
+            "soft": soft,
+            "hard": hard,
+            "resource": types.SimpleNamespace(RLIM_INFINITY=-1),
+        },
+    )
+    assert result == want
+
+
+def test_expired_case_budget_never_creates_fixture_or_child(config, monkeypatch):
+    monkeypatch.setattr(lr.time, "monotonic", iter([0, 100]).__next__)
+    monkeypatch.setattr(cf.DisposableFixture, "create", forbidden)
+    monkeypatch.setattr(lr.subprocess, "Popen", forbidden)
+    report = lr.exercise(config, lr.Case.HYGIENE)
+    assert report.code == "deadline_before_start"
+    assert report.observation.started == 0
+    check(report)
+
+
+def test_unknown_platform_blocks_before_unix_identity_calls(config, monkeypatch):
+    monkeypatch.setattr(lr.sys, "platform", "unsupported")
+    monkeypatch.setattr(lr.os, "getuid", forbidden)
+    monkeypatch.setattr(lr.subprocess, "Popen", forbidden)
+    assert lr.exercise(config, lr.Case.HYGIENE).code == "platform_unavailable"
+
+
+@pytest.mark.parametrize("rc", [None, True, "0"])
+def test_missing_or_non_integer_wait_status_never_proves_reaping(rc):
+    child = types.SimpleNamespace(wait=lambda **kwargs: rc)
+    assert lr._stop(child, None) is False
+
+
+def test_runtime_hash_cap_is_not_widened_for_ci(config, monkeypatch):
+    original = lr._file_hash
+    seen = []
+
+    def bounded(path, limit):
+        seen.append(limit)
+        return original(path, limit)
+
+    monkeypatch.setattr(lr, "_file_hash", bounded)
+    assert lr.reviewed_bytes() == config.pins
+    assert max(seen) == 64 * 1024 * 1024
+
+
+def test_fake_file_hash_is_exact_and_oversize_or_symlink_refuses(tmp_path):
+    path = tmp_path / "fake"
+    path.write_bytes(b"fixed fabricated source")
+    assert lr._file_hash(path, 32) == hashlib.sha256(path.read_bytes()).hexdigest()
+    with pytest.raises(lr.RunnerError):
+        lr._file_hash(path, 2)
+    link = tmp_path / "link"
+    link.symlink_to(path)
+    with pytest.raises(OSError):
+        lr._file_hash(link, 32)
+
+
+@pytest.mark.parametrize("case", list(lr.Case))
+def test_independent_local_runs_have_identical_redacted_reports(config, case):
+    first = lr.exercise(config, case)
+    second = lr.exercise(config, case)
+    assert first.encode() == second.encode()
+    check(first)
+    if case is lr.Case.OVERSIZE:
+        assert first.observation.output_bytes == config.output_bytes
+
+
+@pytest.mark.parametrize("drift", ["symlink", "hardlink", "changed_bytes"])
+def test_marker_drift_at_cp08_cleanup_retains_evidence(config, monkeypatch, drift):
+    original = cf.DisposableFixture.cleanup
+
+    def changed(self):
+        if drift == "symlink":
+            os.unlink("marker", dir_fd=self._child)
+            os.symlink("missing-fake-target", "marker", dir_fd=self._child)
+        elif drift == "hardlink":
+            os.link(
+                "marker",
+                "alias",
+                src_dir_fd=self._child,
+                dst_dir_fd=self._child,
+                follow_symlinks=False,
+            )
+        else:
+            fd = os.open("marker", os.O_WRONLY | os.O_NOFOLLOW, dir_fd=self._child)
+            try:
+                os.write(fd, b"changed-fabricated-marker")
+            finally:
+                os.close(fd)
+        return original(self)
+
+    monkeypatch.setattr(cf.DisposableFixture, "cleanup", changed)
+    report = lr.exercise(config, lr.Case.HYGIENE)
+    assert report.code == "cleanup_uncertain"
+    assert report.observation.reaped == 1 and not report.observation.cleanup
+    assert len(list(Path.cwd().iterdir())) == 1
+    assert lr.exercise(config, lr.Case.HYGIENE).code == "retained_uncertainty"
+    check(report)

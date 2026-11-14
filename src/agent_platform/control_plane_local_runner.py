@@ -29,10 +29,11 @@ _UNCERTAIN = False
 # bound if the supervising test process disappears. No marker is printed/read.
 _HELPER = r"""
 import os, resource, signal, sys, time
+signal.signal(signal.SIGALRM, signal.SIG_DFL)
 signal.alarm(2)
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-limit = min(64, soft, hard)
+limit = min([64] + [n for n in (soft, hard) if n != resource.RLIM_INFINITY])
 resource.setrlimit(resource.RLIMIT_NOFILE, (limit, limit))
 case = sys.argv[1]
 if dict(os.environ) != {"LC_ALL": "C"}:
@@ -286,6 +287,7 @@ _CODES = {
     "ownership_uncertain": Status.UNKNOWN,
     "cancelled": Status.UNKNOWN,
     "deadline": Status.UNKNOWN,
+    "deadline_before_start": Status.UNKNOWN,
     "output_limit": Status.FAIL,
     "protocol_invalid": Status.FAIL,
     "child_failed": Status.FAIL,
@@ -381,6 +383,7 @@ def _validate_observation(obs):
         "busy",
         "retained_uncertainty",
         "supervision_unavailable",
+        "deadline_before_start",
     }:
         _require(
             obs.started == obs.reaped == 0
@@ -407,8 +410,8 @@ def _stop(child, pidfd):
         except ProcessLookupError:
             pass
     try:
-        child.wait(timeout=2.1)  # helper's own alarm also bounds pin failure
-        return True
+        rc = child.wait(timeout=2.1)  # helper's own alarm also bounds pin failure
+        return type(rc) is int
     except subprocess.TimeoutExpired:
         return False
 
@@ -467,12 +470,17 @@ def _supervise(config, case, fixture):
                         selector.unregister(key.fileobj)
                         continue
                     if count + len(data) > config.output_bytes:
+                        # Saturate accepted-byte accounting at the boundary,
+                        # independent of stdout/stderr readiness/chunk order.
+                        count = config.output_bytes
                         code = "output_limit"
                         break
                     count += len(data)
                     # Never retain stderr; no raw output reaches reports/exceptions.
                     if key.fileobj is child.stdout:
-                        captured.extend(data)
+                        # Keep only enough bytes to recognize the fixed protocol.
+                        # Count all accepted output, including discarded stderr.
+                        captured.extend(data[: max(0, 12 - len(captured))])
                     if case is Case.CANCEL and captured == b"CP08_CANCEL\n":
                         code = "cancelled"
                         break
@@ -546,6 +554,12 @@ def _exercise(config: Config, case: Case) -> Report:
     if _UNCERTAIN:
         return _report(case, config, Observation(code="retained_uncertainty"))
     if (
+        sys.platform != "linux"
+        or not hasattr(os, "pidfd_open")
+        or not hasattr(signal, "pidfd_send_signal")
+    ):
+        return _report(case, config, Observation(code="platform_unavailable"))
+    if (
         os.getuid() == 0
         or os.geteuid() != os.getuid()
         or os.getegid() != os.getgid()
@@ -553,12 +567,6 @@ def _exercise(config: Config, case: Case) -> Report:
         or len(set(os.getresgid())) != 1
     ):
         return _report(case, config, Observation(code="privileged_identity"))
-    if (
-        sys.platform != "linux"
-        or not hasattr(os, "pidfd_open")
-        or not hasattr(signal, "pidfd_send_signal")
-    ):
-        return _report(case, config, Observation(code="platform_unavailable"))
     if (
         signal.getsignal(signal.SIGCHLD) is not signal.SIG_DFL
         or threading.current_thread() is not threading.main_thread()
@@ -578,6 +586,8 @@ def _exercise(config: Config, case: Case) -> Report:
         _require(config.pins == reviewed_bytes())
     except Exception:
         return _report(case, config, Observation(code="pins_changed"))
+    if (time.monotonic() - case_started) * 1000 >= config.case_ms:
+        return _report(case, config, Observation(code="deadline_before_start"))
     try:
         fixture = cf.DisposableFixture.create()
     except Exception:
@@ -604,7 +614,10 @@ def _exercise(config: Config, case: Case) -> Report:
             code = "evidence_changed"
     except Exception:
         code = "evidence_changed"
-    if (time.monotonic() - case_started) * 1000 >= config.case_ms:
+    if (
+        code == "complete"
+        and (time.monotonic() - case_started) * 1000 >= config.case_ms
+    ):
         code = "deadline"
     final = Observation(
         obs.started,

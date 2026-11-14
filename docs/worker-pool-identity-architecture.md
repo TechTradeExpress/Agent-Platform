@@ -7,6 +7,19 @@ running system, host inventory attestation, executable schema or grant of author
 Source baseline independently verified during preparation:
 `365a15b0f590ffb20d273c79f0086892f812680a`.
 
+### Packaging specialization (PKG-01, 2026-11-14)
+
+[ADR 007 / AP-PKG/1](debian-role-package-architecture.md) refines the historical
+worker/non-writer language below: untrusted `agentdev`/Codex and tools still
+receive no Control Plane credentials or writer handles. Separately installed,
+operator-initiated PUB-02 principals on each worker may hold **that worker's
+own unique App** in root custody and an independently confined signer, with a
+separate Publisher UID. This is the explicit narrow exception adopted by the
+[package-first roadmap](worker-packaging-rollout.md), not permission to copy
+Control custody or give the coding process tokens. PR #109 remains unmerged
+at the PKG-01 baseline; source design/offline evidence is not live readiness.
+All other admission, continuity, isolation, review and native gates below remain.
+
 ## Decision and alternatives
 
 Design `publisher01` as a trusted Control Plane and `worker01` / `worker02` as
