@@ -274,3 +274,78 @@ resolve that historical CI-image failure, widen pin/capability/ownership/hash
 checks or create live evidence. Local tests and any reproduced main-baseline
 failures are reported with the exact resulting commit/tree. LOCAL_ONLY,
 HOST_NOT_RUN/BLOCKED, LIVE_NO_GO, Gate #73 and native/public exit 13 remain.
+
+## Runtime refusal diagnostics after CI #214
+
+The repair starts from the **published** PR #103 head
+`79f40c879a91bca6e79be4d9d72f64228c922f25`, not from an unpublished local
+merge. CI run `43638245600` reported 3340 passed, 2 failed, 95 fixture errors
+and 1 skipped. The two failures were `pin_stage_runtime_safety` and
+`pin_stage_runtime_bytes`. The latter evaluated `_runtime()` before calling
+`_file_hash`; its failure is **not independent evidence of a binary read,
+size or digest failure**. The 95 dependent errors occurred in `reviewed_bytes()`
+before their local mechanics assertions could execute.
+
+What the available evidence establishes: interpreter safety admission refused.
+It does not identify which metadata/capability predicate refused. `_runtime()`
+contains no Python-minor-version branch. A matching Python 3.12 version or a
+successful local run cannot prove the metadata of an ephemeral Actions image.
+Anonymous access to the actual CI job log returned HTTP 403; no credentials,
+alternate route, remote probing or GitHub mutation was used to fill this gap.
+The specific CI rejection remains **UNKNOWN / BLOCKED pending observation**.
+Do not present an owner mismatch, mode bit or unsupported xattr as established
+without its observed category.
+
+A local restricted-sandbox reproduction on the unchanged published head produced
+both coarse stage failures and the same 95 fixture errors. The new independent
+categories in that same restricted view produced **six PASS and owner BLOCKED**:
+regular file, allowed mode, absent capabilities and bounded readable bytes, but
+owner neither root nor caller. Fixed boolean metadata independently confirmed
+that ownership mismatch without publishing paths or numeric UIDs. The original
+code and this patch both refuse that view. In the separately approved non-root
+contributor test context, both versions accept the observed root-owned binary.
+This establishes a local environment/ownership cause, **not an authenticated
+observation of the GitHub runner's owner**. Do not infer the latter from matching
+coarse symptoms or change sandbox settings as an automatic runtime fallback.
+
+The production predicates are split into small private checks without relaxing
+any accepted condition. The public error is still only `local_runner_blocked`.
+Test-only, independently parametrized checks do not use the configuration fixture
+and emit fixed nonsecret IDs, never the executable path, UID, environment,
+capability bytes, binary bytes or raw OS exception:
+
+| Diagnostic | Predicate / fixed refusal meaning |
+| --- | --- |
+| metadata | Resolve only the active interpreter and stat without following a final symlink; unavailable metadata blocks all dependent observations |
+| file_type | Exactly a regular file |
+| permission_bits | No set-ID or group/other-write bits: unchanged mask `0o6022` |
+| owner | Owner exactly root or current caller; no image/user-name inference |
+| capabilities | `security.capability` absent with ENODATA or empty bytes only; present, unsupported, denied and unknown errors are separate fixed refusals |
+| binary_size | Strictly positive and at most the unchanged 64 MiB ceiling |
+| binary_read | Independent bounded no-follow hash/read, preserving exact byte count and stable metadata checks; special/oversized files are explicitly blocked before diagnostic reading |
+
+Binary diagnostic observations deliberately do not call `_runtime()`: that would
+repeat the previous ambiguity. They inspect only the fixed active-interpreter
+file, never launch it and never constitute admission. `reviewed_bytes()` and the
+actual launch path **still require every original safety check** as well as exact
+source/config/fixture/policy/runtime SHA-256 pins. Unsupported capabilities are
+not equivalent to absent capabilities. The new status mapping also rejects
+unexpected non-byte xattr results. No hash ceiling, deadline, FD/output limit,
+process ownership, negative test or host gate is widened or skipped.
+
+A compliant contributor/CI environment needs an independently trusted interpreter
+and library closure whose actual file meets every row, a non-root test principal
+and the existing local process/scratch prerequisites. A temporary independently
+acquired caller-owned Python 3.12 contributor runtime can meet these checks; a
+root-owned pre-existing reviewed interpreter is another possible candidate, only
+after observation. Do not automatically copy/chmod/chown the rejected binary,
+remove its capabilities, install packages, change the host, select a guessed
+path or waive checks based on a tool-cache label. Selecting any different CI
+runtime requires a separately reviewed workflow change and new actual CI results;
+this patch does not change workflows or provision an image.
+
+Until the actual failing image emits these categories, the specific CI cause
+and remediation remain unresolved. Local results prove the diagnostic/refusal
+logic only. CP-06, Publisher, closed Debian SOURCE_ONLY classification,
+LIVE_NO_GO, Gate #73, native/public exit 13 and human-only merge remain unchanged.
+Real host isolation remains HOST_NOT_RUN/BLOCKED.

@@ -114,18 +114,64 @@ def _digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def _runtime():
-    # The active contributor interpreter only; no caller executable or PATH lookup.
-    path = os.path.realpath(sys.executable)
-    st = os.stat(path, follow_symlinks=False)
-    _require(stat.S_ISREG(st.st_mode) and not st.st_mode & 0o6022)
-    _require(st.st_uid in (0, os.getuid()))
+class _CapabilityStatus(StrEnum):
+    ABSENT = "absent"
+    EMPTY = "empty"
+    PRESENT = "present"
+    UNSUPPORTED = "unsupported"
+    DENIED = "denied"
+    ERROR = "error"
+
+
+def _runtime_file_type(meta):
+    _require(stat.S_ISREG(meta.st_mode))
+
+
+def _runtime_permission_bits(meta):
+    _require(not meta.st_mode & 0o6022)
+
+
+def _runtime_owner(meta):
+    _require(meta.st_uid in (0, os.getuid()))
+
+
+def _runtime_capability_status(path):
+    # Fixed nonsecret categories, never attribute bytes or raw exception text.
     try:
         caps = os.getxattr(path, "security.capability", follow_symlinks=False)
     except OSError as exc:
-        _require(exc.errno == errno.ENODATA)
-    else:
-        _require(not caps)
+        if exc.errno == errno.ENODATA:
+            return _CapabilityStatus.ABSENT
+        if exc.errno in (errno.ENOTSUP, errno.EOPNOTSUPP):
+            return _CapabilityStatus.UNSUPPORTED
+        if exc.errno in (errno.EACCES, errno.EPERM):
+            return _CapabilityStatus.DENIED
+        return _CapabilityStatus.ERROR
+    except Exception:
+        return _CapabilityStatus.ERROR
+    if type(caps) is not bytes:
+        return _CapabilityStatus.ERROR
+    return _CapabilityStatus.PRESENT if caps else _CapabilityStatus.EMPTY
+
+
+def _runtime_capabilities(path):
+    _require(
+        _runtime_capability_status(path)
+        in {
+            _CapabilityStatus.ABSENT,
+            _CapabilityStatus.EMPTY,
+        }
+    )
+
+
+def _runtime():
+    # The active contributor interpreter only; no caller executable or PATH lookup.
+    path = os.path.realpath(sys.executable)
+    meta = os.stat(path, follow_symlinks=False)
+    _runtime_file_type(meta)
+    _runtime_permission_bits(meta)
+    _runtime_owner(meta)
+    _runtime_capabilities(path)
     return path
 
 

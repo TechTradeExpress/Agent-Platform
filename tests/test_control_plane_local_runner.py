@@ -1,9 +1,11 @@
 """CP-08 real benign process mechanics + synthetic failure injection, no host tests."""
 
 import ast
+import errno
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import time
 import types
@@ -639,3 +641,197 @@ def test_marker_drift_at_cp08_cleanup_retains_evidence(config, monkeypatch, drif
     assert len(list(Path.cwd().iterdir())) == 1
     assert lr.exercise(config, lr.Case.HYGIENE).code == "retained_uncertainty"
     check(report)
+
+
+_RUNTIME_CATEGORIES = (
+    "metadata",
+    "file_type",
+    "permission_bits",
+    "owner",
+    "capabilities",
+    "binary_size",
+    "binary_read",
+)
+
+
+def _current_runtime_diagnostic(category):
+    # Test-only fixed active-interpreter path, not an executable-selection API.
+    # No call to _runtime(): otherwise an owner/mode/capability refusal would
+    # again masquerade as a binary-read failure before reading any bytes.
+    try:
+        path = os.path.realpath(lr.sys.executable)
+        meta = os.stat(path, follow_symlinks=False)
+    except Exception:
+        return "runtime_metadata_unavailable"
+    try:
+        if category == "metadata":
+            return None
+        if category == "file_type":
+            lr._runtime_file_type(meta)
+        elif category == "permission_bits":
+            lr._runtime_permission_bits(meta)
+        elif category == "owner":
+            lr._runtime_owner(meta)
+        elif category == "capabilities":
+            lr._runtime_file_type(meta)
+            observed = lr._runtime_capability_status(path)
+            if observed not in {
+                lr._CapabilityStatus.ABSENT,
+                lr._CapabilityStatus.EMPTY,
+            }:
+                return "runtime_capabilities_" + observed.value
+        elif category in {"binary_size", "binary_read"}:
+            # Never attempt a diagnostic read of a special or oversized file.
+            if not stat.S_ISREG(meta.st_mode):
+                return "runtime_" + category + "_blocked_by_file_type"
+            if not 0 < meta.st_size <= 64 * 1024 * 1024:
+                return "runtime_" + category + "_blocked_by_size"
+            if category == "binary_read":
+                lr._file_hash(path, 64 * 1024 * 1024)
+        else:
+            return "runtime_unknown_diagnostic"
+    except Exception:
+        return "runtime_" + category + "_rejected"
+    return None
+
+
+@pytest.mark.parametrize("category", _RUNTIME_CATEGORIES)
+def test_current_runtime_validation_categories(category):
+    # Independent of the failing config fixture. A diagnostic read is not
+    # admission: _runtime()/reviewed_bytes() still require every safety gate.
+    failure = _current_runtime_diagnostic(category)
+    if failure is not None:
+        pytest.fail(failure, pytrace=False)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        stat.S_IFDIR | 0o755,
+        stat.S_IFIFO | 0o600,
+        stat.S_IFLNK | 0o777,
+        stat.S_IFSOCK | 0o600,
+    ],
+)
+def test_runtime_file_type_refuses_non_regular_metadata(mode):
+    with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+        lr._runtime_file_type(types.SimpleNamespace(st_mode=mode))
+
+
+@pytest.mark.parametrize("bits", [0o4000, 0o2000, 0o020, 0o002])
+def test_runtime_permission_mask_remains_fail_closed(bits):
+    with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+        lr._runtime_permission_bits(types.SimpleNamespace(st_mode=stat.S_IFREG | bits))
+
+
+@pytest.mark.parametrize("owner", [0, "caller", "foreign"])
+def test_runtime_ownership_is_still_exact_root_or_caller(owner):
+    uid = os.getuid()
+    value = uid if owner == "caller" else uid + 1 if owner == "foreign" else owner
+    meta = types.SimpleNamespace(st_uid=value)
+    if owner == "foreign":
+        with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+            lr._runtime_owner(meta)
+    else:
+        lr._runtime_owner(meta)
+
+
+@pytest.mark.parametrize(
+    "number,status,accepted",
+    [
+        (errno.ENODATA, lr._CapabilityStatus.ABSENT, True),
+        (errno.ENOTSUP, lr._CapabilityStatus.UNSUPPORTED, False),
+        (errno.EOPNOTSUPP, lr._CapabilityStatus.UNSUPPORTED, False),
+        (errno.EACCES, lr._CapabilityStatus.DENIED, False),
+        (errno.EPERM, lr._CapabilityStatus.DENIED, False),
+        (errno.EIO, lr._CapabilityStatus.ERROR, False),
+        (None, lr._CapabilityStatus.ERROR, False),
+    ],
+)
+def test_runtime_capability_errors_are_distinct_and_not_permissive(
+    monkeypatch, number, status, accepted
+):
+    def unavailable(*args, **kwargs):
+        assert args[1] == "security.capability"
+        assert kwargs == {"follow_symlinks": False}
+        raise OSError(number, "FAKE_PRIVATE_DETAIL_MUST_NOT_ESCAPE")
+
+    monkeypatch.setattr(lr.os, "getxattr", unavailable)
+    assert lr._runtime_capability_status("fixed-test-only") is status
+    if accepted:
+        lr._runtime_capabilities("fixed-test-only")
+    else:
+        with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+            lr._runtime_capabilities("fixed-test-only")
+
+
+@pytest.mark.parametrize(
+    "value,status",
+    [
+        (b"", lr._CapabilityStatus.EMPTY),
+        (b"FABRICATED_CAPABILITY_BYTES", lr._CapabilityStatus.PRESENT),
+        (None, lr._CapabilityStatus.ERROR),
+    ],
+)
+def test_runtime_capability_values_never_escape_or_bypass(monkeypatch, value, status):
+    monkeypatch.setattr(lr.os, "getxattr", lambda *args, **kwargs: value)
+    assert lr._runtime_capability_status("fixed-test-only") is status
+    if status is lr._CapabilityStatus.EMPTY:
+        lr._runtime_capabilities("fixed-test-only")
+    else:
+        with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+            lr._runtime_capabilities("fixed-test-only")
+
+
+def test_runtime_stat_and_all_original_gates_are_still_enforced(config, monkeypatch):
+    actual = os.stat(os.path.realpath(lr.sys.executable), follow_symlinks=False)
+    # Fabricated stat only: never chown or weaken the real interpreter.
+    meta = types.SimpleNamespace(
+        st_mode=actual.st_mode, st_uid=os.getuid() + 1, st_size=actual.st_size
+    )
+    monkeypatch.setattr(lr.os, "stat", lambda *args, **kwargs: meta)
+    monkeypatch.setattr(lr.subprocess, "Popen", forbidden)
+    assert _current_runtime_diagnostic("owner") == "runtime_owner_rejected"
+    with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+        lr._runtime()
+    with pytest.raises(lr.RunnerError, match="^local_runner_blocked$"):
+        lr.reviewed_bytes()
+    assert lr.exercise(config, lr.Case.HYGIENE).code == "pins_changed"
+
+
+def test_binary_diagnostic_is_independent_of_safety_and_still_bounded(monkeypatch):
+    monkeypatch.setattr(lr, "_runtime", forbidden)
+    assert _current_runtime_diagnostic("binary_size") is None
+    assert _current_runtime_diagnostic("binary_read") is None
+
+
+@pytest.mark.parametrize("size", [0, 64 * 1024 * 1024 + 1])
+def test_binary_size_diagnostic_never_reads_oversized_or_empty_files(monkeypatch, size):
+    meta = types.SimpleNamespace(st_mode=stat.S_IFREG | 0o755, st_uid=0, st_size=size)
+    monkeypatch.setattr(lr.os, "stat", lambda *args, **kwargs: meta)
+    monkeypatch.setattr(lr, "_file_hash", forbidden)
+    assert (
+        _current_runtime_diagnostic("binary_size")
+        == "runtime_binary_size_blocked_by_size"
+    )
+    assert (
+        _current_runtime_diagnostic("binary_read")
+        == "runtime_binary_read_blocked_by_size"
+    )
+
+
+def test_binary_read_failure_is_not_reported_as_safety_failure(monkeypatch):
+    def unreadable(*args):
+        raise OSError("FABRICATED_PRIVATE_PATH_AND_ERROR")
+
+    monkeypatch.setattr(lr, "_file_hash", unreadable)
+    assert _current_runtime_diagnostic("binary_read") == "runtime_binary_read_rejected"
+
+
+def test_diagnostic_observation_and_report_validation_never_start_children(
+    config, monkeypatch
+):
+    monkeypatch.setattr(lr.subprocess, "Popen", forbidden)
+    for category in _RUNTIME_CATEGORIES:
+        assert _current_runtime_diagnostic(category) is None
+    check(lr.exercise(replace(config, version="bad"), lr.Case.HYGIENE))
