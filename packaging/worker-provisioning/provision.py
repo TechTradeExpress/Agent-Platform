@@ -639,6 +639,9 @@ def provision(system, *, initialize=False, recover=False):
             )
             # Revalidate NSS and quiescence before the first persistent write.
             need(system.accounts() == snapshot, "changing_nss")
+            # Include orphan processes using IDs not yet represented in NSS.
+            # Check the complete plan before even creating the durable ledger.
+            system.quiescent(accounts | planned)
             if ledger is None:
                 os.mkdir("agent-platform-worker-provisioning", 0o700, dir_fd=parent)
                 ledger = stack.enter_context(

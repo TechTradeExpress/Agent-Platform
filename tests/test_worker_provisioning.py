@@ -32,6 +32,8 @@ class ModelSystem:
         self.snapshot = {"users": [], "groups": []}
         self.mutations = []
         self.busy = False
+        self.busy_uids = set()
+        self.checked_uids = []
         self.payload_bad = False
 
     def accounts(self):
@@ -42,6 +44,10 @@ class ModelSystem:
             raise self.module.Blocked("installed_payload_changed")
 
     def quiescent(self, accounts):
+        uids = {a["uid"] for a in accounts.values()}
+        self.checked_uids.append(uids)
+        if self.busy_uids & uids:
+            raise self.module.Blocked("principal_has_processes")
         if self.busy:
             raise self.module.Blocked("unit_not_quiescent")
 
@@ -529,3 +535,24 @@ def test_closed_private_code_inventory_rejects_unknown_entries(
     else:
         with pytest.raises(m.Blocked, match="unknown_installed_code"):
             m.closed_tree("/fixture", ["/fixture/safe.py"])
+
+
+@pytest.mark.parametrize("busy_uid", [999, 998])
+def test_orphan_process_on_planned_uid_blocks_before_any_write(model, busy_uid):
+    m, system, parents, root = model
+    assert not system.snapshot["users"]  # Orphan process has no NSS identity.
+    system.busy_uids.add(busy_uid)
+    before = files(root)
+    with pytest.raises(m.Blocked, match="principal_has_processes"):
+        m.provision(system, initialize=True)
+    assert files(root) == before
+    assert not (parents["/var/lib"] / "agent-platform-worker-provisioning").exists()
+    assert not system.mutations  # No group/user creation or configuration ACL.
+    assert not system.snapshot["users"] and not system.snapshot["groups"]
+    assert system.checked_uids[-1] == {999, 998}
+
+
+def test_account_creation_retains_post_creation_process_check(model):
+    m, system, _, _ = model
+    assert m.provision(system, initialize=True)["status"] == "PROVISIONED_NOT_ACTIVATED"
+    assert system.checked_uids[-2:] == [{999, 998}, {999, 998}]
