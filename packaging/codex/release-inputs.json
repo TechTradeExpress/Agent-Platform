@@ -1,0 +1,94 @@
+{
+  "archive": {
+    "asset_id": 689712643,
+    "name": "codex-x86_64-unknown-linux-musl.tar.gz",
+    "sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+    "size": 121764138,
+    "url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz"
+  },
+  "binary": {
+    "dt_needed": [],
+    "elf_class": 64,
+    "interpreter": null,
+    "machine": 62,
+    "member": "codex-x86_64-unknown-linux-musl",
+    "mode": 493,
+    "sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+    "size": 319346888,
+    "type": 3
+  },
+  "blockers": [
+    "binary_license_closure_unverified",
+    "debian13_execution_not_verified"
+  ],
+  "debian13_lifecycle": "NOT_RUN_LICENSE_BLOCKED",
+  "debian_dependencies": null,
+  "draft": false,
+  "license": {
+    "binary_bound_sbom": "NOT_ESTABLISHED",
+    "cargo_lock_git_packages": 12,
+    "cargo_lock_packages": 1478,
+    "redistribution_allowed": false,
+    "third_party_audit": "INCOMPLETE",
+    "upstream": "Apache-2.0"
+  },
+  "observed_at": "2026-11-14",
+  "package_build": "BLOCKED",
+  "prerelease": false,
+  "proposed_debian_version": "0.166.0-1",
+  "published_at": "2026-10-29T19:47:53Z",
+  "release_id": 428320524,
+  "release_url": "https://api.github.com/repos/openai/codex/releases/tags/rust-v0.166.0",
+  "runtime_authorized": false,
+  "schema": "AP-CODEX-INPUT/1",
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "sources": [
+    {
+      "git_blob": "4606e72e042564097e8780d66c1d4dcb611869bd",
+      "path": "LICENSE",
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+      "size": 10926,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/LICENSE"
+    },
+    {
+      "git_blob": "2805899d56d0332d175cfc613c67d45d6f006db7",
+      "path": "NOTICE",
+      "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915",
+      "size": 242,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/NOTICE"
+    },
+    {
+      "git_blob": "18ad62af03adb533a195b7a6014799831e7cc907",
+      "path": "docs/license.md",
+      "sha256": "dca51cd27a681f46b17d7867d1e8311c024ec1478a6e12b6463a71a4e2f869ba",
+      "size": 84,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/docs/license.md"
+    },
+    {
+      "git_blob": "1d27abbfa412b8efcbf495a32ce040225c44a186",
+      "path": "codex-rs/Cargo.lock",
+      "sha256": "22bd51f50864ce40f6686f3350c0547fdd50a8213240f54435ed394f68bf08e6",
+      "size": 409262,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/codex-rs/Cargo.lock"
+    },
+    {
+      "git_blob": "6a4a2dcacaa7b815a88a56d0083bf01075ffdfa1",
+      "path": ".github/workflows/rust-release.yml",
+      "sha256": "a7e3fbbd6f787b4b91fdf819c97549eb74daf9ccdf961a80fc2ec42b3dce2477",
+      "size": 89554,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/.github/workflows/rust-release.yml"
+    },
+    {
+      "git_blob": "62f3615ffd4cc11aab68548b12486fc12915dab4",
+      "path": "third_party/voice/NOTICE.md",
+      "sha256": "40097a1799441051aa0b6645cdc819cceb19be73cdd265eb602aa2b15e0b1f48",
+      "size": 2403,
+      "url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/third_party/voice/NOTICE.md"
+    }
+  ],
+  "status": "BLOCKED",
+  "tag": "rust-v0.166.0",
+  "tag_object": "593389380740f7b4762771573c447ccfdc59742f",
+  "version": "0.166.0",
+  "version_execution": "VERIFIED_ISOLATED_VERSION_ONLY"
+}

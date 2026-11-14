@@ -5,6 +5,9 @@ This describes the **currently implemented legacy candidate**. The proposed
 two-role split, separate Codex dependency and explicit legacy retirement.
 It is design-only: #102/#110 build artifacts later; #111 provisions Worker
 separately. No new package, service or migration is implemented by that ADR.
+The separate [PKG-03 audit](codex-toolchain-package.md) records verified official
+Codex inputs and the unresolved binary-license gate; it emits no toolchain .deb
+and does not change this legacy builder or its package manifest.
 
 The package is an **unreleased CLI distribution candidate**, not an activated
 Agent Platform service. Target: Debian 13 **trixie, amd64**, system Python >=3.12

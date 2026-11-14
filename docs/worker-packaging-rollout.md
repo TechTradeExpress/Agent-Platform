@@ -15,6 +15,11 @@ closed module/file inventories, dependencies, versions, explicit retirement of
 the experimental package, state ownership and negative lifecycle matrix.
 It proposes the contract for #102/#110/#111/#112; none is implemented by the ADR.
 
+PKG-03's [actual input audit and preflight](codex-toolchain-package.md) selects
+Codex 0.166.0 but is **BLOCKED** on complete binary-bound third-party license
+evidence. Hashes and isolated `--version` were verified; no approved Codex .deb
+or Worker dependency C exists. Do not substitute a synthetic package for #102.
+
 ## Distribution decision
 
 Exactly **two product/runtime role packages** built from the one Agent Platform source tree, plus a separately versioned **toolchain dependency** for upstream OpenAI Codex CLI. The latter is not a third Agent Platform runtime role or a shared Control/Worker authority package.
