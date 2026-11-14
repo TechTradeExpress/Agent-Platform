@@ -273,8 +273,8 @@ of installed Codex version. Never downgrade/discard existing journals.
 | P0 Control + P0 Worker, same or different versions | Co-installable files only; no authenticated product communication implemented |
 | Any current Control/Worker pair | Enrollment, mTLS ingress, leases and versioned product protocol **NOT_IMPLEMENTED**; launch/dispatch denied |
 | Future authenticated pair | Both must advertise exactly authenticated protocol major, schema/capability versions, peer/boot epoch, source/toolchain hashes and operator-approved compatibility matrix; unknown/required-unsupported capability or stale peer blocks before effects |
-| Worker + exact approved C | Tool installation compatible only after #110/#112 ABI/hash checks; native execution still blocked |
-| Worker + missing/different C, or arbitrary external Codex | APT dependency unsatisfied or readiness BLOCKED, never version negotiation by PATH |
+| Worker + exact verified upstream Codex installation (#116) | Installed executable matches approved release pin and on-disk hash/ABI evidence; #112 doctor independently diagnoses effective path; native execution still blocked |
+| Worker + no Codex, stale/tampered tool, or arbitrary external Codex | Worker P0 still installs and remains inert; future read-only doctor reports tool readiness BLOCKED, without APT failure, PATH fallback or automatic repair |
 | AP-WP/1 root job/artifact/receipt + matching P1 binary | Separate local one-shot protocol only, exact closed schema/identity/expiry; no bridge to Control admission or synthetic CP-03/CP-05 receipts |
 
 This defines future compatibility **requirements**, no implemented wire format
@@ -362,7 +362,7 @@ production migration is safe. Standard dpkg config handling follows
 | Stage / owner | Allowed result | Does not grant |
 | --- | --- | --- |
 | #102 inert artifacts | Code/metadata/conffiles, no scripts/services/profiles/accounts/state or tool download | Host installation or runnable product services |
-| #110 toolchain build | Audited deterministic Codex .deb, offline ABI/version tests | Login, session/tool invocation, redistribution before license audit |
+| #116 explicit upstream tool provisioning, disposable fixtures | Pinned official fetch or pinned offline archive, verified root-owned toolchain and collision/rollback tests; no Codex in .deb | Login, native execution, background activation, unaudited bytes or unapproved host install |
 | #111 Worker provisioning, disposable fixtures | Reviewed idempotent account/path/unit/policy packaging; disabled/inactive oneshots, no automatic restart/start/enable, no key or remote write | Host rollout or an operator approval receipt |
 | #112 read-only readiness | Separate INSTALLED / CONFIGURED / READY_FOR_SUPERVISED_PUBLISHING / BLOCKED / NOT_RUN facts with actual provenance | Repair, authentication, activation, native GO or authorizing publication |
 | #108 explicitly approved worker01, then worker02 pilots | Exact host/install/action consent, real independently retained evidence and App-authored disposable Draft PRs | Unattended runtime, merge, force, deletion, arbitrary API or other targets |
