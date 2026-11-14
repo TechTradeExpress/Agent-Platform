@@ -43,87 +43,161 @@ def snapshot(path):
     return {p.name: p.read_bytes() for p in path.iterdir()}
 
 
-def test_real_deb_archives_metadata_permissions_contents_and_reproducibility(tmp_path):
-    commit = "a" * 40  # Explicit fabricated provenance for this offline build test.
-    first = builder.build(ROOT, tmp_path / "one", 2, commit, 1700000000)
-    second = builder.build(ROOT, tmp_path / "two", 2, commit, 1700000000)
-    baseline = builder.build(ROOT, tmp_path / "baseline", 1, commit, 1700000000)
-    assert first.read_bytes() == second.read_bytes() != baseline.read_bytes()
-    assert first.read_bytes().startswith(b"!<arch>\n")
-    for pkg, version in [(first, "0.1.0-2"), (baseline, "0.1.0-1")]:
-        field = subprocess.check_output(["dpkg-deb", "-f", str(pkg)], text=True)
-        assert f"Version: {version}\n" in field
-        assert "Architecture: amd64\n" in field
-        assert f"Depends: {builder.DEPENDENCIES}\n" in field
-        controls = subprocess.check_output(["dpkg-deb", "--ctrl-tarfile", str(pkg)])
-        with tarfile.open(fileobj=io.BytesIO(controls)) as archive:
-            names = {m.name.removeprefix("./") for m in archive}
-            assert not names & {"preinst", "postinst", "prerm", "postrm", "triggers"}
-            assert archive.extractfile("./conffiles").read() == (
-                b"/etc/agent-platform/package.conf\n"
-            )
-        data = subprocess.check_output(["dpkg-deb", "--fsys-tarfile", str(pkg)])
-        with tarfile.open(fileobj=io.BytesIO(data)) as archive:
-            names = [m.name.removeprefix("./") for m in archive]
-            assert "usr/bin/agent-platform" in names
-            assert ("usr/lib/agent-platform/migrate-example" in names) == (
-                version == "0.1.0-2"
-            )
+def payload(pkg):
+    data = subprocess.check_output(["dpkg-deb", "--fsys-tarfile", str(pkg)])
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        return {
+            m.name.removeprefix("./"): (m, archive.extractfile(m).read())
+            for m in archive
+            if m.isfile()
+        }
+
+
+def test_real_role_archives_metadata_permissions_and_reproducibility(tmp_path):
+    commit = "a" * 40  # Explicit fabricated provenance, offline staging API only.
+    first = builder.build(ROOT, tmp_path / "one", 4, commit, 1700000000)
+    second = builder.build(ROOT, tmp_path / "two", 4, commit, 1700000000)
+    baseline = builder.build(ROOT, tmp_path / "baseline", 3, commit, 1700000000)
+    inventories = {}
+    for role in ("control", "worker"):
+        assert first[role].read_bytes() == second[role].read_bytes()
+        assert first[role].read_bytes() != baseline[role].read_bytes()
+        for pkg, revision in [(first[role], 4), (baseline[role], 3)]:
+            package = "agent-platform-" + role
+            private = "usr/lib/" + package + "/"
+            doc = "usr/share/doc/" + package + "/"
+            field = subprocess.check_output(["dpkg-deb", "-f", str(pkg)], text=True)
+            assert f"Package: {package}\n" in field
+            assert f"Version: 0.1.0-{revision}\n" in field
+            assert "Architecture: amd64\n" in field
+            assert f"Depends: {builder.DEPENDENCIES[role]}\n" in field
+            assert "Conflicts: agent-platform\n" in field
             assert not any(
-                word in name
-                for name in names
-                for word in ("auth.json", "__pycache__", "/systemd/", ".venv", ".git/")
+                key + ":" in field
+                for key in ("Replaces", "Provides", "Breaks", "Pre-Depends")
             )
-            for member in archive:
-                assert member.uid == member.gid == 0
-                assert member.isfile() or member.isdir()
-                assert member.mode in (0o644, 0o755)
-            provenance = json.loads(
-                archive.extractfile("./usr/share/doc/agent-platform/build.json").read()
-            )
-            assert not any(
-                "publisher_handoff" in n or "publisher-handoff" in n for n in names
-            )
-            assert not any(
-                "worker_publish" in n or "worker-publisher" in n for n in names
-            )
-            assert "src/agent_platform/publisher_handoff.py" not in provenance["inputs"]
-            # Deployable modules must ship byte-for-byte in both profiles,
-            # with source hashes, without changing admission or entry points.
-            for source in (ROOT / "src/agent_platform").glob("*.py"):
-                if source.name == "publisher_handoff.py" or source.name.startswith(
-                    "worker_publish"
-                ):
-                    continue
-                installed = "./usr/lib/agent-platform/agent_platform/" + source.name
-                assert archive.extractfile(installed).read() == source.read_bytes()
-                relative = str(source.relative_to(ROOT))
+            controls = subprocess.check_output(["dpkg-deb", "--ctrl-tarfile", str(pkg)])
+            with tarfile.open(fileobj=io.BytesIO(controls)) as archive:
+                assert {m.name.removeprefix("./") for m in archive if m.isfile()} == {
+                    "control",
+                    "conffiles",
+                    "md5sums",
+                }
                 assert (
-                    provenance["inputs"][relative]
+                    archive.extractfile("./conffiles").read()
+                    == f"/etc/{package}/package.conf\n".encode()
+                )
+            files = payload(pkg)
+            metadata = private + "agent_platform-0.1.0.dist-info/"
+            expected = {
+                private + "agent_platform/" + name + ".py"
+                for name in builder.MODULES[role]
+            }
+            expected |= {
+                metadata + name
+                for name in ("METADATA", "INSTALLER", "entry_points.txt")
+            }
+            expected |= {
+                doc + name
+                for name in (
+                    "copyright",
+                    "changelog.Debian.gz",
+                    "README.Debian",
+                    "build.json",
+                    "manifest.json",
+                    "examples/schema-v1.json",
+                )
+            }
+            expected |= {"usr/bin/" + command for command in builder.ENTRY_POINTS[role]}
+            expected |= {
+                "usr/share/man/man1/" + command + ".1.gz"
+                for command in builder.ENTRY_POINTS[role]
+            }
+            expected.add(f"etc/{package}/package.conf")
+            if revision == 4:
+                expected.add(private + "migrate-example")
+            assert files.keys() == expected
+            assert all(
+                m.uid == m.gid == 0 and m.mode in (0o644, 0o755)
+                for m, _ in files.values()
+            )
+            manifest = json.loads(files[doc + "manifest.json"][1])
+            assert {item["path"].lstrip("/") for item in manifest["files"]} == expected
+            for item in manifest["files"]:
+                member, data = files[item["path"].lstrip("/")]
+                assert item["mode"] == member.mode
+                if item["sha256"] is not None:
+                    assert item["sha256"] == hashlib.sha256(data).hexdigest()
+                else:
+                    assert item["path"] == "/" + doc + "manifest.json"
+            provenance = json.loads(files[doc + "build.json"][1])
+            assert provenance["source_commit"] == commit
+            # PUB-02 remains source-only until reviewed Worker P1 integration #111.
+            for name in (
+                "publisher_handoff",
+                "worker_publisher",
+                "worker_publish_artifact",
+                "worker_publish_io",
+                "worker_publish_signer",
+                "worker_publish_export",
+            ):
+                assert not any(name in path for path in files)
+                assert f"src/agent_platform/{name}.py" not in provenance["inputs"]
+            assert not any("worker-publisher" in path for path in files)
+
+            for name in builder.MODULES[role]:
+                source = ROOT / "src/agent_platform" / (name + ".py")
+                assert (
+                    files[private + "agent_platform/" + name + ".py"][1]
+                    == source.read_bytes()
+                )
+                assert (
+                    provenance["inputs"][str(source.relative_to(ROOT))]
                     == hashlib.sha256(source.read_bytes()).hexdigest()
                 )
-            wrapper = archive.extractfile("./usr/bin/agent-platform").read()
-            assert wrapper.startswith(b"#!/usr/bin/python3 -I\n")
-            assert b"sys.dont_write_bytecode = True" in wrapper
-            meta = archive.extractfile(
-                "./usr/lib/agent-platform/agent_platform-0.1.0.dist-info/METADATA"
-            ).read()
-            assert b"Version: 0.1.0\n" in meta
-            assert b"Requires-Dist: cryptography>=43.0.0,<51\n" in meta
-            assert (
-                provenance["inputs"]["uv.lock"]
-                == hashlib.sha256((ROOT / "uv.lock").read_bytes()).hexdigest()
-            )
+            for command in builder.ENTRY_POINTS[role]:
+                wrapper = files["usr/bin/" + command][1]
+                assert wrapper.startswith(b"#!/usr/bin/python3 -I\n")
+                assert b"sys.dont_write_bytecode = True" in wrapper
+            if revision == 4:
+                inventories[role] = expected
+        assert not any("codex" in key for key in payload(first["worker"]))
+    assert not inventories["control"] & inventories["worker"]
     with pytest.raises(FileExistsError):
-        builder.build(ROOT, tmp_path / "one", 2, commit, 1700000000)
+        builder.build(ROOT, tmp_path / "one", 4, commit, 1700000000)
 
 
-@pytest.mark.parametrize("revision,commit", [(0, "a" * 40), (3, "a" * 40), (1, "bad")])
+@pytest.mark.parametrize(
+    "revision,commit", [(0, "a" * 40), (1, "a" * 40), (2, "a" * 40), (3, "bad")]
+)
 def test_bad_package_identity_fails_before_creating_output(tmp_path, revision, commit):
     output = tmp_path / "output"
     with pytest.raises(ValueError):
         builder.build(ROOT, output, revision, commit, 1700000000)
     assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    "unknown_name", ["unreviewed.py", "worker_publish_unreviewed.py"]
+)
+def test_unknown_module_and_worker_authority_import_fail_closed(tmp_path, unknown_name):
+    import shutil
+
+    source = tmp_path / "source"
+    shutil.copytree(ROOT / "src", source / "src")
+    for name in ("pyproject.toml", "debian/control", "debian/changelog"):
+        destination = source / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / name).read_bytes())
+    unknown = source / "src/agent_platform" / unknown_name
+    unknown.write_text("# not admitted\n")
+    with pytest.raises(ValueError, match="review_module_classification"):
+        builder.validate(source)
+    unknown.unlink()  # Only newly created test-owned fixture.
+    worker = source / "src/agent_platform/native_artifact.py"
+    worker.write_text(worker.read_text() + "\nfrom agent_platform import app_signer\n")
+    with pytest.raises(ValueError, match="review_role_import_closure_worker"):
+        builder.validate(source)
 
 
 def test_migration_has_backup_intent_and_idempotent_verified_output(example):
@@ -236,7 +310,8 @@ def test_lifecycle_is_host_guarded_and_workflow_isolated_and_pinned():
         "--network none" in workflow and "--security-opt no-new-privileges" in workflow
     )
     assert "--privileged" not in workflow and "/var/run/docker.sock:" not in workflow
-    assert "--fail-on error" in workflow and "autopkgtest" in workflow
+    quality = (ROOT / "packaging/debian/quality.sh").read_text()
+    assert "--fail-on error" in quality and "autopkgtest" in quality
     assert "continue-on-error" not in workflow
     assert "if-no-files-found: error" in workflow
     pins = re.findall(r"uses: ([\w/-]+)@([0-9a-f]{40}) # (v[\d.]+)", workflow)
@@ -271,5 +346,49 @@ def test_package_rejects_unreviewed_crypto_dependency(
 
     monkeypatch.setattr(builder, "checked_file", changed)
     with pytest.raises(ValueError, match="review_version_or_dependencies"):
-        builder.build(ROOT, tmp_path / "rejected", 2, "a" * 40, 1700000000)
+        builder.build(ROOT, tmp_path / "rejected", 4, "a" * 40, 1700000000)
     assert not (tmp_path / "rejected").exists()
+
+
+@pytest.mark.parametrize("command", ["run", "resume", "doctor"])
+def test_worker_inert_dispatcher_has_fixed_pre_io_refusal(tmp_path, command):
+    poison = tmp_path / "agent_platform"
+    poison.mkdir()
+    (poison / "__init__.py").write_text('raise RuntimeError("foreign code loaded")\n')
+    result = subprocess.run(
+        [
+            "/usr/bin/python3",
+            "-I",
+            str(ROOT / "packaging/debian/worker_inventory.py"),
+            command,
+            "--issue",
+            "1",
+        ],
+        cwd=tmp_path,
+        env={"PYTHONPATH": str(tmp_path), "PATH": "/nonexistent"},
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 13
+    report = json.loads(result.stdout)
+    assert report["launch_allowed"] is report["resume_authorized"] is False
+    assert report["subscription"] == "SUBSCRIPTION_ISOLATION_BLOCKED"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["agent_platform"]
+
+
+@pytest.mark.parametrize(
+    "args", [["codex", "install"], ["run", "--issue", "0"], ["run"], ["inspect"]]
+)
+def test_worker_rejects_unimplemented_or_invalid_commands(args):
+    result = subprocess.run(
+        [
+            "/usr/bin/python3",
+            "-I",
+            str(ROOT / "packaging/debian/worker_inventory.py"),
+            *args,
+        ],
+        capture_output=True,
+        timeout=10,
+    )
+    assert result.returncode == 2

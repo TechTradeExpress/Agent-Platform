@@ -1,0 +1,24 @@
+{
+  "releases": [
+    {
+      "abi": "static-elf64-amd64-no-interpreter-no-needed",
+      "archive_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+      "archive_size": 121764138,
+      "asset_id": 689712643,
+      "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+      "binary_size": 319346888,
+      "member": "codex-x86_64-unknown-linux-musl",
+      "platform": "x86_64-unknown-linux-musl",
+      "provenance": {
+        "evidence": "evidence/codex-0.166.0-provenance.json",
+        "evidence_sha256": "c21efa3d3a15a7dfa0622c3a45ad2362c982aa1a8c3d40ead5349b87c55a9ad3",
+        "signature_identity": "https://github.com/openai/codex/.github/workflows/rust-release.yml@refs/tags/rust-v0.166.0"
+      },
+      "release_id": 428320524,
+      "tag": "rust-v0.166.0",
+      "url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz",
+      "version": "0.166.0"
+    }
+  ],
+  "schema": "AP-CODEX-RELEASE/1"
+}

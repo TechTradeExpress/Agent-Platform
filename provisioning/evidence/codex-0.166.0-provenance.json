@@ -1,0 +1,37 @@
+{
+  "archive_sha256": "a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+  "asset_api_digest": "sha256:a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978",
+  "asset_id": 689712643,
+  "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+  "binary_size": 319346888,
+  "certificate_identity": "https://github.com/openai/codex/.github/workflows/rust-release.yml@refs/tags/rust-v0.166.0",
+  "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
+  "cosign": {
+    "sha256": "424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa",
+    "size": 145688404,
+    "url": "https://github.com/sigstore/cosign/releases/download/v3.1.4/cosign-linux-amd64",
+    "version": "v3.1.4"
+  },
+  "limits": [
+    "HTTPS and Sigstore trust roots/verifier supply chain are trust inputs",
+    "Signature binds artifact digest and release workflow identity, not reproducible source-to-binary equivalence",
+    "No runtime admission, authentication or host installation evidence"
+  ],
+  "observed_at": "2026-11-14",
+  "release_api": "https://api.github.com/repos/openai/codex/releases/tags/rust-v0.166.0",
+  "release_id": 428320524,
+  "release_response_sha256": "cdc2c9933c6715904c9371b9773c5312410b8d12efd80835a6129b2c81d6aba7",
+  "schema": "AP-CODEX-PROVENANCE/1",
+  "signature_verification": {
+    "candidate_executed": false,
+    "certificate_chain_verification": true,
+    "exit_code": 0,
+    "result": "Verified OK",
+    "transparency_log_verification": true,
+    "workflow_identity_match": "exact"
+  },
+  "sigstore_bundle_sha256": "0e8d835aa407c0a7c5d91bd9effd188d2ba4fe2596594140569ddb9a4c44fc6e",
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "tag": "rust-v0.166.0",
+  "trusted_root_sha256": "6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66"
+}

@@ -5,6 +5,16 @@ This is a proposed contract, not an accepted wire schema, executable publisher,
 credential service or worker adapter. All examples below are fabricated and
 non-authorizing. Completion permits independent contract review only.
 
+Packaging specialization: [ADR 007 / AP-PKG/1](debian-role-package-architecture.md)
+records the approved direction of PUB-02's **worker-local**, separately confined
+App signer/Publisher rather than treating the Control-only custody placement
+below as the only future topology. This applies solely to each worker's own
+App and operator-initiated exact feature/Draft operation. Untrusted Codex/tools
+still receive no credential or handle; Control credentials stay on Control.
+The original CP-02 protocol, AP-AL/AP-AS interfaces and synthetic publication
+gates are unchanged. PR #109 must be reviewed/merged before #111 packages its
+implementation; no host activation or live evidence follows from this ADR.
+
 ## Baseline and governing boundaries
 
 Historical CP-02 source base: `e19c0b3b124ac5689d0c31c60a5ea5e7330c11af`.

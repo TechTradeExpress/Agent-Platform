@@ -1,5 +1,19 @@
 # PUB-02 operator-triggered worker publisher — AP-WP/1
 
+**Current integration status:** SOURCE_IMPLEMENTED / OFFLINE_TESTED;
+HOST_NOT_RUN / LIVE_PUBLICATION_BLOCKED. The five PUB-02 modules and deployment
+sources remain source-only in both Debian P0 roles. Closed Control P0 (32 modules)
+and Worker P0 (4 modules) are unchanged. Their explicit inclusion and packaged
+account/unit/profile provisioning belong to #111; read-only readiness belongs to
+#112. Codex is separately acquired through #116, never a project Codex .deb or APT
+dependency. The older manual recipes below are reference material, not the
+current rollout path or authorization to install them. Await reviewed packaged
+provisioning and exact host approval.
+
+Issue #108 stays open until independently verified App-authored Draft PR pilots
+succeed on **both worker01 and worker02**. Source integration, CI or review cannot
+stand in for those pilots. See [integration evidence](worker-publisher-integration.md).
+
 This implementation is a separate one-shot executable, not an adapter for
 `agent-platform run/resume`, native Codex or the autonomous publisher. Those
 components retain exit 13, SUBSCRIPTION_ISOLATION_BLOCKED, Gate #73 and LIVE_NO_GO.
