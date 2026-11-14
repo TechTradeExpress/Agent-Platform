@@ -1,5 +1,7 @@
 # ADR 007: Debian role packages and migration contract
 
+> **Amendment AP-PKG/2, 2026-11-14 (current maintainer choice):** the third `agent-platform-codex.deb` toolchain distribution and `Depends: agent-platform-codex (= C)` requirements in the original ADR have been **superseded**. Agent Platform distributes exactly two role packages. Codex is fetched directly from the official upstream by an explicit pinned+verified, separately authorized worker provisioning command, not by Debian `postinst`. See [codex-upstream-provisioning-decision.md](codex-upstream-provisioning-decision.md) and [#116](https://github.com/TechTradeExpress/Agent-Platform/issues/116). This change does **not** authorize host changes, credentials, autonomous execution or Publisher activation. Historical research [#110](https://github.com/TechTradeExpress/Agent-Platform/issues/110) and [PR #115](https://github.com/TechTradeExpress/Agent-Platform/pull/115) were closed without a .deb. Section-level amendments below are normative after this ADR amendment is human-merged.
+
 **AP-PKG/1 · Issue #101 / PKG-01 · 2026-11-14 · DESIGN_ONLY.**
 Proposed contract for independent source review, not a package implementation.
 Target: Debian 13 trixie, amd64. **LIVE_NO_GO / HOST_NOT_RUN**, Gate #73 and
@@ -34,10 +36,10 @@ the reviewed, actually merged implementation before packaging it; changes to
 its interfaces/closure require manifest review, not copying a stale Draft.
 
 Decision: one canonical source project produces exactly two role packages,
-`agent-platform-control` and `agent-platform-worker`. No shared runtime/common
-package. A separate upstream-derived **toolchain** package,
-`agent-platform-codex`, has its own version and release audit. It is not a third
-role, a service, a credential provider or permission to run Codex.
+`agent-platform-control` and `agent-platform-worker`, with no shared runtime/common
+or third-party Codex package. A separate **verified upstream acquisition** workflow
+installs Codex on operator-authorized worker hosts from an exact vetted source pin.
+It is neither a Debian dependency nor a license to execute Codex.
 
 Rejected: duplicating the whole module tree into both roles; a shared
 secret-bearing common package; one shared Control UID; embedding Codex in Worker;
@@ -51,7 +53,7 @@ These are **future allowlists**, not globs or an instruction to implement now.
 All names in code inventories below mean exactly `<name>.py`; no tests, caches,
 worktrees, samples of credentials or source-only research tools are implicit.
 Unknown files or imports fail the future build. #102 implements P0; #111 extends
-only Worker to P1 after #110 and reviewed #109 merge. #112 adds its diagnostic.
+only Worker to P1 after #116 and reviewed #109 merge. #112 adds its diagnostic.
 Changing a list requires a reviewed source change and new provenance.
 
 | Package / phase | Commands and target | Code location / interface |
@@ -60,7 +62,7 @@ Changing a list requires a reviewed source change and new provenance.
 | Worker P0 (#102) | `/usr/bin/agent-platform-worker`: new inert role inventory CLI, only `--help`, `--version`; syntactically valid `run`, `resume`, `doctor` return fixed blocked/exit 13 before inspection; no fallback. `/usr/bin/agent-platform-worker-native-artifact` delegates to `agent_platform.native_artifact:main` | `/usr/lib/agent-platform-worker/agent_platform/`, exact W list below; inventory dispatcher is a reviewed standalone wrapper, not the Control CLI |
 | Worker P1 (#111, conditional on #109) | `/usr/libexec/ap-worker-publisher`, `ap-worker-publisher-export`, `ap-worker-publisher-signer`, unchanged AP-WP/1 targets | `/usr/lib/ap-worker-publisher/agent_platform/`, exact P list below, empty `__init__.py`; preserve existing hard-coded root and isolated wrappers |
 | Worker diagnostic (#112) | `agent-platform-worker doctor`, a separately implemented read-only diagnostic, replaces only that role CLI's doctor refusal | `/usr/lib/agent-platform-worker/agent_platform/worker_doctor.py`, exact dependency closure must be added at #112 review; must not import existing `doctor.py` or enable execution |
-| Codex (#110) | `/usr/bin/codex`, original unmodified admitted upstream executable, no PATH shim or alternatives | Exact binary/license/provenance inventory below; no Python namespace or service |
+| External Codex (#116) | Explicit provisioning command fetches a pinned official upstream archive, validates SHA-256 and stages a managed local executable; no auto-login or native run | Not in dpkg-owned files, installed only after separate operator command and never in #102's inert package |
 
 P0 inventory wrapper and renamed manuals do not exist today. #102 supplies and
 tests them; it does not implement a worker agent. No `/usr/bin/agent-platform`
@@ -143,7 +145,7 @@ invalidate #109's code hashes, profile or startup admission.
 | Worker P0 | Commands above; `/usr/lib/agent-platform-worker/agent_platform/{W}.py`; corresponding private dist-info; `/usr/lib/agent-platform-worker/migrate-example` in synthetic N+1 only; `/etc/agent-platform-worker/package.conf` sole conffile |
 | Each role P0 | `/usr/share/doc/<package>/{copyright,changelog.Debian.gz,README.Debian,build.json,manifest.json,examples/schema-v1.json}`; `/usr/share/man/man1/<owned-command>.1.gz`; no other files |
 | Worker P1 additions | P code and three libexecs above; `/usr/lib/systemd/system/ap-worker-publisher{,-signer}.service`; `/etc/apparmor.d/ap-worker-publisher{,-signer}` (conffiles); `/usr/lib/sysusers.d/agent-platform-worker.conf`; `/usr/lib/tmpfiles.d/agent-platform-worker.conf`; reviewed nonsecret examples under its own doc directory |
-| Codex | `/usr/bin/codex`; `/usr/share/doc/agent-platform-codex/{copyright,LICENSE,NOTICE,third-party-licenses.txt,provenance.json,manifest.json,changelog.Debian.gz,README.Debian}`; no conffile or writable directory. NOTICE records applicable upstream notices; absence upstream is explicitly recorded, never invented attribution |
+| External Codex #116 | **No dpkg file ownership or .deb package.** A separately invoked, reviewed installer manages versioned files in a worker-only root-owned tool location and an optional conflict-checked command link; no shared library or service ownership |
 
 Manifests enumerate every installed file, mode, owner and digest; generated
 metadata is enumerated too. Brace notation in this ADR expands only the listed
@@ -196,26 +198,28 @@ keys, journals, anchors and administrator data, not erase a security identity.
 ## Dependencies and APT availability
 
 No `Pre-Depends`, role cross-dependency, `Provides: agent-platform`, common
-package, recommends-based security or external-Codex alternative dependency.
+package or Codex-related APT dependency. Codex is a separately verified upstream
+executable, NOT a Debian package from this project.
 Both role artifacts remain amd64, even though their P0 payload is Python;
 architecture expansion needs explicit tests. Exact proposed direct dependencies:
 
 | Artifact phase | Depends |
 | --- | --- |
 | Control P0 | `python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, gh` |
-| Worker P0 | `python3 (>= 3.12), agent-platform-codex (= C)` |
+| Worker P0 | `python3 (>= 3.12)` (no Codex dependency; inert help/version/blocked paths function without any Codex present) |
 | Worker P1 | P0 plus `python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), apparmor (>= 4.1), apparmor-utils, acl` |
-| Codex | Exact ELF-derived runtime closure from #110, expressed as versioned Debian dependencies; unresolved until audited; never empty by assumption |
+| External Codex #116 | No APT dependency; controlled installer checks platform/ABI and versioned upstream archive against reviewed release lock before activation. Any required system libraries must be verified on the target host or provisioned through separately reviewed Debian dependencies. |
 
-`C` means the literal full reviewed Codex Debian version in the release lock,
-substituted before building. An unresolved C or missing closure **blocks** a
-Worker candidate build. #102 and #110 may develop independently, but an actual
-install test needs a complete matching set. No fake Codex package or dropping
-Depends to make #102 green. P0 doesn't need Git/cryptography on Worker: its
-inspector uses stdlib. P1 uses Git only in the credential-free exporter; signer
-and Publisher never spawn repository commands. Worker does not need `gh`, npm,
-pip, Node, Docker or an API broker. Bubblewrap/native runtime prerequisites are
-not inferred from this packaging dependency set.
+#102 builds two inert co-installable packages independently of any Codex
+installation or external download. #116 separately implements verified upstream
+tool acquisition (official asset, full pinned SHA-256, size/platform/ABI) in a
+user-invoked provisioning workflow. #111 integrates it only after operator
+approval; #112 diagnoses installed version/hash and PATH shadowing without
+reading auth/session state. No dynamic `latest`/npm/pip installer, shell profile
+rewrite or remote execution in Debian maintainer scripts. P0 Worker inspector
+uses only stdlib. P1 Git is limited to the credential-free exporter; Publisher
+and signer never spawn repository commands. No `gh`, Node, Docker or API broker
+is a Worker P0 dependency. Native runtime gates remain blocked.
 
 Trixie publishes compatible [cryptography 43](https://packages.debian.org/trixie/python3-cryptography),
 [systemd 257](https://packages.debian.org/trixie/systemd) and an
@@ -231,15 +235,16 @@ Installing AppArmor dependencies may start/reload baseline framework profiles;
 that is separate from authorizing either Publisher unit. Never suppress such
 uncertainty with a silent security-policy change or a host workaround.
 
-The three private Agent Platform packages are **not in Debian's archive** and
-there is currently no project APT feed. Under future explicit install approval,
-provide exact local Worker **and** Codex .debs to one APT transaction, with Debian
-dependencies available from a verified cache/repository. A single local Worker
-file cannot resolve an absent C from thin air. Offline fixtures pre-acquire the
-whole closure then install with network disabled; `dpkg -i` alone is not a
-dependency resolver. A future signed feed requires its own Release/InRelease,
-key custody/rotation/revocation and scoped publication review. No maintainer
-script downloads, `latest`, global npm/pip or credentials in CI.
+The two private Agent Platform **role** packages are not in Debian's archive;
+there is no project APT feed. `apt install ./agent-platform-worker_*.deb` installs
+the inert Worker, resolving only Debian-system dependencies. No extra Codex .deb
+is required or supplied. A subsequent explicit `agent-platform-worker codex
+install` provisioning operation can fetch a reviewed official asset, or accept
+a local pinned archive offline. Lifecycle tests of role .debs run with package
+network disabled, entirely independent of that separate step. A future signed
+feed remains a separate release/keys/revocation decision. Neither `postinst`
+nor any other maintainer script performs network fetches, vendor installer
+execution, authentication, privileged Publisher run or PATH/home edits.
 
 ## Versioning, protocol and upgrade boundaries
 
@@ -253,17 +258,15 @@ increment revision. No version reuse for different bytes/source/toolchain.
 Both packages from one build share source SHA, but administrators may install
 and update either independently: no `Control (= Worker)` dependency.
 
-Codex version is `<upstream-version>-<repack-revision>`, independent of role
-versions. Example mapping `0.166.0-1` is **not a selected/admitted binary**:
-ADR 005 inspected that release's source, not its executable or license closure.
-#110 must select the exact official stable Linux amd64 asset and record URL,
-release/tag/peeled source SHA, archive and extracted binary SHA-256, length,
-ABI, notices and dependencies in a committed release lock. No release number
-alone or a mutable tag supplies binary identity. Worker pins the **entire** C;
-a security/repack update requires a reviewed Worker revision and joint APT
-transaction. No automatic replacement with a newer upstream binary or fallback
-to whatever `codex` is on PATH. Hold rollout on an incompatible dependency;
-never discard newer journal history to fit older code.
+Codex uses a **separately selected upstream version with exact asset URL,
+archive/executable SHA-256, platform/size and release provenance in a reviewed
+version-lock**, not a Debian `<upstream>-<repack>` version. An observation of
+Codex `0.166.0` in #110 is not automatic approval for future downloads:
+#116 must revalidate the selected artifact and trusted release pin. Updates
+require review of a new lock and an explicit operator-managed atomic
+install/rollback transaction, not a joint Debian upgrade. No fallback to an
+arbitrary executable found on PATH. Native `run` remains exit 13, regardless
+of installed Codex version. Never downgrade/discard existing journals.
 
 | Pair / evidence | Compatibility result |
 | --- | --- |
@@ -282,57 +285,39 @@ axes. Pre-upgrade operator quiescence, exact code/config checks and reconciliati
 of any incomplete effects are mandatory before an activated service code change.
 Packages never start/restart units to make an upgrade look complete.
 
-## Codex binary, license and PATH contract
+## Codex upstream binary, ownership and PATH contract (amended)
 
-#110 repackages a pinned official standalone Linux x86_64 binary, unmodified:
-no strip/patch/rebuild in the repack step. Audit ELF interpreter, dynamic NEEDED
-and symbol version requirements against disposable Debian 13 amd64; map each
-needed library to a real APT package and pin minimum supported ABI. A musl-named
-asset is not automatically assumed fully static. If extra shipped helper assets
-are required, STOP and review an expanded exact manifest; never silently copy
-the entire release archive. Record upstream build reproducibility as UNKNOWN
-unless separately demonstrated; deterministic repack from identical pinned
-bytes/toolchain does not prove upstream source-to-binary equivalence.
+The authoritative implementation and safety contract is
+[codex-upstream-provisioning-decision.md](codex-upstream-provisioning-decision.md),
+tracked by [#116](https://github.com/TechTradeExpress/Agent-Platform/issues/116).
+The former #110 repacking, Debian dependency, exact third-party redistribution
+license-closure requirement and `/usr/bin/codex` dpkg preinst collision guard
+were explicitly **superseded**; see historic closed #110 and PR #115. Neither
+proves that upstream binary redistribution was illegal.
 
-The upstream [license](https://github.com/openai/codex/blob/rust-v0.166.0/LICENSE)
-is Apache-2.0 and its [README](https://github.com/openai/codex/blob/rust-v0.166.0/README.md)
-describes standalone release installation. #110 must audit exact-binary bundled
-Rust/native dependencies, applicable licenses/NOTICE/copyright and source-offer
-obligations, with a retained third-party report/SBOM tied to binary SHA. A source
-LICENSE or Cargo.lock alone does not establish that report. Preserve attribution;
-no OpenAI endorsement/trademark claim. If redistribution requirements cannot be
-established, **block distribution and Worker package acceptance**. Separately
-reviewed user-managed external installation with exact hash/version validation
-is the documented alternative, not an OR dependency silently added to this
-contract. It does not satisfy the chosen packaged-installer acceptance.
-
-`/usr/bin/codex` is the only package-owned Codex executable. No shell startup,
-PATH/profile, `~/.local/bin`, `/usr/local/bin`, symlink, alternatives or diversion
-changes. Existing `~/.local/bin/codex` can precede it; shell aliases/functions
-and cached command locations can also differ from the explicit system path.
-Installation leaves them intact. #112 reports nonsecret resolution/version/hash
-mismatch and BLOCKED for an intended packaged workflow; it must not execute an
-arbitrary shadowing file to identify it or read private auth/session files.
-Trusted future callers use absolute `/usr/bin/codex`, not a shell lookup. The
-operator alone decides how to reconcile their interactive shell after review.
-
-For Codex only, #110 implements a **refusal-only preinst collision guard**, not
-a downloader or provisioner. Before unpack, the fixed `/usr/bin/codex` must be
-absent, or an intact regular root-owned executable owned by the installed
-`agent-platform-codex` package with matching previous installed manifest/hash.
-Reject foreign/unowned files, links, unsafe parents or ambiguous dpkg ownership;
-perform bounded no-follow metadata/hash checks without executing the file or
-opening homes. A missing/corrupt prior manifest blocks upgrade, not permits
-replacement. A foreign owning package needs an explicitly reviewed conflict
-decision; no generic `Replaces`, virtual provider, diversion or overwrite.
-This guard must cover direct dpkg and APT paths, including reinstall/downgrade
-and interrupted unpack, in #110/#112 fixtures. Archive allowlists alone cannot
-prevent dpkg replacing an unowned file. A privileged concurrent administrator
-can still race package management and remains outside this guard's trust model.
-No other custom Codex maintainer hook is approved here. No auth configuration,
-home initialization or `codex --version` in maintainer scripts. Version execution
-is confined to a disposable no-account fixture. Binary removal/purge never
-touches `$HOME/.codex`, auth caches, sessions, subscription, worktrees or login.
+- A pre-reviewed pinned official upstream Linux artifact is downloaded as bytes,
+  never executed as a remote install shell script. Verify size, SHA-256 and archive
+  structure before staging a root-owned versioned executable. Reject unsafe tar
+  entries, links, paths, filename collisions, unknown/redirection hosts, perms,
+  symlink races or unknown prior state.
+- The operator invokes a fixed, idempotent provisioning command only after the
+  inert role .deb is installed. No network during dpkg lifecycle and no auto
+  login, Codex runtime run, policy change or Publisher activation.
+- Prefer an app-managed versioned executable path and an optional, strictly
+  conflict-checked conventional `/usr/local/bin/codex` symlink so standard PATH
+  works without editing `/etc/profile`, `.bashrc` or user homes. Exact path is
+  an implementation contract finalized/tested under #116, not assumed to exist.
+  `~/.local/bin/codex`, aliases and shell hash tables may shadow it: preserve
+  and report rather than remove; trusted workers refer to the known absolute
+  installed path, never shell search.
+- This project does not copy Codex into its .deb, release tarballs or distribution
+  service. SHA-256 is meaningful only against a trusted independently reviewed
+  pin; it does not prove upstream source-to-binary equivalence, protect a
+  compromised approval process or authorize subscription-based autonomous
+  execution. External upstream binary use still follows applicable service terms.
+- `#112 doctor` reports provenance/hash/version/ABI/install state separately
+  from authentication, profile confinement and runtime authorization. No
+  success claim until disposable integration and actual host evidence are PASS.
 
 ## Legacy migration and lifecycle
 
@@ -437,10 +422,10 @@ Required follow-up acceptance evidence, all **NOT_RUN for the future split**:
 | Issue | Positive and negative checks |
 | --- | --- |
 | #102 | Real two-role N/N+1/rebuild archives, exact manifests and source hashes; verify all 50 current modules classified, no automatic inclusion of additions; parse transitive imports and exercise CLI paths from installed private roots with no source checkout/PYTHONPATH; no shared leaf ownership, forbidden authority in Worker, secrets/hooks/units absent |
-| #102 | Actual isolated apt/dpkg install each and both, either removal order, both legacy conflict directions and residual config; corrupt archives, staged unpack/configure interruption, reinstall/purge, fake owned/unowned conffile/mode/history preservation, explicit synthetic migration and uncertain-state refusal; missing C blocks dependency installation |
-| #110 | Exact original binary hashes/ABI/third-party report, deterministic repack, no auth/state paths; offline `--version`, missing ELF dependency, foreign/unowned `/usr/bin/codex` collisions, upgrade/downgrade/remove/purge and user shadowing preservation |
+| #102 | Actual isolated apt/dpkg install each and both, either removal order, both legacy conflict directions and residual config; corrupt archives, staged unpack/configure interruption, reinstall/purge, fake owned/unowned conffile/mode/history preservation, explicit synthetic migration and uncertain-state refusal; both packages install **without** Codex |
+| #116 | Exact pinned upstream asset, trusted checksum, version/ABI, bounded TLS fetch/offline archive, hostile tar/hash/redirect rejection, atomic managed install, idempotent retry, collision/shadowing/rollback, no credential paths or `.deb` hooks, preserved user state |
 | #111 | Disposable Debian 13: full APT closure, new vs UID 999/GID 989 existing accounts, occupied IDs/symlink/hardlink/ACL/ancestor drift refused; no chown/reinitialization; no unit activation at every package phase, profiles not assumed effective, interrupted/repeated provision preserving UNKNOWN/anchors; manual unit override conflicts detected |
-| #112 | Real read-only readiness vs fabricated facts; tampered code/wrong C/shadow binary, shared UIDs, missing parser/BPF, unconfined/incorrect attachment, stale approvals/unknown history/missing units report BLOCKED without repair or reading private auth; actual disposable boot/lifecycle evidence separately from container syntax |
+| #112 | Real read-only readiness vs fabricated facts; tampered managed binary/mismatched upstream pin/PATH shadow, shared UIDs, missing parser/BPF, unconfined/incorrect attachment, stale approvals/unknown history/missing units report BLOCKED without repair or reading private auth; actual disposable boot/lifecycle evidence separately from container syntax |
 | #108 | Both distinct Apps' real operator-approved disposable Draft publications, actual exact SHA/attribution, revocation, negative isolation and post-restart proof; no source-main destructive probe, merge or autonomous runtime |
 
 Retain current Ruff/full pytest/diff checks, lintian/autopkgtest, conffile and
