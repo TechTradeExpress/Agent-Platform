@@ -1,5 +1,11 @@
 # Debian 13 candidate package and lifecycle — Issue #65
 
+This describes the **currently implemented legacy candidate**. The proposed
+[ADR 007 / AP-PKG/1](debian-role-package-architecture.md) defines the future
+two-role split, separate Codex dependency and explicit legacy retirement.
+It is design-only: #102/#110 build artifacts later; #111 provisions Worker
+separately. No new package, service or migration is implemented by that ADR.
+
 The package is an **unreleased CLI distribution candidate**, not an activated
 Agent Platform service. Target: Debian 13 **trixie, amd64**, system Python >=3.12
 (trixie supplies 3.13). Development checks continue using the established Python
@@ -75,8 +81,9 @@ package lock and cross-builder independent reproduction are future work.
 
 ## Integration with current source
 
-The builder includes every committed top-level `src/agent_platform/*.py` module,
-including AP-CH/1 `chatgpt_handoff.py` and `handoff_journal.py` merged from #68.
+The builder includes committed top-level `src/agent_platform/*.py` modules,
+**except source-only PUB-01 `publisher_handoff.py`**, including AP-CH/1
+`chatgpt_handoff.py` and `handoff_journal.py` merged from #68.
 Archive tests compare every installed module byte-for-byte with source and its
 embedded input hash in both candidate profiles. Inclusion grants no live
 transport, authenticated approval, journal initialization or runtime authority.

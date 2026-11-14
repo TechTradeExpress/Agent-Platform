@@ -10,6 +10,11 @@ The PUB-02 one-shot worker Publisher source is in [Draft PR #109](https://github
 
 Read along with [PKG-01 #101](https://github.com/TechTradeExpress/Agent-Platform/issues/101), [PKG-02 #102](https://github.com/TechTradeExpress/Agent-Platform/issues/102), the worker identity ADR, the Control Plane host contract and existing Debian policy. This roadmap prioritizes but **does not silently change** their security gates.
 
+The reviewable PKG-01 specification is [ADR 007 / AP-PKG/1](debian-role-package-architecture.md):
+closed module/file inventories, dependencies, versions, explicit retirement of
+the experimental package, state ownership and negative lifecycle matrix.
+It proposes the contract for #102/#110/#111/#112; none is implemented by the ADR.
+
 ## Distribution decision
 
 Exactly **two product/runtime role packages** built from the one Agent Platform source tree, plus a separately versioned **toolchain dependency** for upstream OpenAI Codex CLI. The latter is not a third Agent Platform runtime role or a shared Control/Worker authority package.
