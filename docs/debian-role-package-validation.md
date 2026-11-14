@@ -72,15 +72,18 @@ a same-date changelog error (corrected before delivery), but could not complete
 manual-page checks because man-db/man was unavailable. That partial invocation
 was BLOCKED, not PASS. A separate tool-data fixture can unpack the unchanged
 Debian man executable/libraries without its unmapped-owner cache or maintainer
-scripts. Its standalone lintian outcome must be reported separately; it does
-not establish a fully configured quality image or autopkgtest PASS. No ownership shim,
+scripts. On the four final local candidate archives, Codex subsequently reported
+standalone lintian exit 0 with `--allow-root --fail-on error` using those unpacked
+tools. This does **not** establish a fully configured quality image or local
+autopkgtest PASS; those remain separate CI gates. No ownership shim,
 rewritten dependency package, ignored error, extra privilege or host install was
 used to hide this. Run the existing pinned Docker quality image/quality.sh in
 an approved disposable full-UID testbed; its lintian error gate and required
 explicit autopkgtest smoke PASS remain enforced in CI.
 
-GitHub Actions is NOT_RUN for the local-only commit. CI Docker builds have not
-been executed locally. Namespace tests are not non-root account isolation,
+The original LOCAL_ONLY authoring run did not execute GitHub Actions. Docker
+builds were not executed locally; their published PR exact-HEAD results require
+separate GitHub CI verification. Namespace tests are not non-root account isolation,
 service boot, abrupt power loss, production-state migration, piuparts or host
 readiness evidence. All those checks remain NOT_RUN/BLOCKED. No working controller
 or worker agent, enrollment protocol, Codex installer or activated Publisher is
@@ -90,11 +93,12 @@ provided. LIVE_NO_GO, Gate #73 and public/native execution barriers are unchange
 
 - `uv sync --locked`: completed in the dedicated virtualenv; no host install.
 - Ruff: PASS. Focused packaging and CLI tests: **74 passed**.
-- Full pytest (repeated after final code changes): **3171 passed, 1 failed,
-  1 skipped**. `test_file_mutation_after_digest_read_is_detected` expects
-  `file_changed` but observes `invalid_load`; this exact failure reproduced on
-  an isolated snapshot of unchanged parent
-  `2f6e7729badc772d40900ae02e2cdc86dc9bb591`. Neither that module nor test was
-  changed, skipped or weakened. Full pytest is therefore not claimed PASS.
+- Full pytest on the final local commit: **3170 passed, 2 failed, 1 skipped**.
+  Codex reported both failures also reproduced on unchanged parent
+  `2f6e7729badc772d40900ae02e2cdc86dc9bb591`:
+  `test_file_mutation_after_digest_read_is_detected` (file_changed vs invalid_load)
+  and `test_changing_evidence_before_write_is_blocked[journal]`.
+  These unchanged-parent reproductions were not independently repeated in this
+  review. No tests were skipped or weakened. Full local pytest is not claimed PASS.
 - `git diff --check`: PASS. Exact final artifact and source-SHA evidence is
   reported with local delivery, outside self-referential committed metadata.
