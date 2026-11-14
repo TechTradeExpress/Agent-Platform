@@ -1,0 +1,1676 @@
+{
+  "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+  "cargo_deny": {
+    "action_contents": "NOT_VERIFIED_HTTP_404_RAW_422_TREE",
+    "action_default_arguments": "UNKNOWN",
+    "action_pin": "82eb9f621fbc699dd0918f3ea06864c14cc84246",
+    "confidence_threshold": 0.8,
+    "execution_result": "NOT_VERIFIED",
+    "graph_config": {
+      "all-features": false,
+      "no-default-features": false,
+      "targets": []
+    },
+    "license_allow": [
+      "Apache-2.0",
+      "Apache-2.0 WITH LLVM-exception",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "BSL-1.0",
+      "CC0-1.0",
+      "CDLA-Permissive-2.0",
+      "ISC",
+      "MIT",
+      "MIT-0",
+      "MPL-2.0",
+      "OpenSSL",
+      "Unicode-3.0",
+      "Unlicense",
+      "Zlib"
+    ],
+    "license_exceptions": [],
+    "private_ignore": false
+  },
+  "decision": {
+    "apache2_requires_sbom": false,
+    "builder_implemented": false,
+    "cargo_deny_policy_is_notice_bundle": false,
+    "missing_sbom_is_legal_prohibition": false,
+    "project_distribution_acceptance": "NOT_SATISFIED",
+    "redistribution_allowed": false,
+    "remaining_evidence": [
+      "target_feature_and_native_component_inventory",
+      "complete_selected_component_notice_payload",
+      "mpl_covered_source_availability_and_recipient_notice"
+    ],
+    "runtime_authorized": false
+  },
+  "external_texts": [
+    {
+      "path": "LICENSE",
+      "repository": "seanh-oai/rusty_v8",
+      "revision": "350c5a859a9b3c84ab8701b3ad51e3b7699b30c0",
+      "sha256": "1c6356fb751d45f0c53093ebf8a7f5e580e802f51999178e19d60f3ec39e147d",
+      "size": 1078,
+      "url": "https://raw.githubusercontent.com/seanh-oai/rusty_v8/350c5a859a9b3c84ab8701b3ad51e3b7699b30c0/LICENSE"
+    },
+    {
+      "path": "Cargo.toml",
+      "repository": "seanh-oai/rusty_v8",
+      "revision": "350c5a859a9b3c84ab8701b3ad51e3b7699b30c0",
+      "sha256": "6e48d95df14f8e75e11c68749fc62f7817a78bafe8ab16a7c47c8f1fa6641c20",
+      "size": 4079,
+      "url": "https://raw.githubusercontent.com/seanh-oai/rusty_v8/350c5a859a9b3c84ab8701b3ad51e3b7699b30c0/Cargo.toml"
+    },
+    {
+      "path": "build.rs",
+      "repository": "seanh-oai/rusty_v8",
+      "revision": "350c5a859a9b3c84ab8701b3ad51e3b7699b30c0",
+      "sha256": "47d307ac1df6338dd418d57e286f96b3cf9fcd324579b28d754c56302dab7623",
+      "size": 84469,
+      "url": "https://raw.githubusercontent.com/seanh-oai/rusty_v8/350c5a859a9b3c84ab8701b3ad51e3b7699b30c0/build.rs"
+    },
+    {
+      "path": "Cargo.toml",
+      "repository": "helix-editor/nucleo",
+      "revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "sha256": "8d9ecdf6f400d02ce84e8d4557fdef711e99d080e6a256cd6a3cc178fad3133f",
+      "size": 525,
+      "url": "https://raw.githubusercontent.com/helix-editor/nucleo/4253de9faabb4e5c6d81d946a5e35a90f87347ee/Cargo.toml"
+    },
+    {
+      "path": "matcher/Cargo.toml",
+      "repository": "helix-editor/nucleo",
+      "revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "sha256": "86aa0dbe66e99ae147e0f19b5dd847fea39cd0873558a209ebad63d6d8f18fb9",
+      "size": 563,
+      "url": "https://raw.githubusercontent.com/helix-editor/nucleo/4253de9faabb4e5c6d81d946a5e35a90f87347ee/matcher/Cargo.toml"
+    },
+    {
+      "path": "matcher/LICENSE",
+      "repository": "helix-editor/nucleo",
+      "revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "sha256": "1e881ecf2862d01e6e5bc2b861e46886d2a6fb01499c0c508a209a7271b13cf2",
+      "size": 10,
+      "url": "https://raw.githubusercontent.com/helix-editor/nucleo/4253de9faabb4e5c6d81d946a5e35a90f87347ee/matcher/LICENSE"
+    },
+    {
+      "path": "LICENSE",
+      "repository": "helix-editor/nucleo",
+      "revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "size": 16725,
+      "url": "https://raw.githubusercontent.com/helix-editor/nucleo/4253de9faabb4e5c6d81d946a5e35a90f87347ee/LICENSE"
+    },
+    {
+      "path": "LICENSE",
+      "repository": "v8/v8",
+      "revision": "d848a2b3d3aedda62fd825ce5326e5c9d32db96f",
+      "sha256": "6ab33af8774a0f396ee3aeeb761e3229057682d6f9fa7f572e390c2cb3a6e509",
+      "size": 3093,
+      "url": "https://raw.githubusercontent.com/v8/v8/d848a2b3d3aedda62fd825ce5326e5c9d32db96f/LICENSE"
+    }
+  ],
+  "native_v8": {
+    "archive_downloaded": false,
+    "archive_sha256": "2f2679773a12576dc6b89b0f7d70e8190e5aea8a57f8f6364efaffdd1497d0e7",
+    "bindings_sha256": "3e4d5fecdbe0f98a6017e69d7ca82519a77fb032c5eb5e4cdbecdd3e2ec519d5",
+    "cli_binary_membership": "NOT_PROVEN_NO_NORMAL_WORKSPACE_ROUTE",
+    "companion_host_workspace_route": [
+      "codex-code-mode-host",
+      "codex-code-mode-runtime",
+      "v8"
+    ],
+    "crate_license": "MIT",
+    "crate_revision": "350c5a859a9b3c84ab8701b3ad51e3b7699b30c0",
+    "engine_root_license": "BSD-3-Clause_WITH_SEPARATE_THIRD_PARTY_TERMS",
+    "engine_source_commit": "d848a2b3d3aedda62fd825ce5326e5c9d32db96f",
+    "engine_tag": "15.2.124.1",
+    "linux_checksum_manifest_sha256": "12acf8747729db642a9d49d3448174471fb07cf47e01a6238222e2d9299de72f"
+  },
+  "observed_at": "2026-11-14",
+  "schema": "AP-CODEX-LICENSE-INVESTIGATION/1",
+  "scope": "PARTIAL_SOURCE_LICENSE_INVESTIGATION",
+  "selected_crate_sources": [
+    {
+      "archive_sha256": "1758d6c853020a7244de03cc3e0185eaea3f58715122422dd3cc7452e6d4c16a",
+      "archive_size": 17223,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE",
+          "sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+          "size": 16725
+        }
+      ],
+      "license": "MPL-2.0",
+      "name": "symphonia",
+      "url": "https://static.crates.io/crates/symphonia/symphonia-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "archive_sha256": "95ec293b5f288383b72a7bffcade6b2860b642cf66f28b3bd5967349a49938b1",
+      "archive_size": 147360,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE",
+          "sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+          "size": 16725
+        }
+      ],
+      "license": "MPL-2.0",
+      "name": "symphonia-core",
+      "url": "https://static.crates.io/crates/symphonia-core/symphonia-core-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "archive_sha256": "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27",
+      "archive_size": 9725710,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE",
+          "sha256": "728536b4160e051f86d7c9c388f704866b3d512cd7df97ac3516c65279523c4e",
+          "size": 20337
+        },
+        {
+          "path": "aws-lc/LICENSE",
+          "sha256": "977c541bd25ffe36975dde25c028c0cd15ddf3d08243983b58e8a6a3d9447523",
+          "size": 20338
+        },
+        {
+          "path": "aws-lc/third_party/fiat/LICENSE",
+          "sha256": "43e358d7b6eb109d0f51f7b3a090fd82607965767c25fadee39e922475de2061",
+          "size": 1161
+        }
+      ],
+      "license": "ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0)",
+      "name": "aws-lc-sys",
+      "url": "https://static.crates.io/crates/aws-lc-sys/aws-lc-sys-0.45.0.crate",
+      "version": "0.45.0"
+    },
+    {
+      "archive_sha256": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+      "archive_size": 7195821,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+          "size": 1057
+        },
+        {
+          "path": "openssl/LICENSE.txt",
+          "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+          "size": 10175
+        },
+        {
+          "path": "openssl/crypto/x509/v3_usernotice.c",
+          "sha256": "db1eb4c4563d44b9b5b92c2467b3ed8211ce13a6511b3e330fd7af81cfba17f7",
+          "size": 2836
+        },
+        {
+          "path": "openssl/external/perl/Text-Template-1.56/LICENSE",
+          "sha256": "9837f05336ef3cbacb6a96e1672a0426d81ad01191f214b8d48e22ca62338181",
+          "size": 18412
+        },
+        {
+          "path": "openssl/util/perl/OpenSSL/copyright.pm",
+          "sha256": "04213b69dbebc8ba0dd8a6216af1d9422f9b63619c1cf2f1d8aa107b83bbb608",
+          "size": 1145
+        }
+      ],
+      "license": "MIT/Apache-2.0",
+      "name": "openssl-src",
+      "url": "https://static.crates.io/crates/openssl-src/openssl-src-300.6.1+3.6.3.crate",
+      "version": "300.6.1+3.6.3"
+    },
+    {
+      "archive_sha256": "1a2825c78386b4ae0314074867860ba9577875de945f05992c38815cbec327f0",
+      "archive_size": 1037885,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+          "size": 1057
+        },
+        {
+          "path": "jemalloc/COPYING",
+          "sha256": "94aa2caa98c25d942f58b956c71dba6a99ff98fc3a31cbc669fe2a4cd0268b53",
+          "size": 1709
+        }
+      ],
+      "license": "MIT/Apache-2.0",
+      "name": "tikv-jemalloc-sys",
+      "url": "https://static.crates.io/crates/tikv-jemalloc-sys/tikv-jemalloc-sys-0.7.1+5.3.1-0-g81034ce1f1373e37dc865038e1bc8eeecf559ce8.crate",
+      "version": "0.7.1+5.3.1-0-g81034ce1f1373e37dc865038e1bc8eeecf559ce8"
+    },
+    {
+      "archive_sha256": "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1",
+      "archive_size": 5295554,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE",
+          "sha256": "c10c1f27337546471e5f7e4e97fdd398b35b9d4e126115dcd22de8d8e65abf6f",
+          "size": 1067
+        },
+        {
+          "path": "sqlcipher/LICENSE",
+          "sha256": "ea4fcb309f14a22065e1ea45362d494d320012249ed865fe9c7c0946db754131",
+          "size": 1467
+        }
+      ],
+      "license": "MIT",
+      "name": "libsqlite3-sys",
+      "url": "https://static.crates.io/crates/libsqlite3-sys/libsqlite3-sys-0.37.0.crate",
+      "version": "0.37.0"
+    },
+    {
+      "archive_sha256": "c7f86c6eef3d6df15f23bcfb6af487cbd2fed4e5581d58d5bf1f5f8b7f6727dc",
+      "archive_size": 656378,
+      "complete_obligation_scan": false,
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE.md",
+          "sha256": "71f321038b088358004bee991635ac09e4c703bec467d3c30c06992c0595f189",
+          "size": 1511
+        },
+        {
+          "path": "oniguruma/COPYING",
+          "sha256": "70ba5469ea0bab6e18a32d7009068f996503168d27be57747e08da34337ff26f",
+          "size": 1340
+        }
+      ],
+      "license": "MIT",
+      "name": "onig_sys",
+      "url": "https://static.crates.io/crates/onig_sys/onig_sys-69.9.1.crate",
+      "version": "69.9.1"
+    },
+    {
+      "archive_sha256": "b285c51f8a6ade109ed4566d33ac4fb289fb5d6cf87ed70908a5eaf65e948e34",
+      "archive_size": 3617506,
+      "complete_obligation_scan": false,
+      "embedded_acknowledgement_inputs": [
+        {
+          "path": "generated/acknowledgements_full.bin",
+          "sha256": "e4bf45ad159b67de6a7152874904728adb6421996eb15da01ca75406e6cd51fb",
+          "size": 11715
+        },
+        {
+          "path": "src/acknowledgement/core_types.rs",
+          "sha256": "f24131de2a0b67a5bcd1903dd27c58094ed8823e6b327150ce0f235f143d1a82",
+          "size": 4883
+        },
+        {
+          "path": "src/acknowledgement/mod.rs",
+          "sha256": "970d02361c4a80838150526cd975b64b8714597da1fdcc2e078bc28ebe7d8624",
+          "size": 1489
+        }
+      ],
+      "filename_scan_candidates": [
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "6da61c67477940fc0bfc3a5f65ae1813b1c54c4e3b2572de26f802f097d8b03c",
+          "size": 10845
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "cabb6a447d268894d6dc664a55848e8fba6d093e19666e8fd1e0d5ee3b7d2fa9",
+          "size": 1134
+        }
+      ],
+      "license": "MIT OR Apache-2.0",
+      "name": "two-face",
+      "url": "https://static.crates.io/crates/two-face/two-face-0.5.1.crate",
+      "version": "0.5.1"
+    }
+  ],
+  "source_base_url": "https://raw.githubusercontent.com/openai/codex/6ff1e1ca3b30fc8b914720681fcf5fe62e95f856/",
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "source_files": [
+    {
+      "git_blob": "5779fca149cf74282786dd795bc1d8957d1c9591",
+      "path": ".github/actions/setup-rusty-v8/action.yml",
+      "sha256": "aacc9a6b06873589c53de8162e28ee0966d02f258baf121be539d0f7ebb523d9",
+      "size": 2900
+    },
+    {
+      "git_blob": "20c12a3389809e10c6a65c77def841bf035cfce7",
+      "path": ".github/scripts/build-codex-package-archive.sh",
+      "sha256": "2abcc24b8cad163983abfaeedc0d2ece3fc1c27391526a47803c86e41d9e9386",
+      "size": 6739
+    },
+    {
+      "git_blob": "c6f00555a35559216e222e2ec129a9e927dd57c2",
+      "path": ".github/workflows/blocking-ci.yml",
+      "sha256": "c22b4fb52d005271326db7fd5d7cc4217b6d119e2a730da08f84dc15fb5b0b47",
+      "size": 1900
+    },
+    {
+      "git_blob": "0f8ebae902bd4252fe2ce5cfab57d4ac526bd1e3",
+      "path": ".github/workflows/cargo-deny.yml",
+      "sha256": "9be4532baa0bc7a8f84506f073690ddd844434ab820b59b1eade686744811b4b",
+      "size": 829
+    },
+    {
+      "git_blob": "188f94ef452f6354e25295e0f1ddda89cb0cdf9a",
+      "path": ".github/workflows/rust-ci-full.yml",
+      "sha256": "0b5516edda071b97451f193e637cf4bb2009b6a235e9d23ca652d449081dfac9",
+      "size": 23033
+    },
+    {
+      "git_blob": "48bee976c94209b2ccb9e65a33088e6ba80eada4",
+      "path": ".github/workflows/rust-ci.yml",
+      "sha256": "c05e33c262c930fb9c1ba0774741180147a2c550b8ab74cb187a008bd9dfb7dc",
+      "size": 11268
+    },
+    {
+      "git_blob": "08e6d69632199c3c29569c9d7d7aabb6294ea436",
+      "path": ".github/workflows/rusty-v8-release.yml",
+      "sha256": "bcf4eeb3f68ac85167f4052ef75d2cde33a96a1ca09de67307a26665bb9c9fe8",
+      "size": 16759
+    },
+    {
+      "git_blob": "66f6054c121906d01f7b73c38bb4208952ae016a",
+      "path": "MODULE.bazel",
+      "sha256": "1c27f9120fdea063c48de4f74f2dc9de0a26e8c9d8ef20e5206ffcbae5cee5cc",
+      "size": 35856
+    },
+    {
+      "git_blob": "652e09e7fc88783d6156458f074a17b7b44f2567",
+      "path": "codex-rs/.cargo/config.toml",
+      "sha256": "c860f5cf2f2c9a52ab8886f71edad357229411abeb0a0f867c8672575f40bbec",
+      "size": 949
+    },
+    {
+      "git_blob": "85cd80b7c4536c5510acc373f8d41d730817a2fb",
+      "path": "codex-rs/Cargo.toml",
+      "sha256": "4f9c16fb73cc8487e40dcbfca545f69e7595e6806e1a59b81ea8045b15364e49",
+      "size": 21926
+    },
+    {
+      "git_blob": "1bb5ed2699fb0d986efb8740286775d76e76db92",
+      "path": "codex-rs/agent-graph-store/Cargo.toml",
+      "sha256": "6d13bbf262fa180b318e43ff1295a7db31f4939bc5f174c1fc1f63c46b2ea568",
+      "size": 649
+    },
+    {
+      "git_blob": "36d5eb41fd694a9eb283cbd6af4bc0977fa36c80",
+      "path": "codex-rs/agent-identity/Cargo.toml",
+      "sha256": "6abd72371d8289b9a216491aee14eef2dde7627e42bf3dc4c4aa05979c0901b8",
+      "size": 737
+    },
+    {
+      "git_blob": "c9b361e3c409a6b60e8407aeff4192e605a198ac",
+      "path": "codex-rs/agent-message-board-client/Cargo.toml",
+      "sha256": "ac43d8973e170fe3d74cf6ad7d66947737c81c2e9527fcb05a06873af651ec6c",
+      "size": 951
+    },
+    {
+      "git_blob": "85fa40ce0863ec79c4e0ade1b8be92201be33d43",
+      "path": "codex-rs/agent-roles/Cargo.toml",
+      "sha256": "3af8b9b54fb46748eccf7ffa346d3ab6151e3d340840d52b0cdbf5bc4b748882",
+      "size": 549
+    },
+    {
+      "git_blob": "61e6f7210cccb6fc4844133339a0d59e319b9be9",
+      "path": "codex-rs/analytics/Cargo.toml",
+      "sha256": "afc0af9c9765b77c05aca745d48db31acc507f84ffc17f51b785b24726de5e7d",
+      "size": 969
+    },
+    {
+      "git_blob": "60b1aedf29c74cc3dcf216692d0ec6bf0d3cc9c8",
+      "path": "codex-rs/ansi-escape/Cargo.toml",
+      "sha256": "082f09f80662226c37c5818d271582e30ce93d67b2204286330a9b2ade5372a8",
+      "size": 444
+    },
+    {
+      "git_blob": "b4553fc0be0c9207c27a78a1289bcf72243f18a2",
+      "path": "codex-rs/app-server/Cargo.toml",
+      "sha256": "cceb3af7ee41633a33b14f55f1193b32fc75afb830c0dfa22393cf24af3d6f3d",
+      "size": 5433
+    },
+    {
+      "git_blob": "8efd1763c84ed2d1d2b93e5c8f96b7bb44745819",
+      "path": "codex-rs/app-server/tests/common/Cargo.toml",
+      "sha256": "bdf6850d84b5a089ddca7fa26d5d6b79c844b768d1933c4c3087fc9d53c8d6c0",
+      "size": 1186
+    },
+    {
+      "git_blob": "272173b83a7fa732ad522bc20db2afee189b7068",
+      "path": "codex-rs/app-server-client/Cargo.toml",
+      "sha256": "9f941218c5bc7932bf1d675cbea2715820a563a41e5d871dd45207e1c285ba3e",
+      "size": 1212
+    },
+    {
+      "git_blob": "4bd1678402c2feda01d8279e534bd828d7f0aade",
+      "path": "codex-rs/app-server-daemon/Cargo.toml",
+      "sha256": "375f4f1f016547150a2415949662448457bc447438471645ce6dd36be853328f",
+      "size": 1589
+    },
+    {
+      "git_blob": "2122f79ba5f6014c7b79ae86a0013076ab7a753f",
+      "path": "codex-rs/app-server-protocol/Cargo.toml",
+      "sha256": "eed16bab0bada46556378b378820cc51c73f09db677802e9de14c652ef13b92d",
+      "size": 1602
+    },
+    {
+      "git_blob": "93a24b070beffa187ab27f331e35cdcefe21c4b8",
+      "path": "codex-rs/app-server-protocol-noop-macros/Cargo.toml",
+      "sha256": "86cca540f740f40a7dd58b1d2d62f518517b54c14915c0f3f2171df9223c0226",
+      "size": 212
+    },
+    {
+      "git_blob": "901afb70d00f16e004913c764337d92afc82808b",
+      "path": "codex-rs/app-server-test-client/Cargo.toml",
+      "sha256": "1929e157ff492633b4dd806ef5627e1c53ccf9241e72dd73944ff5f489483080",
+      "size": 847
+    },
+    {
+      "git_blob": "95967581f0639b6166ac49821adb501d94a4ab5a",
+      "path": "codex-rs/app-server-transport/Cargo.toml",
+      "sha256": "90e2b999c62733e9de5cc7d0e2c20757751ef417889330ce910c4294ddf0fd59",
+      "size": 1916
+    },
+    {
+      "git_blob": "8e1d7f651f47a76de2a6ed6226aa2ec1a55cf5d6",
+      "path": "codex-rs/apply-patch/Cargo.toml",
+      "sha256": "388b18e13d8e3f8aa419e30385e33fe58748b2bd972df32eb66aa1484ab3d54a",
+      "size": 846
+    },
+    {
+      "git_blob": "fad5169ffa9e150e70fbe725b853f68594ee38bc",
+      "path": "codex-rs/arg0/Cargo.toml",
+      "sha256": "b5ccf100791cf2cd47304683b1807bd7399845813ac162060be7bdaba77cb46c",
+      "size": 968
+    },
+    {
+      "git_blob": "eee5fb73b8874e65d58953b347cd933336610593",
+      "path": "codex-rs/async-utils/Cargo.toml",
+      "sha256": "880a0c8ea54a30e1db09db6398a01706ad501c834ba32eecd37b7ac3de8dcf4f",
+      "size": 373
+    },
+    {
+      "git_blob": "dd66412fa1621fbe762140498e9149a3676cace0",
+      "path": "codex-rs/attachment-store/Cargo.toml",
+      "sha256": "740aa9e40fb205501ace3b6176c96e76a4737952fc47f2f07a456842225ae018",
+      "size": 444
+    },
+    {
+      "git_blob": "f9b5e7139a1dcffb97daab6f8e1c8712cd69473f",
+      "path": "codex-rs/aws-auth/Cargo.toml",
+      "sha256": "b42bbe49eea0f86ba859b05db8d3d948b5c493122cd607dcc8630412279cf8da",
+      "size": 1021
+    },
+    {
+      "git_blob": "8a8948a9a219740e09e9e5399a4e8730e633d33d",
+      "path": "codex-rs/backend-client/Cargo.toml",
+      "sha256": "3f536d6194f6e2221e10ec9ca11b7d1c5bdc89b71cb0ef35b28c6f6d7aa153ac",
+      "size": 801
+    },
+    {
+      "git_blob": "bd9bb036dc36a5ab65e67b9911441859297d1536",
+      "path": "codex-rs/build-info/Cargo.toml",
+      "sha256": "492f56d0347f602e21786b2f432bd10aeba5266d9cac0fc83e639cbbb16c06da",
+      "size": 526
+    },
+    {
+      "git_blob": "ed7010c8fdaea270f028ceb9a053e60c278d2b4c",
+      "path": "codex-rs/bwrap/Cargo.toml",
+      "sha256": "5b524ac2c30f4029cae77721c026d3487a6628473b042d26f354ab6075ec4a7c",
+      "size": 305
+    },
+    {
+      "git_blob": "04b9cb7df6786401aa2c2cbad225cc40a26d277d",
+      "path": "codex-rs/chatgpt/Cargo.toml",
+      "sha256": "ed8da55f97753db776cbcc798e5deb68bc8da3089fa376004be29f0d8a579435",
+      "size": 836
+    },
+    {
+      "git_blob": "ffff79d3312d781d02b959ec36902822c4cb87da",
+      "path": "codex-rs/cli/Cargo.toml",
+      "sha256": "a12cf0c6b64f66ccc18eb1db74b50a8a12a79411e0d5024dfa948b5f6388260a",
+      "size": 4909
+    },
+    {
+      "git_blob": "abccc48bb6aa9ebf1f5372608a91596fcdf008e1",
+      "path": "codex-rs/cli/build.rs",
+      "sha256": "0702c0215f82e3390f5a1026063e2f45c5c2d45ab2a1483d33e081986e2acf02",
+      "size": 140
+    },
+    {
+      "git_blob": "58ba2d07e858ae9d5bdde7c0d14d9f113470cd71",
+      "path": "codex-rs/cloud-client/Cargo.toml",
+      "sha256": "0c9742a41ee08870a00e7f5baf6d61e8f5a50b6f8b11c32ec8fdebac312ba605",
+      "size": 944
+    },
+    {
+      "git_blob": "ad8a75212b3a73b124cdc814cfb24d8a94acc265",
+      "path": "codex-rs/cloud-config/Cargo.toml",
+      "sha256": "3c1dbe62c1a59cd5640a803050c304f3d793ef8f6e11aae32a885c58683ad05f",
+      "size": 1118
+    },
+    {
+      "git_blob": "12bd6fdf7fd03e8b9c16de911f4ca69d625fba90",
+      "path": "codex-rs/cloud-tasks/Cargo.toml",
+      "sha256": "5f06b8116e9f3f2486953e3776d256946c4faaab9f3c26c2e4001b9d14a95faf",
+      "size": 1502
+    },
+    {
+      "git_blob": "8efd78cb22d0b6458e9ec9138f0df03590f75d75",
+      "path": "codex-rs/cloud-tasks-client/Cargo.toml",
+      "sha256": "713fe5694a802106a72bdb245ed973ce80dd1bd977abfde5f308a14bf3180028",
+      "size": 606
+    },
+    {
+      "git_blob": "b249b654e02f36360389a12ccc14bffb787b9726",
+      "path": "codex-rs/cloud-tasks-mock-client/Cargo.toml",
+      "sha256": "c00ebb5e69c81d6d15793069773c1a84a521cc4d71a2a27b06854c71557f24d4",
+      "size": 369
+    },
+    {
+      "git_blob": "52cdae6d08cb8f8b2ce022ef6a1998c6ce7a318c",
+      "path": "codex-rs/code-mode/Cargo.toml",
+      "sha256": "f3e419dcfd7bf52668885c125ce8b1068e5f349527ac896978ab46f2d0fd0703",
+      "size": 1066
+    },
+    {
+      "git_blob": "8bed201d3314e6ba72b078ed02dffddf04ab51a1",
+      "path": "codex-rs/code-mode/src/lib.rs",
+      "sha256": "672628d0254daded50e508875039d7dcdb95d4d850209ae3ac3f95161b0e470d",
+      "size": 298
+    },
+    {
+      "git_blob": "98e45c5e0b319e828b1c1787a77be9424f3c9815",
+      "path": "codex-rs/code-mode-host/Cargo.toml",
+      "sha256": "12ed8c89fbd63db77438f2c41343f1083aba5f21eec8ecad4bbb6dbb2b4b1d9f",
+      "size": 1432
+    },
+    {
+      "git_blob": "8f823c66244d51dc680cff9330904d56fc7b531a",
+      "path": "codex-rs/code-mode-host/src/main.rs",
+      "sha256": "0cbfee9b630ad56e75226d24038b5ecdc1175e56b80f485ea263d5a111229ac1",
+      "size": 4504
+    },
+    {
+      "git_blob": "cad10b47ebf4e577d9d9278703424f266ba6cc71",
+      "path": "codex-rs/code-mode-protocol/Cargo.toml",
+      "sha256": "2ac9af96867f5babb423d9865e1e1277329e6e1fb10a069d0cb9e380beef2b70",
+      "size": 1026
+    },
+    {
+      "git_blob": "786fad083dd6f7b64d6798fe375681c0c804a465",
+      "path": "codex-rs/code-mode-runtime/Cargo.toml",
+      "sha256": "075eb58a5975625461eaef95731a83b39bb1a38b2f9bffb2916f6af769e41b4b",
+      "size": 921
+    },
+    {
+      "git_blob": "90db05b840e451b5242e2a7fb21b347aad75e2a4",
+      "path": "codex-rs/codex-api/Cargo.toml",
+      "sha256": "f836d8b371da62849dee27b70c352b63fded2ad473b95a72ea66892580b704c5",
+      "size": 1471
+    },
+    {
+      "git_blob": "7baf01935d36ad701d79d0c6e7e9ece0b056142f",
+      "path": "codex-rs/codex-backend-openapi-models/Cargo.toml",
+      "sha256": "f1357552f32833762da0fe2730c65a542da56314ed07371a98fa420fceb45da4",
+      "size": 571
+    },
+    {
+      "git_blob": "9ffe57d95f8c9c0cc51b215666969f3082bc4aa5",
+      "path": "codex-rs/codex-client/Cargo.toml",
+      "sha256": "76e3da92b54ed0c96b14be755fe8d072559d2a9ac6f11e82c1979487edb55b25",
+      "size": 487
+    },
+    {
+      "git_blob": "2e148a21d782b2ca20f5c81fc4ea896523d4d80d",
+      "path": "codex-rs/codex-experimental-api-macros/Cargo.toml",
+      "sha256": "b8fcf3a548dfb052195e49969073aa22d8a2e0948d46732598cbeaaf9826f10b",
+      "size": 311
+    },
+    {
+      "git_blob": "068ec55b4e274c002dc37e3584e96a2c9ab1f7c7",
+      "path": "codex-rs/codex-home/Cargo.toml",
+      "sha256": "6c80a87eaad697efc4dc24f5eca9e7268dd8de29d2f84bc8982af3f89733c92b",
+      "size": 492
+    },
+    {
+      "git_blob": "49adaabe6df1f2abf7dc8e1b125b99be7bc241b3",
+      "path": "codex-rs/codex-mcp/Cargo.toml",
+      "sha256": "381061f4e435d5360e5c10e08bea6389ac2c6bed68b1563f83944192184ed3ba",
+      "size": 1898
+    },
+    {
+      "git_blob": "2c17b1fd2ad989bda8a38e80dee1c5380f887c03",
+      "path": "codex-rs/collaboration-mode-templates/Cargo.toml",
+      "sha256": "52aa162c5ba6085b0eead685bd21a15043150789fcd08000465c95db0044fef4",
+      "size": 255
+    },
+    {
+      "git_blob": "9db5c0711e3e177c7217e93ac7c8aea94fdb59cb",
+      "path": "codex-rs/config/Cargo.toml",
+      "sha256": "1b62419bcb03bfa29aa48af3bab3fef95aff6cec6475884f3678bb8dd7af2716",
+      "size": 2538
+    },
+    {
+      "git_blob": "ec6458bd3e8307150fe44792aa4d1f5d47871c4f",
+      "path": "codex-rs/config-schema/Cargo.toml",
+      "sha256": "070bac9380f4f7140aee21972c9f52e7eb5816be2c306ee00201177cebce5ec9",
+      "size": 338
+    },
+    {
+      "git_blob": "ac3ce9241c2d6f4deb3ac09ced64087fd51b29b3",
+      "path": "codex-rs/connectors/Cargo.toml",
+      "sha256": "20515657b4ab715652a6be25d3b2ff408f36d8b53e0d1dddc1ea014910f95ea0",
+      "size": 815
+    },
+    {
+      "git_blob": "7fa06b242c11d1cfabbe5724bbb28d99c85dd8cd",
+      "path": "codex-rs/context-fragments/Cargo.toml",
+      "sha256": "c75beb2f9f12fd93ac28cc6a75d92244fb0357d50c398ece72f328d82c6f4482",
+      "size": 462
+    },
+    {
+      "git_blob": "542abf90d189c8527059403e785171d7804df5b8",
+      "path": "codex-rs/core/Cargo.toml",
+      "sha256": "48b3e7817b9b9391a4e05d08859f2ec460d4bcfa709885fa8577a6edd58bb393",
+      "size": 6871
+    },
+    {
+      "git_blob": "5644a06e0a1e7f5962c7e9e1bb7e8a5225630777",
+      "path": "codex-rs/core/tests/common/Cargo.toml",
+      "sha256": "8befa624d00c33ca9a7bb8ed077d503265ccd7e625d9d4f06e9cd5cac483223e",
+      "size": 1772
+    },
+    {
+      "git_blob": "b82d5ee4802d68b29f574bc8ebee1334cf751caa",
+      "path": "codex-rs/core-api/Cargo.toml",
+      "sha256": "64d89566ae6c63d3dbd6c655fe9f5277dd93765330611be3f05ebf09e15dd015",
+      "size": 922
+    },
+    {
+      "git_blob": "654faa8af18541b95f23a45183566e4c892bf904",
+      "path": "codex-rs/core-plugin-common/Cargo.toml",
+      "sha256": "d68f45e18a957624d9a22d18c206b22976887b2c06d27b1ae3036850ca0a0424",
+      "size": 436
+    },
+    {
+      "git_blob": "3025c3a62b67f370cff4b55164d7c65e2c5ed850",
+      "path": "codex-rs/core-plugins/Cargo.toml",
+      "sha256": "09eb8789b49e7b238d4989cb49192013d39d008c8a1df213c9d39f287c412f70",
+      "size": 2274
+    },
+    {
+      "git_blob": "fd24d2a46565793f481c0c5e53a31014dca57323",
+      "path": "codex-rs/deny.toml",
+      "sha256": "39180755ed73fb74e9f1250e331ba139c85df3c8331ff12d81d128e2d69e6cb3",
+      "size": 20984
+    },
+    {
+      "git_blob": "2eb2125a102e121ed5a51d8dad3013c7cc258cf0",
+      "path": "codex-rs/diagnostics/Cargo.toml",
+      "sha256": "11974d3cc33cfe81cc15a3def4cdaace9eae05d4ac3b22af0af2e35e12ef6d66",
+      "size": 313
+    },
+    {
+      "git_blob": "4b5306b1cadc29ec0d52bd2984dec61e0e524e3c",
+      "path": "codex-rs/direct-tool-timing/Cargo.toml",
+      "sha256": "6da7b0150485f0fa1fe4faa1c263d12af3a79f07a64c554964b325bac82e3178",
+      "size": 414
+    },
+    {
+      "git_blob": "d5190c2caa2d37217a0335e4c9dd84f796486458",
+      "path": "codex-rs/exec/Cargo.toml",
+      "sha256": "152344aec325b7769804e2e5aef39f590b7fb9faf6e324c83a91d84035e73c47",
+      "size": 2380
+    },
+    {
+      "git_blob": "6f9a1e7af8e4ab4e77c933487287e4575e9e7c31",
+      "path": "codex-rs/exec-server/Cargo.toml",
+      "sha256": "38c2b4e4545c3f6d36443d278ca674ab50e724773ec8919c51a248b95a08ce26",
+      "size": 3655
+    },
+    {
+      "git_blob": "073d4e341141ea59286b5563b4b6af1930d7ca51",
+      "path": "codex-rs/exec-server/tests/support/Cargo.toml",
+      "sha256": "9bec1539cc8fc173c4691863ca16386b3b0f683402160219bea89d2ef0db9048",
+      "size": 553
+    },
+    {
+      "git_blob": "2f066185a7ff242c78674366038d840eacbe8f71",
+      "path": "codex-rs/exec-server-cli/Cargo.toml",
+      "sha256": "05c4614d158275c1cb6c5c2454651d68a4ecca0d9412adae2100b0fa5edeb00f",
+      "size": 1843
+    },
+    {
+      "git_blob": "a203df05358292fd8d6b60f967c0a382a2eeb786",
+      "path": "codex-rs/exec-server-protocol/Cargo.toml",
+      "sha256": "50c8fa5ab4cdaaa95334794ea9817b289c6fa0bcd621de3c18348e7dae21dc56",
+      "size": 837
+    },
+    {
+      "git_blob": "42040222336513132da0b6a274bcd3fc80589f99",
+      "path": "codex-rs/execpolicy/Cargo.toml",
+      "sha256": "a30850d1134be2b9a37a15d383d1cf7a3df72c81c3a4b970bcfac8bf15528e94",
+      "size": 874
+    },
+    {
+      "git_blob": "6c3f10a43319a122e2da129e31ba34aa4f1df49a",
+      "path": "codex-rs/ext/agent/Cargo.toml",
+      "sha256": "684fe7c7a41900dd8c394b6cee6d1fcfd206a44c661811f356c846dcc07d51db",
+      "size": 520
+    },
+    {
+      "git_blob": "646993fdf7e3ff0c788b25fbc51433e2a3522654",
+      "path": "codex-rs/ext/agent-message-board/Cargo.toml",
+      "sha256": "e7dc5be42cfa562473924bd69d64359a7ca8344e8170edd3289cecfd3f4abd76",
+      "size": 629
+    },
+    {
+      "git_blob": "1aead727731475bc9590ac90efb37c2ae7adef64",
+      "path": "codex-rs/ext/connectors/Cargo.toml",
+      "sha256": "d0dd96da7c42189b2e5a3c6976a54b565b02441bd2f4979652e3192b30b279a8",
+      "size": 556
+    },
+    {
+      "git_blob": "3b80882c4a40ff544ece48bbbd30d42c21adc981",
+      "path": "codex-rs/ext/extension-api/Cargo.toml",
+      "sha256": "90497378f10aec84d0480c57801d39cefdec36b3a8ab17320c8fb703412aee43",
+      "size": 1025
+    },
+    {
+      "git_blob": "e96d0dbcd577bcc0645f3f6175bbe31429f87159",
+      "path": "codex-rs/ext/git-attribution/Cargo.toml",
+      "sha256": "15e8f2143ff99c657b40045c9b0609dd93f89b55cc37a95039b9aed89f5e6687",
+      "size": 589
+    },
+    {
+      "git_blob": "3939da1ab7f1c2e13c1263190abf91b17108fb7c",
+      "path": "codex-rs/ext/goal/Cargo.toml",
+      "sha256": "e03430bf9732d45b9aaebe6969d4a90e63daf348107f4b74bf227dfb38e33454",
+      "size": 1059
+    },
+    {
+      "git_blob": "26e73f0f6f86af6ac3c2076eb6daa7b78de5f6d0",
+      "path": "codex-rs/ext/guardian-reviewer/Cargo.toml",
+      "sha256": "e626fdc4eb40b76b0def4e137f2ca9ed5aa40cccf435f307c92eb8672d1f90c2",
+      "size": 1514
+    },
+    {
+      "git_blob": "efbe4b9b42c403180d562d8077d41434e235f74e",
+      "path": "codex-rs/ext/guardian-v2/Cargo.toml",
+      "sha256": "82aedeb1e33025705c1f0b2985fafd9e6b0b318833772a652149df5c4118e005",
+      "size": 1566
+    },
+    {
+      "git_blob": "d86f4ba89515a27af175bb94ec8fb9be19dd3c40",
+      "path": "codex-rs/ext/guardian-v3/Cargo.toml",
+      "sha256": "30277629dd4229212150877d593a4336c3a2ce5a5252e998566b845d1ab881c8",
+      "size": 306
+    },
+    {
+      "git_blob": "11e93ea96b3e2a3cdedf3d77118b3afe62c59045",
+      "path": "codex-rs/ext/history-notes/Cargo.toml",
+      "sha256": "758c79a48e49cb02ad814d8b64278043531ce2b488480407ade064db3a5503d6",
+      "size": 1046
+    },
+    {
+      "git_blob": "7bb334e22de10ddbc9c17c54cd3034d4e8dfdf6b",
+      "path": "codex-rs/ext/image-generation/Cargo.toml",
+      "sha256": "98a5e190316d02b87da99379358637be53cd40499830554068ecdb25ccad6147",
+      "size": 1320
+    },
+    {
+      "git_blob": "4d58b29bc7004171361e4828e1dda712815ad8d1",
+      "path": "codex-rs/ext/items/Cargo.toml",
+      "sha256": "bbb3630e5a2dd711a1ff6d118e095a062606afaa5ca970316d668114d45d7df5",
+      "size": 489
+    },
+    {
+      "git_blob": "a30517a3f81bad304d8b7126fcfaed1ea3cce929",
+      "path": "codex-rs/ext/mcp/Cargo.toml",
+      "sha256": "2a9619bae381bdf9059a7fd731ece652e73ea99547a9785837bc5fa1b448cbc5",
+      "size": 1381
+    },
+    {
+      "git_blob": "9111571fa40c4a37f4a3937a172796e806a18bc7",
+      "path": "codex-rs/ext/memories/Cargo.toml",
+      "sha256": "b53ffe9567465a01a696bb0de03bcc9c3fcaa0052a0aab794143a025c778526c",
+      "size": 956
+    },
+    {
+      "git_blob": "3c64e174a48e738a8a8c10a8c6000205b49cb37d",
+      "path": "codex-rs/ext/multi-env-copy-file/Cargo.toml",
+      "sha256": "f4f2dff49722e519964d7921390708bec5e486c02dbe9b25721f4d2825d95c90",
+      "size": 1010
+    },
+    {
+      "git_blob": "4b5e5d04f4cf6bb414305a3badffda7038014e43",
+      "path": "codex-rs/ext/queue/Cargo.toml",
+      "sha256": "d7553e62f33e7cf4feb38f5f21b5e0c628773584340479dfa8155fca8886639e",
+      "size": 930
+    },
+    {
+      "git_blob": "ee67976705a7e1463ff88e75043fcab61cf2644b",
+      "path": "codex-rs/ext/skills/Cargo.toml",
+      "sha256": "f9813629c60f14b59b7477dd2ea038c994fc6f7401b5951a4572270a3a1d9949",
+      "size": 1667
+    },
+    {
+      "git_blob": "a464b56beadec898c998c6ae6fdcae3ee01a8df4",
+      "path": "codex-rs/ext/web-search/Cargo.toml",
+      "sha256": "b74df62ad7dd3159d96f68b3be17c8804cfc4ec280fbbfd9df06ab4326cfe9e4",
+      "size": 855
+    },
+    {
+      "git_blob": "3f49a1ae00cc48720b766d9e76bc050e954cf0fa",
+      "path": "codex-rs/external-agent-migration/Cargo.toml",
+      "sha256": "762a2915a42cbab1e1e4035bb9a3d0f66608a985010549c8b157699d2a498744",
+      "size": 1292
+    },
+    {
+      "git_blob": "d45e70ff885415bfde31352e3af1dd05372ab8db",
+      "path": "codex-rs/features/Cargo.toml",
+      "sha256": "a554de5c70b3ba2040cb5248522c9157dd3fc0b9a7e2afb6a5786eb111f14814",
+      "size": 574
+    },
+    {
+      "git_blob": "80641bdd291e135b59ad0c669e567df62e00c18e",
+      "path": "codex-rs/feedback/Cargo.toml",
+      "sha256": "283042c3639700d3a1e00e6c421f0b2b805e69d8efdf6dbeacfff582aca80d7b",
+      "size": 1020
+    },
+    {
+      "git_blob": "e235898982f6eba908c5c0751eae91a5b25cdb1a",
+      "path": "codex-rs/file-search/Cargo.toml",
+      "sha256": "ac012c6347e727e2a7a9cb927eec9fe4ece2c17a38474f7efa0563d3adbc98d4",
+      "size": 692
+    },
+    {
+      "git_blob": "d2ee2bb9949b9d4b315347e14666f0800aa16ac8",
+      "path": "codex-rs/file-system/Cargo.toml",
+      "sha256": "bfac049ecd1d56c085f7030bdc59125df22a256f54b055e168c944a12eca6933",
+      "size": 588
+    },
+    {
+      "git_blob": "781698794773a3b4b16205573510d296acce5f8a",
+      "path": "codex-rs/file-watcher/Cargo.toml",
+      "sha256": "901925f6f2141e4f9e70e4ad1850bab4f26826a232b3dbca7a15666716b8a535",
+      "size": 474
+    },
+    {
+      "git_blob": "c9409d41e0dc30d1b837e9a07bcea2bd0f36a2ab",
+      "path": "codex-rs/git-utils/Cargo.toml",
+      "sha256": "f30878ea0371fdebc17efc37199c561f225f52783ae0815c0ef79ec6706a0bdc",
+      "size": 1139
+    },
+    {
+      "git_blob": "cc4f4cf73409749860936f8c22a60337ca7a7b06",
+      "path": "codex-rs/guardian-context/Cargo.toml",
+      "sha256": "164cce17d0cfb4a71a37c672984000473a60d84f3576002ab3f8252d0795e470",
+      "size": 607
+    },
+    {
+      "git_blob": "bd938d2c2ea45333b8f040f41399674a28e54644",
+      "path": "codex-rs/history/Cargo.toml",
+      "sha256": "1efeca5a9781224b2682eb98ce880f0d1ed9ee614ff2d9a906195458924c0a89",
+      "size": 463
+    },
+    {
+      "git_blob": "d519e3b3d089a78461e4bf0ef822d1a010960dde",
+      "path": "codex-rs/hooks/Cargo.toml",
+      "sha256": "d9cfb2602aecfe6ba83716e72d5bb2ecb6ddb698f79eb8aa3ff346a240098c68",
+      "size": 1310
+    },
+    {
+      "git_blob": "fa144cbb7005579578e8cf348c089bd9312e67f1",
+      "path": "codex-rs/http-client/Cargo.toml",
+      "sha256": "b522db0fba570b1667e21c4bbe1fae63f960f3821fa387b6c5bf9a24e3530f7c",
+      "size": 1815
+    },
+    {
+      "git_blob": "ee84ad2962acf57a698e399b38dbc0a03c51bd11",
+      "path": "codex-rs/install-context/Cargo.toml",
+      "sha256": "f3889e33551bedcf564069d27568c5f1ea01e9e696cf122e4b8f99a7292fbff8",
+      "size": 556
+    },
+    {
+      "git_blob": "7a2f1e15bdc3c79b0d74866c3e8d371d13fa9193",
+      "path": "codex-rs/keyring-store/Cargo.toml",
+      "sha256": "6a6a49f225ecefe5b2d5c85e7b667001113363a4b75e4c30427c8e17adff1dc6",
+      "size": 874
+    },
+    {
+      "git_blob": "26abe26d713fc86d4d3112c5fe53fbf190ee0f27",
+      "path": "codex-rs/linux-sandbox/Cargo.toml",
+      "sha256": "7cbb24a865c6aec28e381fbbd75786cb73b99218666d36e5e95925a63312dea9",
+      "size": 1315
+    },
+    {
+      "git_blob": "e84bcfed51c3683e87ea7ae2e0a7809aade43a76",
+      "path": "codex-rs/lmstudio/Cargo.toml",
+      "sha256": "f90889e3a31ae28b860e6a86da3d1fb9941f5b2232f82d42e178a777432cac48",
+      "size": 571
+    },
+    {
+      "git_blob": "50de4dc83a8d67c55a56ec51148b431f14a55511",
+      "path": "codex-rs/login/Cargo.toml",
+      "sha256": "56f70c2fa40e353ead788e74077b5b25e3f6707f8809b1f9af95aef69ec51673",
+      "size": 1793
+    },
+    {
+      "git_blob": "2c0c5f2c954ceb8b986057bdd929badca4ecd64d",
+      "path": "codex-rs/memories/read/Cargo.toml",
+      "sha256": "e51d8384f3a844f0687b9ea4864e19286b3fec7edfee69bd365cd02fd42886b5",
+      "size": 419
+    },
+    {
+      "git_blob": "bf031a6a164f5a098757efdb6c791d9e2705ca50",
+      "path": "codex-rs/memories/write/Cargo.toml",
+      "sha256": "2ce09ca433559076a62b478f42c5a820a531c79811834bc2084b48e12f1276c1",
+      "size": 1586
+    },
+    {
+      "git_blob": "b01437b433d7b8960d775041a9a59b0e9da24ee7",
+      "path": "codex-rs/mermaid/Cargo.toml",
+      "sha256": "ceab314f8c1be29d0483813175f304e7114fb40442a66dbc2f3235a770432f67",
+      "size": 343
+    },
+    {
+      "git_blob": "52f991c07d58c5a2d78386be54fb7ffeef90e69a",
+      "path": "codex-rs/message-board/Cargo.toml",
+      "sha256": "99547943eddb40ea7dad03e11a90814ad0e50717ccf794e1ea66c8ae3c0eca57",
+      "size": 1007
+    },
+    {
+      "git_blob": "176b9579097499b050e24823217eec93502c004b",
+      "path": "codex-rs/message-history/Cargo.toml",
+      "sha256": "adb2d2b3f7c7a6068b87deb69cb2dcd4afcbe45ad86e9b0a41bc4b5dce724722",
+      "size": 664
+    },
+    {
+      "git_blob": "4d0a9aadfdbadfa78b717b8b81e42217b6c391f7",
+      "path": "codex-rs/model-provider/Cargo.toml",
+      "sha256": "595679f720c5cd1160374cd1966ecfa52374bf704912b6af04b2c9e960fd267a",
+      "size": 1638
+    },
+    {
+      "git_blob": "51d3026637dce62a30f6574cb1a5d4624877ebe0",
+      "path": "codex-rs/model-provider-info/Cargo.toml",
+      "sha256": "901ee4b68854f0f43a16ff97b7d5806ddcfb90f8488e0c46595e739effb91adc",
+      "size": 718
+    },
+    {
+      "git_blob": "159f75023431e3bd579fac871ccda63d9ab8ccd2",
+      "path": "codex-rs/models-manager/Cargo.toml",
+      "sha256": "843d1a014174611f14256305ba2fcdcb1a0e150620a8a513bd20a4bef5648847",
+      "size": 848
+    },
+    {
+      "git_blob": "2cd39d5d2eb892b4bebb52b6562648d1c397f00b",
+      "path": "codex-rs/mxc-sandbox/Cargo.toml",
+      "sha256": "fdc1865fda5f33a0ddb5caa9ff4e03b37cb33e94396da1a5e85e15dc98648051",
+      "size": 1221
+    },
+    {
+      "git_blob": "0706660b95a58b9101934bcc89b8d12d7299f964",
+      "path": "codex-rs/network-proxy/Cargo.toml",
+      "sha256": "5f69cb801de00de161c74ff3ee663531bc39bc48b8df2939597876b1ea7434dd",
+      "size": 2575
+    },
+    {
+      "git_blob": "29c0852092c0ebdb9846f50f91384e4720f15d71",
+      "path": "codex-rs/ollama/Cargo.toml",
+      "sha256": "4acd659c88671e6be1ce2be7b2920977c221461245b198c81c195197789ce2eb",
+      "size": 835
+    },
+    {
+      "git_blob": "f1124348bd55a059aa309d3297fe240c7351f85e",
+      "path": "codex-rs/otel/Cargo.toml",
+      "sha256": "75169b0aa6276a2ade18d9c86e9b1b846c956e9945a98ea16574e3ad2192cd5e",
+      "size": 2149
+    },
+    {
+      "git_blob": "538666ec72de29f79eff181ed5fb34e6066af4b6",
+      "path": "codex-rs/otel-trace-websocket/Cargo.toml",
+      "sha256": "61b323decc2b50de473480971f498a580e3c89574530743bef685f33febde7bf",
+      "size": 429
+    },
+    {
+      "git_blob": "462fb5e1891c4033c84dc115268c6f8a5d2f62e8",
+      "path": "codex-rs/plugin/Cargo.toml",
+      "sha256": "1032b4bf35e2a8426d07840a371f09a48bc568cac97292b4a29dfeac6838a088",
+      "size": 600
+    },
+    {
+      "git_blob": "98e88b4262a49b7b372a4942f6e780b21f9588a2",
+      "path": "codex-rs/plugin-host/Cargo.toml",
+      "sha256": "8927d0196d1d4932d80e0288073d9d70715b37ac7bd309de57ab80d6d3f7cba7",
+      "size": 1028
+    },
+    {
+      "git_blob": "60a5729ff57a961dd9ccc145f8ae7171fe0b3176",
+      "path": "codex-rs/process-hardening/Cargo.toml",
+      "sha256": "93c8131ae5485a66d16cff10dd254bf56bd49fd33235399cd5f59ccf0d75396d",
+      "size": 325
+    },
+    {
+      "git_blob": "faf6be294f716e27bcfe652a4e8228ffe9534278",
+      "path": "codex-rs/prompts/Cargo.toml",
+      "sha256": "baaa046a96d07be4184fb29bdd52037a3c3853673155b4527e975720bc40e356",
+      "size": 750
+    },
+    {
+      "git_blob": "8314592a7d0321027f94f18806321fc8bd22d021",
+      "path": "codex-rs/protocol/Cargo.toml",
+      "sha256": "28a9261377f22f25a63214400e22741360f57354792d92f6cdb000286fb4842a",
+      "size": 2298
+    },
+    {
+      "git_blob": "674cd71d8a8c38a804e579c8a0fc18d1aae9652b",
+      "path": "codex-rs/protocol/tests/support/Cargo.toml",
+      "sha256": "225cc5bc62c6fd4a25cc3d956449c3095d8bc47830dc724665da1575c1ff9ccc",
+      "size": 254
+    },
+    {
+      "git_blob": "bd1e058f37b1a8b48b6d5cc03505c5e09766fd9f",
+      "path": "codex-rs/realtime-webrtc/Cargo.toml",
+      "sha256": "ba4f869d40ef25beea5e2ea534c3951ca155e545541208bfb2810f378778a1ea",
+      "size": 791
+    },
+    {
+      "git_blob": "fcdb6c9630c4d04da55b9c64318e4c111afce441",
+      "path": "codex-rs/response-debug-context/Cargo.toml",
+      "sha256": "a6075edb089d3c6ab4588c5cf17604e15827821d67320508344e0af5a9c49070",
+      "size": 432
+    },
+    {
+      "git_blob": "82a90867838318e0fbdeeaf190f86fc6ddd77764",
+      "path": "codex-rs/responses-api-proxy/Cargo.toml",
+      "sha256": "309132cf3397dd411055bcc56d33987b653f38b530033d09b69ca5308650938b",
+      "size": 1085
+    },
+    {
+      "git_blob": "4702b0f53f1b9aeec01e57839b4460dcf2ea81d8",
+      "path": "codex-rs/rmcp-client/Cargo.toml",
+      "sha256": "1d27143238c12d32abfff50eafeaea0feac6d338a2d8bf1300c4f07c75d07836",
+      "size": 3375
+    },
+    {
+      "git_blob": "54100b5dd47f78785cd66f020acc40299c9da0eb",
+      "path": "codex-rs/rollout/Cargo.toml",
+      "sha256": "00c45c4d4f5c0467c00f2373f3e6ba45e8cb5432958add0293c47b6721dc0e52",
+      "size": 1528
+    },
+    {
+      "git_blob": "048026f60af3d2057be63c1219ef5b6e9715c042",
+      "path": "codex-rs/rollout-trace/Cargo.toml",
+      "sha256": "0e50b3709f7bedc71aa9ce54aa9bb7f1d9ac2a7dbc11e3bfd6ac03b103d8bc00",
+      "size": 648
+    },
+    {
+      "git_blob": "1c000678ab471283bf120ea364538bba2b166f2b",
+      "path": "codex-rs/runtime-agent-instance/Cargo.toml",
+      "sha256": "e2608f237bec6c3a27bff7dbc2eca6ab315c25a2f47884e71b4168bc271bcbd0",
+      "size": 1032
+    },
+    {
+      "git_blob": "64ebac488ae3237f0f0b91e6bdfe203460be513d",
+      "path": "codex-rs/sandboxing/Cargo.toml",
+      "sha256": "24d17ffd9c5d3f9667738ba0ed0111f4398f2d67c0cb015ca6426300758eab7c",
+      "size": 1222
+    },
+    {
+      "git_blob": "2a294ee39134e0a4d4160ed7b422d5fe3c2ba6da",
+      "path": "codex-rs/secrets/Cargo.toml",
+      "sha256": "99d0a0c6bb4972d0ee5336949870ce0b2bc4b05c22bfe34f47edfb3655602150",
+      "size": 677
+    },
+    {
+      "git_blob": "999295ec314a37a523f65bd050e8b95453cc7c77",
+      "path": "codex-rs/shell-command/Cargo.toml",
+      "sha256": "6967abe322f82037b6c57f3e6bbe6425030c4ed0a388915527a59dea7317b856",
+      "size": 801
+    },
+    {
+      "git_blob": "7342975aaea0e3ecc61da41f145674cd154a12c9",
+      "path": "codex-rs/skills/Cargo.toml",
+      "sha256": "099f2da853fa6853df18b7923ccd55b6bd1374af7741fd6156ec84b7765ae086",
+      "size": 682
+    },
+    {
+      "git_blob": "e03dcd3d42fdd148725f483354940e36f870ab3b",
+      "path": "codex-rs/state/Cargo.toml",
+      "sha256": "71f45290e80bec97d67e37398d45e0b645eca9e678ed72b690f94a583e6faee1",
+      "size": 1076
+    },
+    {
+      "git_blob": "6b5c037d755d4dc8006424aa836b29036cea8185",
+      "path": "codex-rs/stdio-to-uds/Cargo.toml",
+      "sha256": "86bc7744cb3455915a0dca21bdf9b95b1f446c03eee70dccda8ade7497ee1510",
+      "size": 609
+    },
+    {
+      "git_blob": "617ed7e0670f2ad945e9796cd5bd61ab0fb237a6",
+      "path": "codex-rs/tcp-tunnel/Cargo.toml",
+      "sha256": "28342e9cc76b554fde97237814d2ac1d46fa45cb39d280a7a23aecb23c4751ff",
+      "size": 1001
+    },
+    {
+      "git_blob": "9b1bf3a51663289c68b61f566201df8d05e385cf",
+      "path": "codex-rs/terminal-detection/Cargo.toml",
+      "sha256": "d6afc64a36ea33610d0fb4506f9b9fe809105ccde228bfa41c8ed24497dc4546",
+      "size": 330
+    },
+    {
+      "git_blob": "12d995b9720b942daf802ce30c2976b3f36e7371",
+      "path": "codex-rs/test-binary-support/Cargo.toml",
+      "sha256": "72707d0f0238886c11269f3a9bf28fab63107120c13477e4e34b798add3dc9c5",
+      "size": 280
+    },
+    {
+      "git_blob": "9e857ad0bc7fa670089008eeddf7d593a4a6f45f",
+      "path": "codex-rs/thread-manager-sample/Cargo.toml",
+      "sha256": "502a50a536c149f205579a25ba8175d0ba35a657810ff7a9a85dfb3af21dfd9a",
+      "size": 524
+    },
+    {
+      "git_blob": "31e16dd72a9523bbb1c9b3eea00dc5377037e2e2",
+      "path": "codex-rs/thread-store/Cargo.toml",
+      "sha256": "2abe7eb1f6e1a5c48a7364b2453296840ad27f911b43f9c9601f353a72227853",
+      "size": 1313
+    },
+    {
+      "git_blob": "aa378ff33d7a63a90ec1bd5910656f765cdaaa9e",
+      "path": "codex-rs/tools/Cargo.toml",
+      "sha256": "eb88752b688512bcc000666abe5ca7c03e1aea805e5208871ed27ec6b26c4027",
+      "size": 1105
+    },
+    {
+      "git_blob": "47968b86946d94be3b72d3dc2f817ec18cf82f55",
+      "path": "codex-rs/tui/Cargo.toml",
+      "sha256": "1eb18f1181bf947cee297f229517e66f687f491cb7068979fc20f60b476b4ca8",
+      "size": 6781
+    },
+    {
+      "git_blob": "a985ebd3a69605ac4b6a6246267909cf00227c8b",
+      "path": "codex-rs/uds/Cargo.toml",
+      "sha256": "9d12d74d08723dd5ff1ac2cf1998e79b03a5de65cb4c014e90b225167405577c",
+      "size": 934
+    },
+    {
+      "git_blob": "50aa51096480a245d48e2ff7e2c6a97d388551a9",
+      "path": "codex-rs/user-verification/Cargo.toml",
+      "sha256": "a58cf92913a7bd187ab2f0b1692065b2c5229e086aba64554951926b782262a2",
+      "size": 1035
+    },
+    {
+      "git_blob": "7c5b4840d15d81deed1d1ea30c0b269d399772bc",
+      "path": "codex-rs/utils/absolute-path/Cargo.toml",
+      "sha256": "ad98dc1a75333700db00f6bde0685ce7a3e0f5558b0520e7a09e9bbcc6576736",
+      "size": 547
+    },
+    {
+      "git_blob": "6efd2c482b4386b505a15d96bf60504050633e61",
+      "path": "codex-rs/utils/approval-presets/Cargo.toml",
+      "sha256": "a8a1723c8fc4fef9815fa02f426b1bee8b1e16f43e9382b5fb878c9a603cdaff",
+      "size": 239
+    },
+    {
+      "git_blob": "90540228a6bf5608329d2f2773225271229b9813",
+      "path": "codex-rs/utils/audio/Cargo.toml",
+      "sha256": "a8bd5661a23ac093df6f9a307dc9e440201e7bf7995044dbfc632869f62914c0",
+      "size": 486
+    },
+    {
+      "git_blob": "3c120c032e8d595a7675f0474ab6d91b0b52a59e",
+      "path": "codex-rs/utils/cache/Cargo.toml",
+      "sha256": "79bf902f30726d663ca11ab7dad4bcd617de94b36baaeb33016d188ec06ebe89",
+      "size": 404
+    },
+    {
+      "git_blob": "a56e5758306799cc5962eaf57e8ad3a26b73033f",
+      "path": "codex-rs/utils/cargo-bin/Cargo.toml",
+      "sha256": "eecb409357a98472df8a81d9fd1a25902b967433f4df3403cf213f07e68f8786",
+      "size": 293
+    },
+    {
+      "git_blob": "9d330c5ce6badd0d15e6c401cd777fb3d13c8d08",
+      "path": "codex-rs/utils/cli/Cargo.toml",
+      "sha256": "144258eae359f1b20753dcedff9d8c60a5947e261cec4ad97514b1daf1b35ca8",
+      "size": 438
+    },
+    {
+      "git_blob": "a670985e650f5505fa1ae8c91b1de1029a14c947",
+      "path": "codex-rs/utils/critical-path/Cargo.toml",
+      "sha256": "010d1017a6c878f9119c877007c1512e465daa6f817e3978dd0f96bde2fc5bbd",
+      "size": 224
+    },
+    {
+      "git_blob": "7ba5e6ae6614fddadaa1ba1e1f8299ffc251d78f",
+      "path": "codex-rs/utils/elapsed/Cargo.toml",
+      "sha256": "998e972175e47355bcc0f14b326e5c71955bd670a12ab3200890d9168855ff40",
+      "size": 163
+    },
+    {
+      "git_blob": "704386e74f6924a016c30bfbaa6447b093f70be0",
+      "path": "codex-rs/utils/fuzzy-match/Cargo.toml",
+      "sha256": "d233d52afa20bbf405df269a31a76aeb7fe45de5e6e6bcc872dd331668996fbb",
+      "size": 167
+    },
+    {
+      "git_blob": "bb5345f9b2ef9b55111c9512546151e16f45c09f",
+      "path": "codex-rs/utils/git-discovery/Cargo.toml",
+      "sha256": "79bb0d98647a830492dda425dca98b6a5f89a62841db9824a339502dbcd2cb51",
+      "size": 642
+    },
+    {
+      "git_blob": "85304d4dea7f0a99d11226b2628a695de33bc726",
+      "path": "codex-rs/utils/head-tail-buffer/Cargo.toml",
+      "sha256": "527803e5e2bd7453d3478499f660cd4d0e243b7ac1b06751baf0e5e708104827",
+      "size": 233
+    },
+    {
+      "git_blob": "2d2de0230e38004d562b8ab5546888cd5da74851",
+      "path": "codex-rs/utils/home-dir/Cargo.toml",
+      "sha256": "9b81719e70c693dc156d90fb43a8d71b328e650ef566816b7bcc8014c4bd8e50",
+      "size": 350
+    },
+    {
+      "git_blob": "3ac43b6df0dfad7087ec566af71df90104244cb7",
+      "path": "codex-rs/utils/image/Cargo.toml",
+      "sha256": "2f84e8c60810db1ec6ae392715d130117b27f6e3b94be089790a1a85221be9bd",
+      "size": 903
+    },
+    {
+      "git_blob": "57a28696c8fc2148525480511551b256b35d8b02",
+      "path": "codex-rs/utils/json-to-toml/Cargo.toml",
+      "sha256": "aa9e8d0262bbc8e021f32488083d6d003a83c2bca10186da2d2b17f764bb77f9",
+      "size": 307
+    },
+    {
+      "git_blob": "78cc0cb2f8ed60f3d4b8a3bb007b348d700024ac",
+      "path": "codex-rs/utils/oss/Cargo.toml",
+      "sha256": "204e3ba8509541c37b2088dd6c8e596286f502a8990d2655e861c6babcac9b19",
+      "size": 332
+    },
+    {
+      "git_blob": "3f83bd5fb10d757103f9be4a3e9d4d4bad751340",
+      "path": "codex-rs/utils/output-truncation/Cargo.toml",
+      "sha256": "76ce40f57554264573715e04ab9754cc3ac09fa37091d3abba71a8f22837e45e",
+      "size": 364
+    },
+    {
+      "git_blob": "5bb6328139c7fe2f7759e7edf34be0de9e2f0371",
+      "path": "codex-rs/utils/path-uri/Cargo.toml",
+      "sha256": "d45031c71d6dbcf8c7770ce1feebabbc2f3224841c5eb770d9e2dc70d19d9d20",
+      "size": 596
+    },
+    {
+      "git_blob": "c4cc1c74812ec1965e4a6a2b014be5380359185f",
+      "path": "codex-rs/utils/path-utils/Cargo.toml",
+      "sha256": "71503aeb2195cbcecd60ab50b6cf3bd853ef4db4815d8c966336825591103fea",
+      "size": 538
+    },
+    {
+      "git_blob": "1a4576d59d0fcf04a54236f57976e42683c266a6",
+      "path": "codex-rs/utils/plugins/Cargo.toml",
+      "sha256": "2aa0eb685dc9595b71c33740108080bea0f448e3439afee76c75e0701d275a28",
+      "size": 609
+    },
+    {
+      "git_blob": "3d5bbd66ad92385e005b3b961b7f222ec84a7b1d",
+      "path": "codex-rs/utils/process/Cargo.toml",
+      "sha256": "f7c5bbba88c3f9166a31bfd68d39ec215861db67028becb2a34b782a73b22bf0",
+      "size": 306
+    },
+    {
+      "git_blob": "f7cabb697538c8135a4f38c98fc3d142f7e13b57",
+      "path": "codex-rs/utils/pty/Cargo.toml",
+      "sha256": "bacf71d7afedb321054493d7353ea3c2f04eb0ba609e567fef4b7fec9906a2c4",
+      "size": 975
+    },
+    {
+      "git_blob": "076651d5227baa047d95a42e9e8795c65dc0bc52",
+      "path": "codex-rs/utils/readiness/Cargo.toml",
+      "sha256": "fae1bb2669768af1ef70d76bc3b124977110f1969c1a977ea65926cdbb0d5353",
+      "size": 435
+    },
+    {
+      "git_blob": "39f60d8eb109312fba4b052e69649b1c9382a1a4",
+      "path": "codex-rs/utils/redacted-string/Cargo.toml",
+      "sha256": "b4db650414f5dff6c4823eeb5e05be5adb9bbf6bfaf87c5763a475379528d81d",
+      "size": 284
+    },
+    {
+      "git_blob": "af79eff69252fc01244e2ae721b5a263c1d2fc4c",
+      "path": "codex-rs/utils/rustls-provider/Cargo.toml",
+      "sha256": "21fda73b6ea661f3626372e94b16bce766c5278e6c695c92fc490274d4582f33",
+      "size": 230
+    },
+    {
+      "git_blob": "413b64214bd132c7dfbe4625dc5d110c38d974cc",
+      "path": "codex-rs/utils/sandbox-summary/Cargo.toml",
+      "sha256": "f8ee68013858432e2ff468e643345db592988e5482c59998d724deb0311dd58e",
+      "size": 379
+    },
+    {
+      "git_blob": "14ab4d675eb907b7f80e86b67b956602e721df3f",
+      "path": "codex-rs/utils/sleep-inhibitor/Cargo.toml",
+      "sha256": "ade46cdb5e13c8986605574caf47745a0b78e5382f847432765c3e3dec347ca8",
+      "size": 588
+    },
+    {
+      "git_blob": "6eb5fb9a8747b95cb3dbd113f4ebfcda53b8fed5",
+      "path": "codex-rs/utils/stream-parser/Cargo.toml",
+      "sha256": "d48dda6b4337f17002ae1698fa9a0aeb38df8fd6f35193980396f722afe09fe5",
+      "size": 230
+    },
+    {
+      "git_blob": "8710cffe4697ae4cce6e97d6bac35566db426672",
+      "path": "codex-rs/utils/string/Cargo.toml",
+      "sha256": "3d4f0131321ca76f08410c8a3278d1d2373c8a43118fafa5add9bd8fbb8672ff",
+      "size": 336
+    },
+    {
+      "git_blob": "f24caec190455f3ac685004fc1f6e474ee8f8ed9",
+      "path": "codex-rs/utils/template/Cargo.toml",
+      "sha256": "5785b0365d1f99f5d719c8d6b16586fcaadedc373f4342c92aa28a52eb778368",
+      "size": 225
+    },
+    {
+      "git_blob": "9615ab977f9dfdb35467d1eadaf0bc6dfa641625",
+      "path": "codex-rs/v8-poc/Cargo.toml",
+      "sha256": "e98d307ee1683087debb02cf5fba46cc1a23177a25cd6b03f74f1539239312c9",
+      "size": 348
+    },
+    {
+      "git_blob": "6ce04e3de934bf1daf74cc1835d73a0cfe51fbc3",
+      "path": "codex-rs/voice-host/Cargo.toml",
+      "sha256": "cc697897a4d9dbe53d24855dc579be170ae75b11471a76a2e0a6fcbb3d5b5bb2",
+      "size": 1565
+    },
+    {
+      "git_blob": "038b161237d596e4e2480089ccdab4bcf6e2c58a",
+      "path": "codex-rs/websocket-auth/Cargo.toml",
+      "sha256": "899992915b3b1d746389d3c7c5e7a284ea2af9bf819b8544013d9c29f04e708d",
+      "size": 675
+    },
+    {
+      "git_blob": "19baf9842b591c6aba15d5253f124a737d0d1cdf",
+      "path": "codex-rs/websocket-client/Cargo.toml",
+      "sha256": "7575122d37c47bbb011945d68541422dc0122ab7be1374c9bc9c78ec56a74231",
+      "size": 657
+    },
+    {
+      "git_blob": "a798fb828d3d064eefdf5d9c90f9e91f15129972",
+      "path": "codex-rs/windows-sandbox-rs/Cargo.toml",
+      "sha256": "1695a3007995156a1933d5d7daae3f68a58b3d40e9ba329684b296b341c67fd8",
+      "size": 2792
+    },
+    {
+      "git_blob": "6cfb1fb78e852fd83e96d9e38323208b22939995",
+      "path": "codex-rs/windows-sandbox-rs/tests/support/Cargo.toml",
+      "sha256": "ada0b514811022b794d23c714596c346e857160a7f29879faf4827aa079a504b",
+      "size": 257
+    },
+    {
+      "git_blob": "b4652f858ff585027dad95df510f4603ebb0d7eb",
+      "path": "codex-rs/windows-sandbox-service/Cargo.toml",
+      "sha256": "357db7d43d81a2d6cd015acfe29f1fc6d5c56e57a3397fe026e16d70e230397a",
+      "size": 1621
+    },
+    {
+      "git_blob": "b64177282accbb1975aa7adbe2411ace4da52662",
+      "path": "codex-rs/workload-identity/Cargo.toml",
+      "sha256": "347f3a72058b81058498c83529b69d01a1055384ce6021112038193853a0d0fb",
+      "size": 686
+    },
+    {
+      "git_blob": "05a4bdd82508e5f532a5a83301a2a5dcfe457c36",
+      "path": "codex-rs/worktree/Cargo.toml",
+      "sha256": "9d62ce3cda20191520e11f0d0dbc13a9a3c67d15f64a0261637698365039ab4f",
+      "size": 581
+    },
+    {
+      "git_blob": "9b74a8d8a06c8123355f8aeba5b9d32f944ba272",
+      "path": "third_party/v8/README.md",
+      "sha256": "05a91790c189b5ac53430f4a902ebaff9d708008cd661bf2127cea2c3a6ab3b8",
+      "size": 14722
+    },
+    {
+      "git_blob": "50dd8221bee2b338af174da4c466eefcec997428",
+      "path": "third_party/v8/dependencies.bzl",
+      "sha256": "ea9033169d888f392be16279ee92a474f64adedd48e38cd324fa8cfb111c1d25",
+      "size": 3180
+    },
+    {
+      "git_blob": "f9a7eb18931aae2cba6dd2a14863d27e7770d145",
+      "path": "third_party/v8/dependency_config.bzl",
+      "sha256": "57be71515600cb6bf599578294702f78c7ae0e9f147c5d4d219c14576dc8383f",
+      "size": 1035
+    },
+    {
+      "git_blob": "0da122a548cf5c8d245516b9ada5e115c11edd0e",
+      "path": "third_party/v8/engine_repository.bzl",
+      "sha256": "916da1ebb68d247282a7e0b1b9e830449d7b21aec24c28626cfe293b386cd31a",
+      "size": 4847
+    },
+    {
+      "git_blob": "814e018a41c42e7bfc1c4b3f651940725d00176f",
+      "path": "third_party/v8/rusty_v8_152_2_0_release_manifests.sha256",
+      "sha256": "1dd7c7f7d3d91af7f06a2846bddc6a1da7725acc67ecd7ab2c7dfc980dd8c6d4",
+      "size": 1040
+    }
+  ],
+  "status": "BLOCKED",
+  "workspace_reachability": {
+    "binary_components_proven": false,
+    "cli_v8_direct_external_edges": [],
+    "cli_workspace_packages": [
+      "codex-agent-graph-store",
+      "codex-agent-identity",
+      "codex-agent-message-board-client",
+      "codex-agent-message-board-extension",
+      "codex-agent-roles",
+      "codex-analytics",
+      "codex-ansi-escape",
+      "codex-api",
+      "codex-app-server",
+      "codex-app-server-client",
+      "codex-app-server-daemon",
+      "codex-app-server-protocol",
+      "codex-app-server-protocol-noop-macros",
+      "codex-app-server-test-client",
+      "codex-app-server-transport",
+      "codex-apply-patch",
+      "codex-arg0",
+      "codex-async-utils",
+      "codex-attachment-store",
+      "codex-aws-auth",
+      "codex-backend-client",
+      "codex-backend-openapi-models",
+      "codex-build-info",
+      "codex-chatgpt",
+      "codex-cli",
+      "codex-client",
+      "codex-cloud-config",
+      "codex-cloud-tasks",
+      "codex-cloud-tasks-client",
+      "codex-cloud-tasks-mock-client",
+      "codex-code-mode",
+      "codex-code-mode-protocol",
+      "codex-collaboration-mode-templates",
+      "codex-config",
+      "codex-connectors",
+      "codex-connectors-extension",
+      "codex-context-fragments",
+      "codex-core",
+      "codex-core-plugin-common",
+      "codex-core-plugins",
+      "codex-diagnostics",
+      "codex-direct-tool-timing",
+      "codex-exec",
+      "codex-exec-server",
+      "codex-exec-server-cli",
+      "codex-exec-server-protocol",
+      "codex-execpolicy",
+      "codex-experimental-api-macros",
+      "codex-extension-api",
+      "codex-extension-items",
+      "codex-external-agent-migration",
+      "codex-features",
+      "codex-feedback",
+      "codex-file-search",
+      "codex-file-system",
+      "codex-file-watcher",
+      "codex-git-attribution",
+      "codex-git-utils",
+      "codex-goal-extension",
+      "codex-guardian-context",
+      "codex-guardian-reviewer",
+      "codex-guardian-v2",
+      "codex-history",
+      "codex-history-notes-extension",
+      "codex-home",
+      "codex-hooks",
+      "codex-http-client",
+      "codex-image-generation-extension",
+      "codex-install-context",
+      "codex-keyring-store",
+      "codex-linux-sandbox",
+      "codex-lmstudio",
+      "codex-login",
+      "codex-mcp",
+      "codex-mcp-extension",
+      "codex-memories-extension",
+      "codex-memories-read",
+      "codex-memories-write",
+      "codex-mermaid",
+      "codex-message-board",
+      "codex-message-history",
+      "codex-model-provider",
+      "codex-model-provider-info",
+      "codex-models-manager",
+      "codex-multi-env-copy-file",
+      "codex-mxc-sandbox",
+      "codex-network-proxy",
+      "codex-ollama",
+      "codex-otel",
+      "codex-plugin",
+      "codex-process-hardening",
+      "codex-prompts",
+      "codex-protocol",
+      "codex-queue-extension",
+      "codex-realtime-webrtc",
+      "codex-response-debug-context",
+      "codex-responses-api-proxy",
+      "codex-rmcp-client",
+      "codex-rollout",
+      "codex-rollout-trace",
+      "codex-runtime-agent-instance",
+      "codex-sandboxing",
+      "codex-secrets",
+      "codex-shell-command",
+      "codex-skills",
+      "codex-skills-extension",
+      "codex-state",
+      "codex-stdio-to-uds",
+      "codex-tcp-tunnel",
+      "codex-terminal-detection",
+      "codex-thread-store",
+      "codex-tools",
+      "codex-tui",
+      "codex-uds",
+      "codex-user-verification",
+      "codex-utils-absolute-path",
+      "codex-utils-approval-presets",
+      "codex-utils-audio",
+      "codex-utils-cache",
+      "codex-utils-cli",
+      "codex-utils-critical-path",
+      "codex-utils-elapsed",
+      "codex-utils-fuzzy-match",
+      "codex-utils-git-discovery",
+      "codex-utils-head-tail-buffer",
+      "codex-utils-home-dir",
+      "codex-utils-image",
+      "codex-utils-json-to-toml",
+      "codex-utils-oss",
+      "codex-utils-output-truncation",
+      "codex-utils-path",
+      "codex-utils-path-uri",
+      "codex-utils-plugins",
+      "codex-utils-process",
+      "codex-utils-pty",
+      "codex-utils-redacted-string",
+      "codex-utils-rustls-provider",
+      "codex-utils-sandbox-summary",
+      "codex-utils-sleep-inhibitor",
+      "codex-utils-stream-parser",
+      "codex-utils-string",
+      "codex-utils-template",
+      "codex-web-search-extension",
+      "codex-websocket-auth",
+      "codex-websocket-client",
+      "codex-windows-sandbox",
+      "codex-workload-identity",
+      "codex-worktree"
+    ],
+    "explicit_members": 165,
+    "external_transitives_resolved": false,
+    "host_v8_workspace_routes": [
+      [
+        "codex-code-mode-host",
+        "codex-code-mode-runtime",
+        "v8"
+      ]
+    ],
+    "manifest_count": 171,
+    "method": "ALL_TARGET_OPTIONAL_NORMAL_WORKSPACE_UPPER_BOUND",
+    "redistribution_allowed": false,
+    "selected_workspace_witnesses": {
+      "codex-core": [
+        "codex-cli",
+        "codex-core"
+      ],
+      "codex-file-search": [
+        "codex-cli",
+        "codex-app-server",
+        "codex-file-search"
+      ],
+      "codex-state": [
+        "codex-cli",
+        "codex-state"
+      ],
+      "codex-tui": [
+        "codex-cli",
+        "codex-tui"
+      ],
+      "codex-utils-audio": [
+        "codex-cli",
+        "codex-core",
+        "codex-utils-audio"
+      ],
+      "codex-utils-rustls-provider": [
+        "codex-cli",
+        "codex-api",
+        "codex-utils-rustls-provider"
+      ]
+    },
+    "target_resolved": false
+  }
+}

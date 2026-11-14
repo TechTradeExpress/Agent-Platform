@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LOCK_SHA256 = "e3eb36b0bbce8ba9c705e619926c944a15a9dfa6a4a5235d34a8d8a6b3b4da47"
+LOCK_SHA256 = "7d6e97f31d1d41d2676fba508740059d4b3af653c52e894b0eca2793d74c28dc"
 CHUNK = 128 * 1024
 MAX_ARCHIVE = 122_000_000
 MAX_BINARY = 320_000_000
@@ -68,7 +68,12 @@ def read_lock():
         raw = stream.read(32_769)
     if hashlib.sha256(raw).hexdigest() != LOCK_SHA256:
         raise Blocked("release_lock_changed")
-    return json.loads(raw)
+    pin = json.loads(raw)
+    with regular(ROOT / "license-investigation.json", 131_072) as stream:
+        report = stream.read(131_073)
+    if hashlib.sha256(report).hexdigest() != pin["license"]["followup_report_sha256"]:
+        raise Blocked("license_evidence_changed")
+    return pin
 
 
 def inspect_elf(stream, size):

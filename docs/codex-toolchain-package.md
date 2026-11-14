@@ -1,5 +1,11 @@
 # PKG-03: pinned Codex inputs — BLOCKED before Debian distribution
 
+Follow-up: [target/feature, cargo-deny and native-license investigation](codex-license-investigation.md)
+narrows this first-pass evidence. It corrects the V8 attribution concern,
+distinguishes legal conditions from project assurance and identifies the
+remaining notice/covered-source work. BLOCKED remains; absence of an SBOM is
+not by itself a legal prohibition or the sole project blocker.
+
 Issue #110, 2026-11-14. Source parent
 `edf15ccb8ac197de7542ab4cad89800e50c83ff9`, verified against fresh public
 `origin/main`. PR #114 / [ADR 007](debian-role-package-architecture.md) is merged.
@@ -82,9 +88,12 @@ review include Ratatui 0.30.2, aws-lc-sys 0.45.0, libsqlite3-sys 0.37.0 and v8
 not proof that all are linked, nor a license classification for their binaries.
 
 The pinned `.github/workflows/rust-release.yml` configures an independently
-downloaded rusty_v8 artifact/checksum before Cargo build. A Rust-only license
-list cannot simply cover embedded V8/native components or their transitive
-notices. Source `third_party/voice/NOTICE.md` separately describes voice runtime
+downloaded rusty_v8 artifact/checksum before the multibinary Cargo build. The
+follow-up establishes the known normal workspace path to V8 through the separate
+code-mode host, not through the CLI client; this first-pass observation must not
+be read as proof that V8 is linked into the selected CLI member. Native/data
+notice obligations for actually selected components still need coverage.
+Source `third_party/voice/NOTICE.md` separately describes voice runtime
 libraries and license files for packages that contain voice; the selected
 single-member archive does not contain those separate runtime files. Do not
 infer either that all voice obligations apply here or that no native license
@@ -99,7 +108,7 @@ that evidence. There is no claim that upstream redistribution is prohibited;
 the required completeness has not been verified. Adding Apache LICENSE, copying
 all Cargo package names or setting `redistribution_allowed=true` is insufficient.
 
-Unblocking requires upstream artifact-bound SBOM/notices/build provenance, or
+Unblocking can use upstream artifact-bound SBOM/notices/build provenance, or
 an independently reviewed reconstruction of the exact target/feature/native
 input closure with all applicable texts and obligations, then a new reviewed
 source change implementing packaging and its lifecycle tests. A new upstream

@@ -25,10 +25,20 @@
   "debian_dependencies": null,
   "draft": false,
   "license": {
+    "apache2_requires_sbom": false,
     "binary_bound_sbom": "NOT_ESTABLISHED",
     "cargo_lock_git_packages": 12,
     "cargo_lock_packages": 1478,
+    "decision_scope": "PROJECT_DISTRIBUTION_ACCEPTANCE",
+    "followup_report": "license-investigation.json",
+    "followup_report_sha256": "6779ee1507619f786b452aba2c7ade6719e804677060a259ef87cda520f72d9d",
+    "missing_sbom_is_legal_prohibition": false,
     "redistribution_allowed": false,
+    "remaining_evidence": [
+      "target_feature_and_native_component_inventory",
+      "complete_selected_component_notice_payload",
+      "mpl_covered_source_availability_and_recipient_notice"
+    ],
     "third_party_audit": "INCOMPLETE",
     "upstream": "Apache-2.0"
   },

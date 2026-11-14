@@ -180,6 +180,18 @@ def test_lock_edit_cannot_authorize_package(tmp_path, monkeypatch):
         checks.read_lock()
 
 
+def test_license_investigation_edit_cannot_supply_clearance(tmp_path, monkeypatch):
+    (tmp_path / "release-inputs.json").write_bytes(
+        (checks.ROOT / "release-inputs.json").read_bytes()
+    )
+    (tmp_path / "license-investigation.json").write_bytes(
+        b'{"redistribution_allowed":true}'
+    )
+    monkeypatch.setattr(checks, "ROOT", tmp_path)
+    with pytest.raises(checks.Blocked, match="license_evidence_changed"):
+        checks.read_lock()
+
+
 def test_fabricated_complete_inputs_still_never_admit(tmp_path, monkeypatch):
     path, pin = fixture_archive(tmp_path)
     pin = copy.deepcopy(pin)
