@@ -1,3 +1,16 @@
+agent-platform (0.1.0-4) trixie; urgency=medium
+
+  * Synthetic split-role N+1; explicit example migration helper only.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Sat, 14 Nov 2026 00:00:00 +0000
+
+agent-platform (0.1.0-3) trixie; urgency=medium
+
+  * First inert Control and Worker P0 candidates, not released.
+  * Supersede experimental single-package profiles without taking over files.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Fri, 13 Nov 2026 00:00:00 +0000
+
 agent-platform (0.1.0-2) trixie; urgency=medium
 
   * Unreleased CLI candidate with explicit synthetic schema-v2 migration.

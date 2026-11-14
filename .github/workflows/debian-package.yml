@@ -10,6 +10,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Build isolated tool and dependency images
         run: |
@@ -18,10 +19,15 @@ jobs:
       - name: Build real N and N+1 packages and compare candidate rebuild
         run: |
           mkdir -p "$RUNNER_TEMP/ap-packages" "$RUNNER_TEMP/ap-evidence"
-          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 1 --output /packages/n
-          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 2 --output /packages/next
-          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 2 --output /packages/rebuilt
-          cmp "$RUNNER_TEMP/ap-packages/next/agent-platform_0.1.0-2_amd64.deb" "$RUNNER_TEMP/ap-packages/rebuilt/agent-platform_0.1.0-2_amd64.deb"
+          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 3 --output /packages/n
+          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 4 --output /packages/next
+          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/build_deb.py --revision 4 --output /packages/rebuilt
+          for role in control worker; do
+            cmp "$RUNNER_TEMP/ap-packages/next/agent-platform-${role}_0.1.0-4_amd64.deb" "$RUNNER_TEMP/ap-packages/rebuilt/agent-platform-${role}_0.1.0-4_amd64.deb"
+          done
+          docker run --rm --platform linux/amd64 --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages" -w /source ap-package-quality python3 packaging/debian/build_legacy_fixtures.py /packages/historical
+          mv "$RUNNER_TEMP/ap-packages/historical/legacy-1" "$RUNNER_TEMP/ap-packages/legacy-1"
+          mv "$RUNNER_TEMP/ap-packages/historical/legacy-2" "$RUNNER_TEMP/ap-packages/legacy-2"
           cat "$RUNNER_TEMP/ap-packages/n/SHA256SUMS" "$RUNNER_TEMP/ap-packages/next/SHA256SUMS"
       - name: Real apt and dpkg lifecycle with no network or host state
         run: |
@@ -30,22 +36,7 @@ jobs:
       - name: Inspect archives, lintian and autopkgtest in separate container
         if: always()
         run: |
-          docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 256 --memory 2g -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" -w /source ap-package-quality sh -ec '
-            dpkg-deb --info /packages/next/*.deb > /evidence/package-info.txt
-            dpkg-deb --contents /packages/next/*.deb > /evidence/package-files.txt
-            test "$(dpkg-deb -f /packages/next/*.deb Architecture)" = amd64
-            test "$(dpkg-deb -f /packages/next/*.deb Version)" = 0.1.0-2
-            test "$(dpkg-deb -f /packages/next/*.deb Depends)" = "python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, gh"
-            dpkg-deb --control /packages/next/*.deb /tmp/ap-control
-            for hook in preinst postinst prerm postrm triggers; do test ! -e "/tmp/ap-control/$hook"; done
-            lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1
-            apt-get -y install /packages/next/*.deb
-            autopkgtest --no-built-binaries -o /evidence/autopkgtest /packages/next/agent-platform_0.1.0-2_amd64.deb /source -- null
-            test -s /evidence/autopkgtest/summary
-            grep -Eq "smoke[[:space:]]+PASS" /evidence/autopkgtest/summary
-            dpkg-query -W > /evidence/quality-toolchain.txt
-            chmod -R a+rX /evidence
-          '
+          docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 256 --memory 2g -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-packages:/packages:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" -w /source ap-package-quality /bin/sh /opt/ap-tests/quality.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

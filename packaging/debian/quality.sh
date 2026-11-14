@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+# This is testbed code, never a host installer.
+test -f /.dockerenv
+test "$(cat /ap-package-ci-fixture)" = AP-PKG-CI-DISPOSABLE-v1
+test "$(id -u)" = 0
+grep -qx 'VERSION_CODENAME=trixie' /etc/os-release
+test ! -S /var/run/docker.sock
+for role in control worker; do
+    package="/packages/next/agent-platform-${role}_0.1.0-4_amd64.deb"
+    dpkg-deb --info "$package" > "/evidence/${role}-info.txt"
+    dpkg-deb --contents "$package" > "/evidence/${role}-files.txt"
+    test "$(dpkg-deb -f "$package" Architecture)" = amd64
+    test "$(dpkg-deb -f "$package" Version)" = 0.1.0-4
+    dpkg-deb --control "$package" "/tmp/ap-control-${role}"
+    for hook in preinst postinst prerm postrm triggers; do
+        test ! -e "/tmp/ap-control-${role}/$hook"
+    done
+done
+lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1
+apt-get --no-install-recommends -y install /packages/next/*.deb
+autopkgtest --no-built-binaries -o /evidence/autopkgtest /packages/next/agent-platform-control_0.1.0-4_amd64.deb /packages/next/agent-platform-worker_0.1.0-4_amd64.deb /source -- null
+test -s /evidence/autopkgtest/summary
+grep -Eq 'smoke[[:space:]]+PASS' /evidence/autopkgtest/summary
+dpkg-query -W > /evidence/quality-toolchain.txt
+chmod -R a+rX /evidence
