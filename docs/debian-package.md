@@ -3,7 +3,7 @@
 **CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY.** Debian 13 trixie,
 amd64 only. [ADR 007](debian-role-package-architecture.md) and
 [AP-PKG/2](codex-upstream-provisioning-decision.md) define two independent P0
-packages: `agent-platform-control` and `agent-platform-worker`. Neither includes
+packages: `agent-platform-control` and `agent-platform-worker`. Neither P0 package includes
 Codex, has a Codex APT dependency, downloads code, creates users/groups/state,
 installs services/profiles or activates anything. `LIVE_NO_GO`, Gate #73,
 `SUBSCRIPTION_ISOLATION_BLOCKED` and public/native exit 13 remain unchanged.
@@ -136,3 +136,14 @@ Those remain NOT_RUN, as do real hosts, credentials, runtime and Publisher pilot
 No Docker installation, privileged fallback or host provisioning is authorized.
 
 See [local fixture evidence and limitations](debian-role-package-validation.md).
+
+## P1 Worker candidates (PKG-04)
+
+Revisions -5/-6 intentionally extend only Worker with the closed Publisher,
+signer, exporter, vendor units/profiles and explicit root operator provisioning
+and #116 Codex commands. Control stays P0. Build with the same recipe and exact
+source SHA, using `--revision 5` or `--revision 6` (the current default). These
+synthetic candidates still do not authenticate, activate units, acquire Codex
+during dpkg or include its binary/dependency. Accounts and state require a
+separate approved command, never a maintainer script. See
+[the P1 contract](worker-provisioning.md) and ADR 007's explicit manifest update.

@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+# Fixed data-only checks before dpkg may replace a new P1 leaf. No Python,
+# provisioning, profile load, account command, network or service operation.
+fail() { echo worker_package_path_conflict >&2; exit 1; }
+for dir in /usr /usr/lib /usr/libexec /usr/lib/systemd /usr/lib/systemd/system /etc /etc/apparmor.d /usr/lib/ap-worker-publisher /usr/lib/ap-worker-publisher/agent_platform /usr/lib/agent-platform-worker /usr/lib/agent-platform-worker/provisioning /usr/lib/agent-platform-worker/provisioning/evidence; do
+    test ! -L "$dir" || fail
+    if test -e "$dir"; then
+        test -d "$dir" || fail
+        test "$(stat -c '%u:%g:%a' "$dir")" = 0:0:755 || fail
+    fi
+done
+for unit in ap-worker-publisher ap-worker-publisher-signer; do
+    for path in "/etc/systemd/system/$unit.service" "/etc/systemd/system/$unit.service.d" "/run/systemd/system/$unit.service" "/run/systemd/system/$unit.service.d"; do
+        if test -e "$path" || test -L "$path"; then fail; fi
+    done
+    for root in /etc/systemd/system /run/systemd/system; do
+        if test -d "$root"; then
+            found=$(timeout 5 find "$root" -maxdepth 3 -type l \( -name "$unit.service" -o -lname "*/$unit.service" -o -lname "$unit.service" \) -print) || fail
+            test -z "$found" || fail
+        fi
+    done
+done
+# Read-only manager observation; never start/stop/reload/enable anything.
+if test -d /run/systemd/system; then
+    for unit in ap-worker-publisher ap-worker-publisher-signer; do
+        state=$(timeout 5 /usr/bin/systemctl show --property=ActiveState --value "$unit.service") || fail
+        test "$state" = inactive || fail
+    done
+fi
+for dir in /usr/lib/ap-worker-publisher /usr/lib/agent-platform-worker/provisioning; do
+    if test -e "$dir"; then
+        owner=$(dpkg-query -S "$dir" 2>/dev/null) || fail
+        test "$owner" = "agent-platform-worker: $dir" || fail
+        timeout 10 find "$dir" -maxdepth 8 -exec /bin/sh -c '
+            for entry do
+                case "$entry" in @CLOSED_ROOT_ENTRIES@) ;; *) exit 1 ;; esac
+            done
+        ' sh {} + || fail
+    fi
+done
+while IFS= read -r path; do
+    if test -e "$path" || test -L "$path"; then
+        test ! -L "$path" && test -f "$path" || fail
+        test "$(stat -c '%u:%g:%h' "$path")" = 0:0:1 || fail
+        case "$(stat -c '%a' "$path")" in 600|640|644|700|750|755) ;; *) fail ;; esac
+        owner=$(dpkg-query -S "$path" 2>/dev/null) || fail
+        test "$owner" = "agent-platform-worker: $path" || fail
+    fi
+done <<'AP_OWNED_PATHS'
+@OWNED_PATHS@
+AP_OWNED_PATHS
+exit 0

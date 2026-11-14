@@ -26,7 +26,7 @@ Architecture: amd64
 Maintainer: TechTradeExpress <maintainers@techtradeexpress.com>
 Section: devel
 Priority: optional
-Depends: python3 (>= 3.12)
+Depends: @WORKER_DEPENDS@
 Conflicts: agent-platform
 Homepage: https://github.com/TechTradeExpress/Agent-Platform
 Description: inert Agent Platform Worker candidate

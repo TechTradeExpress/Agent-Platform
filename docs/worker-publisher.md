@@ -3,8 +3,8 @@
 **Current integration status:** SOURCE_IMPLEMENTED / OFFLINE_TESTED;
 HOST_NOT_RUN / LIVE_PUBLICATION_BLOCKED. The five PUB-02 modules and deployment
 sources remain source-only in both Debian P0 roles. Closed Control P0 (32 modules)
-and Worker P0 (4 modules) are unchanged. Their explicit inclusion and packaged
-account/unit/profile provisioning belong to #111; read-only readiness belongs to
+and Worker P0 (4 modules) are unchanged. PKG-04 deliberately includes these in Worker P1 revisions -5/-6; see
+[explicit provisioning](worker-provisioning.md). P0 remains inert; read-only readiness belongs to
 #112. Codex is separately acquired through #116, never a project Codex .deb or APT
 dependency. The older manual recipes below are reference material, not the
 current rollout path or authorization to install them. Await reviewed packaged
