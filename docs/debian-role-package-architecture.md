@@ -124,6 +124,12 @@ deployment doctor native_canary native_codex native_security notification_outbox
 notifications publisher_handoff telegram_console telegram_fake tool_dispatch_probe
 ```
 
+PUB-02 integration adds the five named **P** modules above to the explicit
+source-only inventory until #111 deliberately packages P1. This makes 21
+source-only modules / 55 total source modules in the integrated tree; the
+historical 16-name block remains its original snapshot. C and W remain exactly
+32 and four modules, respectively. No prefix/glob admits additional helpers.
+
 Also exclude `_native_elf`/`native_artifact` from C and the C-only modules from W;
 `__init__` and `runtime_manifest` are the sole C/W byte duplication. CP-08 is not
 on this main; if merged later, `control_plane_local_runner.py` remains source-only

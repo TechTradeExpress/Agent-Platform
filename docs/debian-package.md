@@ -45,7 +45,8 @@ uploads, release signing and an APT feed remain separate work.
 ## Exact P0 contents and interfaces
 
 The builder's closed C/W/source-only inventories match ADR 007: **32 Control
-modules, 4 Worker modules, 16 source-only modules**. Application imports are
+modules, 4 Worker modules, 21 source-only modules (the original 16 plus the five
+PUB-02 modules reserved for reviewed Worker P1 in #111)**. Application imports are
 parsed before staging; a cross-role import or unclassified top-level Python
 module blocks the build. `runtime_manifest` and `__init__` are the only source
 bytes duplicated, under different private roots. Worker has no Control CLI,

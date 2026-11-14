@@ -1,0 +1,24 @@
+#include <tunables/global>
+profile ap-worker-publisher-signer /usr/libexec/ap-worker-publisher-signer flags=(attach_disconnected) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  /usr/libexec/ap-worker-publisher-signer r,
+  /usr/bin/python3* ixr,
+  /usr/lib/ap-worker-publisher/** r,
+  /usr/lib/** mr,
+  /etc/ld.so.cache r,
+  /etc/{passwd,group,nsswitch.conf} r,
+  /etc/ap-publisher/{job,receipts}.json r,
+  /var/lib/ap-publisher-signer/journal rwk,
+  /run/ap-publisher-signer/app-jwt rw,
+  /run/credentials/ap-worker-publisher-signer.service/app-key r,
+  /proc/[0-9]*/{status,attr/current} r,
+  deny network,
+  deny ptrace,
+  signal (receive) peer=unconfined,
+  deny signal (send),
+  deny /home/** rwklmx,
+  deny /root/** rwklmx,
+  deny /var/lib/ap-publisher/** rwklmx,
+  deny /proc/*/{mem,environ,fd/**,map_files/**} rwklmx,
+}

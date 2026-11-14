@@ -197,3 +197,10 @@ SSH agent, production Codex, host/Proxmox/root, AppArmor/systemd activation or
 remote writes occur in PUB-01. Offline tests are not independent host attestation,
 security review or current GitHub governance evidence. Delivery is one local
 commit, no push/PR, for subsequent separate AP-SM/2 technical review.
+
+## PUB-02 separate operator executable
+
+[Issue #108](worker-publisher.md) implements a separate one-shot operator publisher
+with full-tree byte intake, real fixed GitHub wire code and distinct signer custody.
+It does not convert PUB-01 fixtures or activate native/autonomous runtime. Host
+installation, credentials and exact first pilot remain separately authorized.

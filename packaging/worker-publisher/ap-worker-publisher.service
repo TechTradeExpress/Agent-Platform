@@ -1,0 +1,52 @@
+[Unit]
+Description=Operator-triggered single publication (no autonomous runtime)
+After=network-online.target
+ConditionPathExists=/etc/ap-publisher/job.json
+
+[Service]
+Type=oneshot
+User=ap-publisher
+Group=ap-publisher
+SupplementaryGroups=
+UMask=0077
+UnsetEnvironment=GH_TOKEN GITHUB_TOKEN GIT_ASKPASS SSH_AUTH_SOCK SSLKEYLOGFILE SSL_CERT_FILE SSL_CERT_DIR OPENSSL_CONF OPENSSL_MODULES HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+ExecStart=/usr/libexec/ap-worker-publisher --job /etc/ap-publisher/job.json --artifact /etc/ap-publisher/candidate.json --execute
+LoadCredential=app-jwt:/run/ap-publisher-signer/app-jwt
+AppArmorProfile=ap-worker-publisher
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET
+SocketBindDeny=any
+IPAddressDeny=any
+# Operator must install a matching, independently verified IPAddressAllow drop-in.
+ReadOnlyPaths=/etc/ap-publisher /usr/lib/ap-worker-publisher
+ReadWritePaths=/var/lib/ap-publisher/journal
+InaccessiblePaths=/etc/ap-publisher-keys /var/lib/ap-publisher-signer
+LimitCORE=0
+LimitNOFILE=64
+TasksMax=8
+MemoryMax=256M
+CPUQuota=100%
+TimeoutStartSec=310
+TimeoutStopSec=5
+KillMode=control-group
+Restart=no
+StandardOutput=journal
+StandardError=null
+# No [Install], socket, timer, worker-writable trigger or automatic activation.
+# Egress MUST additionally be pinned to the job's verified peer by operator policy.

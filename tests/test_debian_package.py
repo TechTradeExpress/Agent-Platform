@@ -132,6 +132,19 @@ def test_real_role_archives_metadata_permissions_and_reproducibility(tmp_path):
                     assert item["path"] == "/" + doc + "manifest.json"
             provenance = json.loads(files[doc + "build.json"][1])
             assert provenance["source_commit"] == commit
+            # PUB-02 remains source-only until reviewed Worker P1 integration #111.
+            for name in (
+                "publisher_handoff",
+                "worker_publisher",
+                "worker_publish_artifact",
+                "worker_publish_io",
+                "worker_publish_signer",
+                "worker_publish_export",
+            ):
+                assert not any(name in path for path in files)
+                assert f"src/agent_platform/{name}.py" not in provenance["inputs"]
+            assert not any("worker-publisher" in path for path in files)
+
             for name in builder.MODULES[role]:
                 source = ROOT / "src/agent_platform" / (name + ".py")
                 assert (
@@ -164,7 +177,10 @@ def test_bad_package_identity_fails_before_creating_output(tmp_path, revision, c
     assert not output.exists()
 
 
-def test_unknown_module_and_worker_authority_import_fail_closed(tmp_path):
+@pytest.mark.parametrize(
+    "unknown_name", ["unreviewed.py", "worker_publish_unreviewed.py"]
+)
+def test_unknown_module_and_worker_authority_import_fail_closed(tmp_path, unknown_name):
     import shutil
 
     source = tmp_path / "source"
@@ -173,7 +189,7 @@ def test_unknown_module_and_worker_authority_import_fail_closed(tmp_path):
         destination = source / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((ROOT / name).read_bytes())
-    unknown = source / "src/agent_platform/unreviewed.py"
+    unknown = source / "src/agent_platform" / unknown_name
     unknown.write_text("# not admitted\n")
     with pytest.raises(ValueError, match="review_module_classification"):
         builder.validate(source)
