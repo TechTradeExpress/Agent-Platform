@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LOCK_SHA256 = "c62fc5b596f29a6a7640fc3912e51de3bb18ca866b0a245c621459ca8663710a"
+LOCK_SHA256 = "7cb261030269c986891ea25c72f0eb8657aeed716f4924fb902a201b668f423b"
 CHUNK = 128 * 1024
 MAX_ARCHIVE = 122_000_000
 MAX_BINARY = 320_000_000
@@ -77,6 +77,8 @@ def read_lock():
         ("resolution-attempts.json", "resolution_attempts_sha256", 32_768),
         ("mpl-source-candidates.json", "mpl_source_candidates_sha256", 32_768),
         ("MPL-SOURCE-NOTICE.txt", "mpl_source_notice_sha256", 8192),
+        ("large-fixture-observation.json", "large_fixture_observation_sha256", 65_536),
+        ("resolution-job-inputs.json", "resolution_job_inputs_sha256", 65_536),
     ):
         with regular(ROOT / filename, limit) as stream:
             data = stream.read(limit + 1)

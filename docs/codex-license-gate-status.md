@@ -1,5 +1,10 @@
 # PKG-03 third pass: real Cargo attempts and supplied MPL candidate sources
 
+Latest result: [fourth-pass large isolated fixture](codex-large-resolution-fixture.md)
+found and tested larger storage. Cargo reached a new hard stop: the pinned lock
+requires an update forbidden by `--locked`. The storage failures and table below
+are the historical third-pass snapshot, not the latest stopping reason.
+
 2026-11-14. Local parent: `3fe266fe59f1d3f47cc0463613dfa7afdcd1e789`.
 The existing worktree, common Git directory, feature branch, exact HEAD and clean
 tracked/untracked state were verified before changes. Public #115 was observed

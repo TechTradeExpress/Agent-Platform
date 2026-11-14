@@ -204,6 +204,19 @@ def test_resolution_attempt_or_candidate_source_edit_refuses(tmp_path, monkeypat
         checks.read_lock()
 
 
+def test_large_fixture_result_edit_cannot_change_license_gate(tmp_path, monkeypatch):
+    for name in (
+        "release-inputs.json", "license-investigation.json", "resolution-attempts.json",
+        "mpl-source-candidates.json", "MPL-SOURCE-NOTICE.txt",
+        "large-fixture-observation.json", "resolution-job-inputs.json",
+    ):
+        (tmp_path / name).write_bytes((checks.ROOT / name).read_bytes())
+    (tmp_path / "large-fixture-observation.json").write_bytes(b'{"status":"PASS"}')
+    monkeypatch.setattr(checks, "ROOT", tmp_path)
+    with pytest.raises(checks.Blocked, match="license_evidence_changed"):
+        checks.read_lock()
+
+
 def test_fabricated_complete_inputs_still_never_admit(tmp_path, monkeypatch):
     path, pin = fixture_archive(tmp_path)
     pin = copy.deepcopy(pin)
