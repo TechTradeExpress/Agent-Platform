@@ -1,0 +1,216 @@
+{
+  "artifacts": [
+    {
+      "filename": "symphonia-0.6.0.crate",
+      "name": "symphonia",
+      "sha256": "1758d6c853020a7244de03cc3e0185eaea3f58715122422dd3cc7452e6d4c16a",
+      "size": 17223,
+      "url": "https://static.crates.io/crates/symphonia/symphonia-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-bundle-mp3-0.6.0.crate",
+      "name": "symphonia-bundle-mp3",
+      "sha256": "350f1f2f2e19ad4dd315db94304d1eb361b29af070681f94e51b8fdaad769546",
+      "size": 68037,
+      "url": "https://static.crates.io/crates/symphonia-bundle-mp3/symphonia-bundle-mp3-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-common-0.6.0.crate",
+      "name": "symphonia-common",
+      "sha256": "8257891ffa7f05e02b58f4761e2abf7e5278c8744fd59e981559e050f86eef55",
+      "size": 19078,
+      "url": "https://static.crates.io/crates/symphonia-common/symphonia-common-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-core-0.6.0.crate",
+      "name": "symphonia-core",
+      "sha256": "95ec293b5f288383b72a7bffcade6b2860b642cf66f28b3bd5967349a49938b1",
+      "size": 147360,
+      "url": "https://static.crates.io/crates/symphonia-core/symphonia-core-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-format-isomp4-0.6.0.crate",
+      "name": "symphonia-format-isomp4",
+      "sha256": "2d179a01305b3505940135a9f0180d6ef4b487912748fe97554756f120fbd05e",
+      "size": 53863,
+      "url": "https://static.crates.io/crates/symphonia-format-isomp4/symphonia-format-isomp4-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-format-mkv-0.6.0.crate",
+      "name": "symphonia-format-mkv",
+      "sha256": "fb17713e134f5ad316c2690fa3104590ccc85842cdbcf82c3cd1a845cb08aa74",
+      "size": 50172,
+      "url": "https://static.crates.io/crates/symphonia-format-mkv/symphonia-format-mkv-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-format-ogg-0.6.0.crate",
+      "name": "symphonia-format-ogg",
+      "sha256": "b05a67e02b1e4fca1a261ba4fe06910a9357489ad8c36aafdd2960e9c6559433",
+      "size": 33325,
+      "url": "https://static.crates.io/crates/symphonia-format-ogg/symphonia-format-ogg-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-format-riff-0.6.0.crate",
+      "name": "symphonia-format-riff",
+      "sha256": "17424452a777666d3eaf09a5c651029b15b6a333812fcc5b5474f2a3f0cff3f0",
+      "size": 29295,
+      "url": "https://static.crates.io/crates/symphonia-format-riff/symphonia-format-riff-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "symphonia-metadata-0.6.0.crate",
+      "name": "symphonia-metadata",
+      "sha256": "a31acf5cd623398a6208e2225d18f4b20f761c55098a796a5247ad516a4a8681",
+      "size": 59325,
+      "url": "https://static.crates.io/crates/symphonia-metadata/symphonia-metadata-0.6.0.crate",
+      "version": "0.6.0"
+    },
+    {
+      "filename": "nucleo-4253de9faabb4e5c6d81d946a5e35a90f87347ee.tar.gz",
+      "git_tree_files_verified": 42,
+      "name": "nucleo-and-matcher",
+      "revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "sha256": "d1676ac33a82c5903ffede68ce73c9d924666aa8a102bb649a8fb926a7a61ce1",
+      "size": 86782,
+      "url": "https://codeload.github.com/helix-editor/nucleo/tar.gz/4253de9faabb4e5c6d81d946a5e35a90f87347ee"
+    }
+  ],
+  "binary_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+  "components": [
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia",
+      "source_artifact": "symphonia-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-bundle-mp3",
+      "source_artifact": "symphonia-bundle-mp3-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-common",
+      "source_artifact": "symphonia-common-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-core",
+      "source_artifact": "symphonia-core-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-format-isomp4",
+      "source_artifact": "symphonia-format-isomp4-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-format-mkv",
+      "source_artifact": "symphonia-format-mkv-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-format-ogg",
+      "source_artifact": "symphonia-format-ogg-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-format-riff",
+      "source_artifact": "symphonia-format-riff-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "c76f740d1521b9bed9ca7a04ad526c310493c62621b1341d623b431736533b30",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "symphonia-metadata",
+      "source_artifact": "symphonia-metadata-0.6.0.crate",
+      "source_revision": "980bf5830a90e069fd64641d9c38f067ab772a24",
+      "version": "0.6.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "manifest_path": "Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "nucleo",
+      "source_artifact": "nucleo-4253de9faabb4e5c6d81d946a5e35a90f87347ee.tar.gz",
+      "source_revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "version": "0.5.0"
+    },
+    {
+      "license": "MPL-2.0",
+      "license_path": "LICENSE",
+      "license_sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "manifest_path": "matcher/Cargo.toml",
+      "modifications_by_this_repack": false,
+      "name": "nucleo-matcher",
+      "source_artifact": "nucleo-4253de9faabb4e5c6d81d946a5e35a90f87347ee.tar.gz",
+      "source_revision": "4253de9faabb4e5c6d81d946a5e35a90f87347ee",
+      "version": "0.3.1"
+    }
+  ],
+  "full_binary_mpl_set_verified": false,
+  "modifications_by_bundle_tool": false,
+  "redistribution_allowed": false,
+  "schema": "AP-CODEX-MPL-SOURCE-CANDIDATES/1",
+  "scope": "AUDIT_CANDIDATES_NOT_CONFIRMED_BINARY_INVENTORY",
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "source_delivery": "COMPANION_SOURCE_ARCHIVES_WITH_BUNDLE_NOTICE"
+}

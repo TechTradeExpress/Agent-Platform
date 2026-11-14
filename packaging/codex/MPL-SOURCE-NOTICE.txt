@@ -1,0 +1,47 @@
+CODEX 0.166.0 — MPL SOURCE AUDIT CANDIDATES, NOT A PRODUCT RELEASE
+
+This companion bundle provides the complete downloaded source archives for the
+components below. It is source-delivery evidence for an audit, not a statement
+that all these components, and no others, occur in the official Codex executable.
+The complete target dependency graph and binary distribution gate remain BLOCKED.
+
+Covered-source candidates and exact identifiers:
+
+  nucleo 0.5.0 and nucleo-matcher 0.3.1
+  Git revision 4253de9faabb4e5c6d81d946a5e35a90f87347ee
+  https://github.com/helix-editor/nucleo/tree/4253de9faabb4e5c6d81d946a5e35a90f87347ee
+
+  symphonia 0.6.0
+  symphonia-bundle-mp3 0.6.0
+  symphonia-common 0.6.0
+  symphonia-core 0.6.0
+  symphonia-format-isomp4 0.6.0
+  symphonia-format-mkv 0.6.0
+  symphonia-format-ogg 0.6.0
+  symphonia-format-riff 0.6.0
+  symphonia-metadata 0.6.0
+  Published crate source revision 980bf5830a90e069fd64641d9c38f067ab772a24
+
+These components' source manifests and license texts identify MPL-2.0. Their
+source remains governed by that license; original source copyright/license
+notices are retained inside the unmodified archives. A copy is in each archive's
+LICENSE. nucleo-matcher's matcher/LICENSE is a source symlink to ../LICENSE;
+the actual root LICENSE is retained. The manifest records the referent's hash,
+not the hash of the symlink spelling as if it were the license text.
+
+How an audit-bundle recipient obtains the source:
+
+  The sources/ directory in THIS bundle contains the source archives, not just
+  links or promises. Extract a .crate with a standard tar/gzip reader; extract
+  the nucleo .tar.gz likewise. No account, payment, compiler or network is needed
+  to obtain the provided source. manifest.json identifies every archive, exact
+  size/SHA-256, origin URL, component revision and license path/hash. Upstream
+  URLs are supplementary provenance; access does not depend on those URLs
+  continuing to be available. The bundle tool makes no source modifications.
+
+This does not require publication or licensing of all Agent Platform under MPL.
+It does not constitute a complete notice bundle for other Rust/native/resource
+licenses. Before any Codex binary distribution, reconcile this candidate set
+with the actual target graph, include any additional covered source and provide
+the completed matching source bundle with the binary to every recipient.
+Do not present this audit notice as completed product-release clearance.

@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LOCK_SHA256 = "7d6e97f31d1d41d2676fba508740059d4b3af653c52e894b0eca2793d74c28dc"
+LOCK_SHA256 = "c62fc5b596f29a6a7640fc3912e51de3bb18ca866b0a245c621459ca8663710a"
 CHUNK = 128 * 1024
 MAX_ARCHIVE = 122_000_000
 MAX_BINARY = 320_000_000
@@ -73,6 +73,15 @@ def read_lock():
         report = stream.read(131_073)
     if hashlib.sha256(report).hexdigest() != pin["license"]["followup_report_sha256"]:
         raise Blocked("license_evidence_changed")
+    for filename, key, limit in (
+        ("resolution-attempts.json", "resolution_attempts_sha256", 32_768),
+        ("mpl-source-candidates.json", "mpl_source_candidates_sha256", 32_768),
+        ("MPL-SOURCE-NOTICE.txt", "mpl_source_notice_sha256", 8192),
+    ):
+        with regular(ROOT / filename, limit) as stream:
+            data = stream.read(limit + 1)
+        if hashlib.sha256(data).hexdigest() != pin["license"][key]:
+            raise Blocked("license_evidence_changed")
     return pin
 
 

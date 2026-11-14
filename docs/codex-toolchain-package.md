@@ -1,5 +1,11 @@
 # PKG-03: pinned Codex inputs — BLOCKED before Debian distribution
 
+Current gate status: [third-pass Cargo resolution attempts and MPL delivery](codex-license-gate-status.md).
+The graph was attempted with verified Rust/Cargo in isolation and stopped on
+fixture storage limits. Exact sources/recipient information for 11 MPL candidates
+are now supplied; a complete target/binary inventory and license manifest remain
+unverified. No working .deb exists.
+
 Follow-up: [target/feature, cargo-deny and native-license investigation](codex-license-investigation.md)
 narrows this first-pass evidence. It corrects the V8 attribution concern,
 distinguishes legal conditions from project assurance and identifies the

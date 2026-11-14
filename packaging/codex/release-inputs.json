@@ -32,13 +32,21 @@
     "decision_scope": "PROJECT_DISTRIBUTION_ACCEPTANCE",
     "followup_report": "license-investigation.json",
     "followup_report_sha256": "6779ee1507619f786b452aba2c7ade6719e804677060a259ef87cda520f72d9d",
+    "latest_gate_status": {
+      "mpl_sources": "PARTIAL_11_CANDIDATES_SOURCE_VERIFIED_FULL_SET_UNPROVEN",
+      "redistribution_manifest": "BLOCKED_NO_COMPLETE_SELECTED_COMPONENT_SET",
+      "target_cli_graph": "BLOCKED_CARGO_METADATA_DID_NOT_COMPLETE"
+    },
     "missing_sbom_is_legal_prohibition": false,
+    "mpl_source_candidates_sha256": "7dc92081119f142918ab9c8b02ef512c2fd3505e5f2fd4f4d95b8d8ad6ec50f5",
+    "mpl_source_notice_sha256": "44904f89ec1bddf1a40d8c30d54e0910b60759eb95141e3d36032fb700794e25",
     "redistribution_allowed": false,
     "remaining_evidence": [
       "target_feature_and_native_component_inventory",
       "complete_selected_component_notice_payload",
       "mpl_covered_source_availability_and_recipient_notice"
     ],
+    "resolution_attempts_sha256": "dc24af5ae4eba2018bae2a2f6337a55be6a3754b7bf1db939c2df672b1c63ad3",
     "third_party_audit": "INCOMPLETE",
     "upstream": "Apache-2.0"
   },

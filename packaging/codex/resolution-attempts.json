@@ -1,0 +1,90 @@
+{
+  "actual_binary_link_inputs": "NOT_OBSERVED",
+  "attempts": [
+    {
+      "cache_disposition": "REMOVE_ONLY_THIS_ATTEMPT_NEW_CACHE_AFTER_PROCESS_EXIT",
+      "error_code": "CARGO_GIT_SUBMODULE_ICU_ENOSPC",
+      "fresh_cache_bytes": 481608598,
+      "fresh_cache_files": 5464,
+      "metadata_exit": 101,
+      "metadata_stdout_bytes": 0,
+      "raw_stderr_committed": false,
+      "stderr_bytes": 1630,
+      "stderr_sha256": "7e0f6f5cea3bb5f6606f266b6ecc3a04dd2bdc31d33dd240829ea49da00066c5"
+    },
+    {
+      "cache_bytes": 870178075,
+      "elapsed_seconds": 60,
+      "exit": -9,
+      "raw_stderr_committed": false,
+      "stderr_bytes": 1052,
+      "stderr_sha256": "4c67451d73b2caa7dfb607a09d77ecda807d0875441ffd3cd545f23818cf70f5",
+      "stdout_bytes": 0,
+      "supervisor_stop": "LOCAL_FIXTURE_STORAGE_BUDGET"
+    }
+  ],
+  "command": [
+    "cargo",
+    "metadata",
+    "--locked",
+    "--format-version",
+    "1",
+    "--filter-platform",
+    "x86_64-unknown-linux-musl"
+  ],
+  "fixture_filesystem_bytes": 3109699584,
+  "gates": {
+    "mpl_sources": "PARTIAL_11_CANDIDATES_SOURCE_VERIFIED_FULL_SET_UNPROVEN",
+    "redistribution_manifest": "BLOCKED_NO_COMPLETE_SELECTED_COMPONENT_SET",
+    "target_cli_graph": "BLOCKED_CARGO_METADATA_DID_NOT_COMPLETE"
+  },
+  "github_pr": 115,
+  "isolation": {
+    "build_scripts_executed": false,
+    "cargo_home": "NEW_FIXTURE_CACHE_PER_ATTEMPT",
+    "credentials_available": false,
+    "home": "EMPTY_FIXTURE",
+    "installer_executed": false,
+    "namespaces": true,
+    "network": "PUBLIC_SOURCE_ACQUISITION_ONLY",
+    "source": "READ_ONLY"
+  },
+  "mpl_candidate_source_bundle": {
+    "components": 11,
+    "filename": "pkg-03-issue-110-mpl-source-candidates.tar.xz",
+    "full_binary_set_verified": false,
+    "rebuild_equal": true,
+    "sha256": "86e71f9effaab2b83921d59b7591ac3f276528e9526524e1c1ea469ca71ab4f1",
+    "size": 568276,
+    "source_artifacts": 10
+  },
+  "observed_github_head": "3e06cfd9d544fc0ae9e5ae9179592d7b6c5777c7",
+  "package_built": false,
+  "parent": "3fe266fe59f1d3f47cc0463613dfa7afdcd1e789",
+  "redistribution_allowed": false,
+  "runtime_authorized": false,
+  "schema": "AP-CODEX-RESOLUTION-ATTEMPTS/1",
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "source_file_bytes": 97140378,
+  "source_git_blob_files_verified": 9732,
+  "status": "BLOCKED",
+  "toolchain": {
+    "date": "2026-04-16",
+    "manifest_sha256": "821ff14e4c4a1cbe1e8915f35aff0a3fbbdf8d293ad48ab8f31e3b0440c581f9",
+    "packages": {
+      "cargo": {
+        "xz_hash": "e74edd2cf7d0f1f1383b4f00eb90c843750bc489e2ccf7214e6476678a907425",
+        "xz_url": "https://static.rust-lang.org/dist/2026-04-16/cargo-1.95.0-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      "rust-std": {
+        "xz_hash": "047ea7098803d3500fa1072e9cee5392697e21525559e4458128a2bf874aa382",
+        "xz_url": "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      "rustc": {
+        "xz_hash": "8426a3d170a5879f5682f5fbdd024a1779b3951e7baba685af2d6dc32a6dfc15",
+        "xz_url": "https://static.rust-lang.org/dist/2026-04-16/rustc-1.95.0-x86_64-unknown-linux-gnu.tar.xz"
+      }
+    }
+  },
+  "v8_cli_membership": "NOT_INFERRED_FROM_WORKSPACE_FETCH"
+}

@@ -1,5 +1,11 @@
 # PKG-03 second pass: target graph, cargo-deny and redistribution obligations
 
+Third pass: [actual Cargo attempts and supplied MPL source candidates](codex-license-gate-status.md)
+records real toolchain/source acquisition, two failed resource-bounded metadata
+attempts and a reproducible covered-source candidate bundle. The earlier statement
+that Cargo was unavailable describes this second-pass snapshot, not the latest
+state. No complete binary graph or distribution clearance is claimed.
+
 2026-11-14, continuation of local `3e082c846198ba78197b8260155e97056e3b28b9`.
 Same worktree/common repository/feature branch and clean tracked/untracked state
 were verified before editing. No history reset or replacement. Public #115 is
