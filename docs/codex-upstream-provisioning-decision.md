@@ -1,5 +1,8 @@
 # AP-PKG/2: verified upstream Codex CLI provisioning, no binary redistribution
 
+Source implementation and test contract: [PKG-03R provisioner](codex-upstream-provisioner.md).
+The tool remains source-only; P0 and host/runtime authorization are unchanged.
+
 **Decision:** 2026-11-14, maintainer-approved architecture amendment to [ADR 007](debian-role-package-architecture.md).
 **Status:** DESIGN_ONLY / SOURCE_ONLY / HOST_NOT_RUN / LIVE_NO_GO.
 **Implementation tracker:** [PKG-03R #116](https://github.com/TechTradeExpress/Agent-Platform/issues/116).
