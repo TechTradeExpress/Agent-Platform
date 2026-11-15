@@ -23,8 +23,15 @@ def load(path="packaging/worker-provisioning/worker_doctor.py"):
 
 
 @pytest.fixture
-def doctor():
-    return load()
+def doctor(monkeypatch):
+    module = load()
+
+    def absent_network(*_args):
+        raise FileNotFoundError
+
+    # Existing tests model an unconfigured install; never inspect the host.
+    monkeypatch.setattr(module, "network_read", absent_network)
+    return module
 
 
 class GoodObservations:
@@ -571,7 +578,9 @@ def test_configured_bpf_policy_is_still_not_attachment_evidence(doctor, monkeypa
             "SocketBindDeny=any\nRestrictAddressFamilies=AF_INET\n"
         ),
     )
-    assert doctor.Observer().bpf() == ("NOT_RUN", "bpf_attachment_evidence_missing")
+    # IP syntax alone, without root operator approval, is no longer accepted.
+    with pytest.raises(doctor.Blocked, match="bpf_egress_policy_missing"):
+        doctor.Observer().bpf()
 
 
 @pytest.mark.parametrize(
@@ -672,11 +681,14 @@ def unit_response(argv, overrides=None):
     )
     values.update(
         LoadState="loaded",
+        NeedDaemonReload="no",
         ActiveState="inactive",
         UnitFileState="static",
         DropInPaths="",
         FragmentPath="/usr/lib/systemd/system/" + name + ".service",
     )
+    values["IPAddressDeny"] = "0.0.0.0/0 ::/0"
+    values["IPAddressAllow"] = ""
     values["MemoryMax"] = str(int(values["MemoryMax"].removesuffix("M")) * 1024**2)
     values["CPUQuotaPerSecUSec"] = "1s"
     values["LimitCORESoft"] = values["LimitCORE"]
