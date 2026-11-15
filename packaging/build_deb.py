@@ -266,7 +266,9 @@ if sys.argv[1:] == ["--version"]:
                 put(stage, "usr/bin/" + command, wrapper.encode(), 0o755)
                 operator_help = (
                     "Explicit root-only provision and codex install/rollback/recover\n"
-                    "require --approve. See worker-provisioning.md."
+                    "require --approve. Bare doctor is read-only;\n"
+                    "doctor --issue remains "
+                    "quarantined at exit 13. See worker-doctor.md."
                     if p1
                     else "No provisioning commands are enabled in P0."
                 )
@@ -356,10 +358,20 @@ Display command help.
                     conffiles.append("/etc/apparmor.d/" + name)
                 for name in ("job.example.json", "receipts.example.json"):
                     copy("packaging/worker-publisher/" + name, doc + "examples/" + name)
+                for document in (
+                    "worker-doctor.md",
+                    "worker-doctor.schema.json",
+                    "worker-pilot-checklist.md",
+                ):
+                    copy("docs/" + document, doc + document)
                 provision = private + "provisioning/"
                 copy(
                     "packaging/worker-provisioning/provision.py",
                     provision + "provision.py",
+                )
+                copy(
+                    "packaging/worker-provisioning/worker_doctor.py",
+                    provision + "worker_doctor.py",
                 )
                 copy("provisioning/codex_upstream.py", provision + "codex_upstream.py")
                 copy(
@@ -473,7 +485,11 @@ Display command help.
             }
             if p1:
                 provenance["publisher_modules"] = sorted(PUBLISHER_MODULES)
-                provenance["operator_tools"] = ["provision.py", "codex_upstream.py"]
+                provenance["operator_tools"] = [
+                    "provision.py",
+                    "codex_upstream.py",
+                    "worker_doctor.py",
+                ]
             put(stage, doc + "build.json", encoded(provenance))
             manifest_path = doc + "manifest.json"
             inventory = [

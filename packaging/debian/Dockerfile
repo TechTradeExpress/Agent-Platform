@@ -29,6 +29,14 @@ RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbi
     groupadd --gid 2000 agentdev && useradd --uid 2000 --gid agentdev --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin agentdev && \
     printf '%s\n' "$P1_CASE" > /ap-worker-p1-case && \
     apt-get --no-install-recommends -y install \
-    python3 python3-cryptography git ca-certificates systemd apparmor apparmor-utils acl passwd
+    python3 python3-cryptography git gh ca-certificates systemd apparmor apparmor-utils acl passwd
 COPY worker_p1_lifecycle.py /opt/ap-tests/
 ENTRYPOINT ["/usr/bin/python3", "-IB", "/opt/ap-tests/worker_p1_lifecycle.py"]
+
+# Separate Codex installer fixture, with synthetic pins/ELFs and loopback HTTP.
+# No project .deb, official executable, login, host socket or lifecycle network.
+FROM base AS codex-pkg05
+RUN apt-get update && apt-get --no-install-recommends -y install \
+    python3 python3-pytest ca-certificates
+COPY codex_pkg05_lifecycle.py /usr/share/ap-tests/
+ENTRYPOINT ["/usr/bin/python3", "-IB", "/usr/share/ap-tests/codex_pkg05_lifecycle.py"]

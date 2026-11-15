@@ -50,6 +50,7 @@ def main():
             "#!/bin/sh\nprintf forbidden >> /tmp/forbidden-p1-call\nexit 99\n"
         )
         path.chmod(0o755)
+    control = "/packages/p1/agent-platform-control_0.1.0-5_amd64.deb"
     worker = "/packages/p1/agent-platform-worker_0.1.0-5_amd64.deb"
     newer = "/packages/p1-next/agent-platform-worker_0.1.0-6_amd64.deb"
     case = Path("/ap-worker-p1-case").read_text().strip()
@@ -98,7 +99,11 @@ def main():
         before is None or fingerprint(journal) == before
     )
     foreign.unlink()
-    call(["apt-get", "--no-install-recommends", "-y", "install", worker])
+    call(["apt-get", "--no-install-recommends", "-y", "install", control, worker])
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    assert diagnostic["installation"] == "INSTALLED", diagnostic["checks"]["package"]
+    assert diagnostic["status"] == "BLOCKED" and not diagnostic["launch_allowed"]
+    assert diagnostic["host_evidence"] == "HOST_NOT_RUN"
     if original is not None:
         assert pwd.getpwnam("ap-publisher") == original
     else:
@@ -130,6 +135,10 @@ def main():
         raise AssertionError("interruption missing")
     call(["agent-platform-worker", "provision", "--approve"], 13)
     call(["agent-platform-worker", "provision", "--approve", "--recover"])
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    assert diagnostic["checks"]["identities"]["state"] == "CONFIGURED"
+    assert diagnostic["checks"]["state"]["state"] == "CONFIGURED"
+    assert diagnostic["checks"]["continuity"]["state"] == "NOT_RUN"
     signer = pwd.getpwnam("ap-publisher-signer")
     publisher = pwd.getpwnam("ap-publisher")
     assert signer.pw_uid != publisher.pw_uid and signer.pw_gid != publisher.pw_gid
@@ -171,6 +180,24 @@ for path in sys.argv[1:]:
                 *paths,
             ]
         )
+    # The new doctor is also usable without reading protected journal/receipt data.
+    unprivileged = json.loads(
+        call(
+            [
+                "/usr/bin/setpriv",
+                "--reuid",
+                "2000",
+                "--regid",
+                "2000",
+                "--clear-groups",
+                "/usr/bin/agent-platform-worker",
+                "doctor",
+            ],
+            13,
+        )
+    )
+    assert unprivileged["checks"]["state"]["state"] == "NOT_RUN"
+    assert unprivileged["checks"]["state"]["reason"] == "observation_denied"
     if before is None:
         journal.write_text("UNKNOWN synthetic retained publication\n")
         before = fingerprint(journal)
@@ -218,6 +245,18 @@ for path in sys.argv[1:]:
     assert fingerprint(journal) == before and pwd.getpwnam("ap-publisher") == original
     assert pwd.getpwnam("ap-publisher-signer") == signer
     assert not marker.exists() and not Path("/usr/bin/codex").exists()
+    # Reinstall after purge must restore code but retain both identities/history.
+    call(["apt-get", "--no-install-recommends", "-y", "install", newer])
+    assert fingerprint(journal) == before and receipt.read_bytes() == previous
+    assert pwd.getpwnam("ap-publisher") == original
+    assert pwd.getpwnam("ap-publisher-signer") == signer
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    assert diagnostic["installation"] == "INSTALLED"
+    assert diagnostic["checks"]["state"]["state"] == "CONFIGURED"
+    assert not marker.exists()
+    assert "install ok installed" in call(
+        ["dpkg-query", "-W", "-f=${Status}", "agent-platform-control"]
+    )
     Path("/evidence/worker-p1-lifecycle-" + case + ".json").write_text(
         json.dumps(
             {
@@ -227,6 +266,9 @@ for path in sys.argv[1:]:
                 "no_activation": True,
                 "retained_unknown_history": True,
                 "uid_gid_separation": "PASS",
+                "doctor_read_only_blocked": True,
+                "reinstall_retains_state": True,
+                "two_role_coinstall": True,
                 "kernel_apparmor_bpf_boot": "NOT_RUN",
                 "real_credentials_and_runtime": "NOT_RUN",
             },

@@ -61,7 +61,7 @@ Changing a list requires a reviewed source change and new provenance.
 | Control P0 (#102) | `/usr/bin/agent-platform-control` delegates to `agent_platform.cli:main`; update help/program name only, preserve command syntax and pre-I/O exit-13 quarantine | `/usr/lib/agent-platform-control/agent_platform/`, exact C list below; no daemon entrypoint |
 | Worker P0 (#102) | `/usr/bin/agent-platform-worker`: new inert role inventory CLI, only `--help`, `--version`; syntactically valid `run`, `resume`, `doctor` return fixed blocked/exit 13 before inspection; no fallback. `/usr/bin/agent-platform-worker-native-artifact` delegates to `agent_platform.native_artifact:main` | `/usr/lib/agent-platform-worker/agent_platform/`, exact W list below; inventory dispatcher is a reviewed standalone wrapper, not the Control CLI |
 | Worker P1 (#111, conditional on #109) | `/usr/libexec/ap-worker-publisher`, `ap-worker-publisher-export`, `ap-worker-publisher-signer`, unchanged AP-WP/1 targets | `/usr/lib/ap-worker-publisher/agent_platform/`, exact P list below, empty `__init__.py`; preserve existing hard-coded root and isolated wrappers |
-| Worker diagnostic (#112) | `agent-platform-worker doctor`, a separately implemented read-only diagnostic, replaces only that role CLI's doctor refusal | `/usr/lib/agent-platform-worker/agent_platform/worker_doctor.py`, exact dependency closure must be added at #112 review; must not import existing `doctor.py` or enable execution |
+| Worker diagnostic (#112) | `agent-platform-worker doctor`, a separately implemented read-only diagnostic, replaces only that role CLI's doctor refusal | `/usr/lib/agent-platform-worker/provisioning/worker_doctor.py`, standalone standard-library diagnostic plus the two fixed installed read-only validation helpers from #111/#116; must not import existing `doctor.py` or enable execution |
 | External Codex (#116) | Explicit provisioning command fetches a pinned official upstream archive, validates SHA-256 and stages a managed local executable; no auto-login or native run | Not in dpkg-owned files, installed only after separate operator command and never in #102's inert package |
 
 P0 inventory wrapper and renamed manuals do not exist today. #102 supplies and
@@ -469,3 +469,8 @@ source-only into this private P1 tool path, with fixed CLI dispatch; no upstream
 binary enters dpkg. Configuration, authentication, policy attachment and
 activation remain separate. [Worker provisioning](worker-provisioning.md) gives
 exact ownership, interruption/recovery and remove/purge contracts and limitations.
+
+PKG-05 implementation: [read-only Worker doctor](worker-doctor.md) reports local
+installation/configuration independently; live evidence remains NOT_RUN and
+overall readiness BLOCKED. `doctor --issue` remains quarantined. This adds no
+Control module, CP-08 dependency or Publisher execution interface.

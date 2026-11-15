@@ -16,7 +16,9 @@ agent-platform-worker codex install --version 0.166.0 --approve --operator-path 
 
 Codex accepts the same explicit offline `--archive` and upgrade/rollback/recover
 contract as #116. No vendor binary or Codex APT dependency is supplied. Native
-run/resume/doctor remain exit 13. No command logs in or starts the Publisher.
+run/resume and legacy doctor --issue remain exit 13. Bare doctor is the separate
+[PKG-05 diagnostic](worker-doctor.md), also fail-closed at exit 13.
+No command logs in or starts the Publisher.
 
 The explicit root tool is the justified equivalent to sysusers/tmpfiles here:
 global boot-time processing of permissive declarations could adopt occupied

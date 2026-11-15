@@ -556,3 +556,95 @@ def test_account_creation_retains_post_creation_process_check(model):
     m, system, _, _ = model
     assert m.provision(system, initialize=True)["status"] == "PROVISIONED_NOT_ACTIVATED"
     assert system.checked_uids[-2:] == [{999, 998}, {999, 998}]
+
+
+@pytest.mark.parametrize("defect", [None, "acl", "pending", "receipt", "journal-mode"])
+def test_pkg05_reads_only_receipt_and_metadata_not_protected_history(
+    model, monkeypatch, defect
+):
+    from types import SimpleNamespace
+
+    m, system, parents, _ = model
+    seed(model)
+    m.provision(system)
+    d = load("pkg05_state", "packaging/worker-provisioning/worker_doctor.py")
+    observer = d.Observer()
+    observer.accounts = m.identities(system.accounts())
+    ledger = parents["/var/lib"] / "agent-platform-worker-provisioning"
+    receipt = ledger / "receipt.json"
+    value = json.loads(receipt.read_bytes())
+    # Symbolic unit ownership only, as in PKG-04 model: no host chown or UID proof.
+    value["paths"]["/etc/ap-publisher"].update(uid=0, gid=0)
+    if defect == "receipt":
+        value["paths"]["/var/lib/ap-publisher"]["inode"] += 1
+    receipt.write_bytes(m.encoded(value))
+    if defect == "pending":
+        (ledger / "intent.json").write_text("unknown retained intent")
+    if defect == "journal-mode":
+        (parents["/var/lib"] / "ap-publisher/journal").chmod(0o644)
+    before = files(model[3])
+
+    @contextlib.contextmanager
+    def mapped(path):
+        assert path in (
+            "/var/lib",
+            "/etc",
+            "/var/lib/agent-platform-worker-provisioning",
+        )
+        actual = ledger if path.endswith("provisioning") else parents[path]
+        fd = os.open(actual, os.O_RDONLY | os.O_DIRECTORY | d.FLAGS)
+        try:
+            yield fd
+        finally:
+            os.close(fd)
+
+    monkeypatch.setattr(d, "directory", mapped)
+    raw_meta = d.meta
+
+    def symbolic(fd, uid=0, gid=0, **kwargs):
+        value = raw_meta(fd, os.getuid(), os.getgid(), **kwargs)
+        fields = {
+            key: getattr(value, key)
+            for key in (
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_uid",
+                "st_gid",
+                "st_size",
+                "st_mtime_ns",
+                "st_ctime_ns",
+            )
+        }
+        fields.update(st_uid=uid, st_gid=gid)
+        return SimpleNamespace(**fields)
+
+    monkeypatch.setattr(d, "meta", symbolic)
+
+    def receipt_only(path, limit=262144, mode=0o644):
+        assert path == "/var/lib/agent-platform-worker-provisioning/receipt.json"
+        with mapped("/var/lib/agent-platform-worker-provisioning") as fd:
+            return m.read(fd, "receipt.json", limit, mode)
+
+    monkeypatch.setattr(d, "read", receipt_only)
+    acl = "user::rwx\nuser:999:r-x\nuser:998:r-x\ngroup::r-x\nmask::r-x\nother::---\n"
+    monkeypatch.setattr(
+        d, "query", lambda _: "user::rwx\nother::rwx\n" if defect == "acl" else acl
+    )
+    journal_inodes = {
+        (parents["/var/lib"] / r / "journal").stat().st_ino for r in m.ROLES
+    }
+    original_read = os.read
+
+    def no_history(fd, size):
+        assert os.fstat(fd).st_ino not in journal_inodes, "protected history read"
+        return original_read(fd, size)
+
+    monkeypatch.setattr(os, "read", no_history)
+    if defect is None:
+        assert observer.state() == ("CONFIGURED", "verified_state_metadata")
+    else:
+        with pytest.raises(d.Blocked):
+            observer.state()
+    assert files(model[3]) == before
