@@ -420,3 +420,43 @@ def test_role_import_cannot_pull_source_only_cp08(tmp_path, role, module):
     )
     with pytest.raises(ValueError, match="review_role_import_closure_" + role):
         builder.validate(source)
+
+
+@pytest.mark.parametrize("revision", [3, 4, 5, 6])
+def test_cp08_excluded_from_every_role_phase_archive(tmp_path, revision):
+    artifacts = builder.build(
+        ROOT, tmp_path / "packages", revision, "a" * 40, 1700000000
+    )
+    name = "control_plane_local_runner"
+    assert name in builder.SOURCE_ONLY
+    assert name not in builder.PUBLISHER_MODULES
+    for role, artifact in artifacts.items():
+        files = payload(artifact)
+        assert not any(name in path for path in files)
+        doc = "usr/share/doc/agent-platform-" + role + "/"
+        manifest = json.loads(files[doc + "manifest.json"][1])
+        provenance = json.loads(files[doc + "build.json"][1])
+        assert name not in json.dumps(manifest, sort_keys=True)
+        assert name not in json.dumps(provenance, sort_keys=True)
+        assert provenance["modules"] == sorted(builder.MODULES[role])
+        if role == "worker" and revision >= 5:
+            assert provenance["publisher_modules"] == sorted(builder.PUBLISHER_MODULES)
+
+
+def test_p1_publisher_import_cannot_pull_source_only_cp08(tmp_path):
+    import shutil
+
+    source = tmp_path / "source"
+    shutil.copytree(ROOT / "src", source / "src")
+    for name in ("pyproject.toml", "debian/control", "debian/changelog"):
+        target = source / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / name).read_bytes())
+    target = source / "src/agent_platform/worker_publisher.py"
+    target.write_text(
+        target.read_text() + "\nfrom agent_platform import control_plane_local_runner\n"
+    )
+    with pytest.raises(ValueError, match="review_role_import_closure_publisher"):
+        builder.validate(source, 5)
+    with pytest.raises(ValueError, match="review_role_import_closure_publisher"):
+        builder.validate(source, 6)

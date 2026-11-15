@@ -150,7 +150,7 @@ invalidate #109's code hashes, profile or startup admission.
 | Control P0 | Commands above; `/usr/lib/agent-platform-control/agent_platform/{C}.py`; private `agent_platform-0.1.0.dist-info/{METADATA,INSTALLER,entry_points.txt}`; `/usr/lib/agent-platform-control/migrate-example` in synthetic N+1 only; `/etc/agent-platform-control/package.conf` sole conffile |
 | Worker P0 | Commands above; `/usr/lib/agent-platform-worker/agent_platform/{W}.py`; corresponding private dist-info; `/usr/lib/agent-platform-worker/migrate-example` in synthetic N+1 only; `/etc/agent-platform-worker/package.conf` sole conffile |
 | Each role P0 | `/usr/share/doc/<package>/{copyright,changelog.Debian.gz,README.Debian,build.json,manifest.json,examples/schema-v1.json}`; `/usr/share/man/man1/<owned-command>.1.gz`; no other files |
-| Worker P1 additions | P code and three libexecs above; `/usr/lib/systemd/system/ap-worker-publisher{,-signer}.service`; `/etc/apparmor.d/ap-worker-publisher{,-signer}` (conffiles); `/usr/lib/sysusers.d/agent-platform-worker.conf`; `/usr/lib/tmpfiles.d/agent-platform-worker.conf`; reviewed nonsecret examples under its own doc directory |
+| Worker P1 additions | P code and three libexecs above; `/usr/lib/systemd/system/ap-worker-publisher{,-signer}.service`; `/etc/apparmor.d/ap-worker-publisher{,-signer}` (conffiles); explicit root-only `/usr/lib/agent-platform-worker/provisioning/{provision.py,codex_upstream.py,codex-release-lock.json,evidence/<verified-proof-files>}`; reviewed nonsecret job/receipt examples and worker-provisioning.md under its own doc directory |
 | External Codex #116 | **No dpkg file ownership or .deb package.** A separately invoked, reviewed installer manages versioned files in a worker-only root-owned tool location and an optional conflict-checked command link; no shared library or service ownership |
 
 Manifests enumerate every installed file, mode, owner and digest; generated
@@ -213,7 +213,7 @@ architecture expansion needs explicit tests. Exact proposed direct dependencies:
 | --- | --- |
 | Control P0 | `python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, gh` |
 | Worker P0 | `python3 (>= 3.12)` (no Codex dependency; inert help/version/blocked paths function without any Codex present) |
-| Worker P1 | P0 plus `python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), apparmor (>= 4.1), apparmor-utils, acl` |
+| Worker P1 | P0 plus `python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), apparmor (>= 4.1), apparmor-utils, acl, passwd` |
 | External Codex #116 | No APT dependency; controlled installer checks platform/ABI and versioned upstream archive against reviewed release lock before activation. Any required system libraries must be verified on the target host or provisioned through separately reviewed Debian dependencies. |
 
 #102 builds two inert co-installable packages independently of any Codex
@@ -452,3 +452,20 @@ does not isolate same-UID code. Preserve [CP-01](control-plane-host-contract.md)
 Missing evidence is BLOCKED/HOST_NOT_RUN, never configuration-driven GO.
 No package version, receipt digest, doctor's READY or successful pilot can release
 `LIVE_NO_GO`, Gate #73 or the public/native execution barriers.
+
+## PKG-04 P1 implementation clarification (#111)
+
+P0 revisions -3/-4 and their closed C/W manifests remain unchanged. Synthetic
+-5/-6 deliberately add the P1 manifest above using the existing builder. The
+justified equivalent to automatic sysusers/tmpfiles is the explicit
+`agent-platform-worker provision --approve` operator tool: it validates the
+entire account/path plan before durable intent and fixed Debian account tools.
+No sysusers/tmpfiles declarations or configure/remove hooks are installed,
+avoiding implicit boot-time adoption of occupied identities/paths. `passwd` is
+the additional Debian dependency for groupadd/useradd and locked-status checks.
+Only read-only collision/inactivity preinst checks run at package installation.
+The versioned #116 source/lock/public evidence is deliberately promoted from
+source-only into this private P1 tool path, with fixed CLI dispatch; no upstream
+binary enters dpkg. Configuration, authentication, policy attachment and
+activation remain separate. [Worker provisioning](worker-provisioning.md) gives
+exact ownership, interruption/recovery and remove/purge contracts and limitations.

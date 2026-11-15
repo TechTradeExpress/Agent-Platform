@@ -18,6 +18,7 @@ for role in control worker; do
     done
 done
 lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1
+lintian --allow-root --fail-on error /packages/p1/*.deb /packages/p1-next/*.deb > /evidence/p1-lintian.txt 2>&1
 apt-get --no-install-recommends -y install /packages/next/*.deb
 autopkgtest --no-built-binaries -o /evidence/autopkgtest /packages/next/agent-platform-control_0.1.0-4_amd64.deb /packages/next/agent-platform-worker_0.1.0-4_amd64.deb /source -- null
 test -s /evidence/autopkgtest/summary

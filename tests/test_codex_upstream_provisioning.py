@@ -501,10 +501,22 @@ def test_production_lock_and_public_signature_evidence_bound_to_expected_bytes()
     )
 
 
-def test_p0_closed_manifest_and_inert_worker_are_unchanged():
-    # The source provisioner must never silently enter either role payload.
+def test_p0_closed_manifest_and_inert_worker_are_unchanged(tmp_path):
+    # The source provisioner must never silently enter either P0 role payload.
     assert not list((ROOT / "src/agent_platform").glob("*provision*"))
-    assert "codex_upstream" not in (ROOT / "packaging/build_deb.py").read_text()
+    spec = importlib.util.spec_from_file_location(
+        "p0_builder", ROOT / "packaging/build_deb.py"
+    )
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    packages = builder.build(ROOT, tmp_path / "p0", 4, "a" * 40, 1700000000)
+    import subprocess
+
+    for package in packages.values():
+        names = subprocess.check_output(
+            ["dpkg-deb", "--contents", str(package)], text=True
+        )
+        assert "codex_upstream" not in names and "/provisioning/" not in names
     assert '"codex"' not in (ROOT / "packaging/debian/worker_inventory.py").read_text()
 
 

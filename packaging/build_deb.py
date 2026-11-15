@@ -9,6 +9,7 @@ import io
 import json
 import os
 import re
+import shlex
 import stat
 import subprocess
 import sys
@@ -23,6 +24,16 @@ DEPENDENCIES = {
     "python3-cryptography (<< 51), git, gh",
     "worker": "python3 (>= 3.12)",
 }
+P1_DEPENDENCIES = (
+    "python3 (>= 3.12), python3-cryptography (>= 43.0.0), "
+    "python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), "
+    "apparmor (>= 4.1), apparmor-utils, acl, passwd"
+)
+PUBLISHER_MODULES = frozenset(
+    """worker_publisher worker_publish_artifact worker_publish_io
+    worker_publish_signer worker_publish_export""".split()
+)
+
 PYTHON_DEPENDENCIES = ["cryptography>=43.0.0,<51"]
 MODULES = {
     "control": frozenset(
@@ -78,7 +89,7 @@ def put(root, name, data, mode=0o644):
     dest.chmod(mode)
 
 
-def validate(source):
+def validate(source, revision=4):
     project = tomllib.loads(checked_file(source / "pyproject.toml").decode())["project"]
     if (
         project["version"] != "0.1.0"
@@ -93,7 +104,10 @@ def validate(source):
         name + ".py" for name in expected
     }:
         raise ValueError("review_module_classification")
-    for role, modules in MODULES.items():
+    closures = dict(MODULES)
+    if revision >= 5:
+        closures["publisher"] = PUBLISHER_MODULES
+    for role, modules in closures.items():
         for name in modules:
             tree = ast.parse(checked_file(directory / (name + ".py")))
             imports = set()
@@ -131,7 +145,8 @@ def validate(source):
         if (
             fields.get("Package") != "agent-platform-" + role
             or fields.get("Source") != "agent-platform"
-            or fields.get("Depends") != DEPENDENCIES[role]
+            or fields.get("Depends")
+            != ("@WORKER_DEPENDS@" if role == "worker" else DEPENDENCIES[role])
             or fields.get("Conflicts") != "agent-platform"
             or fields.get("Architecture") != "amd64"
             or fields.get("Version") != "@VERSION@"
@@ -141,10 +156,16 @@ def validate(source):
             )
         ):
             raise ValueError("review_debian_dependencies")
-        controls[role] = stanza + "\n"
+        controls[role] = (
+            stanza.replace(
+                "@WORKER_DEPENDS@",
+                P1_DEPENDENCIES if revision >= 5 else DEPENDENCIES["worker"],
+            )
+            + "\n"
+        )
     if re.findall(
         rb"^agent-platform \(([^)]+)\)", checked_file(source / "debian/changelog"), re.M
-    ) != [b"0.1.0-4", b"0.1.0-3", b"0.1.0-2", b"0.1.0-1"]:
+    ) != [b"0.1.0-6", b"0.1.0-5", b"0.1.0-4", b"0.1.0-3", b"0.1.0-2", b"0.1.0-1"]:
         raise ValueError("review_changelog_version_mapping")
     return controls
 
@@ -154,11 +175,11 @@ def build(source, output, revision, commit, epoch):
 
     Public CLI exports an exact clean committed tree before calling this API.
     """
-    if revision not in (3, 4) or not re.fullmatch("[0-9a-f]{40}", commit):
+    if revision not in (3, 4, 5, 6) or not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("unsupported_candidate_identity")
     if type(epoch) is not int or not 0 <= epoch <= 2**31 - 1:
         raise ValueError("unsupported_build_epoch")
-    controls = validate(source)
+    controls = validate(source, revision)
     version = f"0.1.0-{revision}"
     output.mkdir(parents=True, exist_ok=False)
     artifacts = {}
@@ -194,8 +215,11 @@ def build(source, output, revision, commit, epoch):
                     private + "agent_platform/" + name + ".py",
                 )
             metadata = private + "agent_platform-0.1.0.dist-info/"
+            p1 = role == "worker" and revision >= 5
             requires = (
-                "Requires-Dist: cryptography>=43.0.0,<51\n" if role == "control" else ""
+                "Requires-Dist: cryptography>=43.0.0,<51\n"
+                if role == "control" or p1
+                else ""
             )
             put(
                 stage,
@@ -219,7 +243,12 @@ if sys.argv[1:] == ["--version"]:
                 if entry is None:
                     # Standalone dispatcher is the wrapper itself, not a fifth W module.
                     wrapper = (
-                        prefix + copy("packaging/debian/worker_inventory.py").decode()
+                        prefix
+                        + copy(
+                            "packaging/worker-provisioning/worker_cli.py"
+                            if p1
+                            else "packaging/debian/worker_inventory.py"
+                        ).decode()
                     )
                 else:
                     module, function = entry.split(":")
@@ -235,6 +264,12 @@ if sys.argv[1:] == ["--version"]:
                     )
                     entries += f"{command} = {entry}\n"
                 put(stage, "usr/bin/" + command, wrapper.encode(), 0o755)
+                operator_help = (
+                    "Explicit root-only provision and codex install/rollback/recover\n"
+                    "require --approve. See worker-provisioning.md."
+                    if p1
+                    else "No provisioning commands are enabled in P0."
+                )
                 manual = f""".TH {command.upper()} 1 "2026-11-14" "Agent Platform 0.1.0"
 .SH NAME
 {command} \\- inert Agent Platform {role} candidate
@@ -243,7 +278,9 @@ if sys.argv[1:] == ["--version"]:
 .RI [ options ]
 .SH DESCRIPTION
 Use --help for syntax. CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY.
-No Codex is installed or executed. Native and legacy execution remain blocked.
+No installation-time Codex acquisition or execution.
+Native and legacy execution remain blocked.
+{operator_help}
 .SH OPTIONS
 .TP
 .B --version
@@ -258,7 +295,7 @@ Display command help.
                     gzip.compress(manual.encode(), mtime=0),
                 )
             put(stage, metadata + "entry_points.txt", entries.encode())
-            if revision == 4:
+            if revision in (4, 5, 6):
                 copy(
                     "packaging/debian/migrate_example.py",
                     private + "migrate-example",
@@ -269,7 +306,7 @@ Display command help.
                 "etc/" + package + "/package.conf",
                 (
                     "# Inert inventory, NOT runtime authorization.\n"
-                    f"version={version}\npackage_schema={revision - 2}\n"
+                    f"version={version}\npackage_schema={1 if revision == 3 else 2}\n"
                     "execution=blocked\n"
                 ).encode(),
             )
@@ -287,20 +324,156 @@ Display command help.
                 b'{"format":"AP-PKG-SYNTHETIC","schema":1,"label":"offline demo"}\n',
             )
             copy("docs/debian-package.md", doc + "README.Debian")
+            conffiles = [f"/etc/{package}/package.conf"]
+            preinst_data = None
+            if p1:
+                publisher_root = "usr/lib/ap-worker-publisher/agent_platform/"
+                put(stage, publisher_root + "__init__.py", b"")
+                for name in sorted(PUBLISHER_MODULES):
+                    copy(
+                        "src/agent_platform/" + name + ".py",
+                        publisher_root + name + ".py",
+                    )
+                for name in (
+                    "ap-worker-publisher",
+                    "ap-worker-publisher-export",
+                    "ap-worker-publisher-signer",
+                ):
+                    copy(
+                        "packaging/worker-publisher/" + name,
+                        "usr/libexec/" + name,
+                        0o755,
+                    )
+                for name in ("ap-worker-publisher", "ap-worker-publisher-signer"):
+                    copy(
+                        "packaging/worker-publisher/" + name + ".service",
+                        "usr/lib/systemd/system/" + name + ".service",
+                    )
+                    copy(
+                        "packaging/worker-publisher/" + name + ".apparmor",
+                        "etc/apparmor.d/" + name,
+                    )
+                    conffiles.append("/etc/apparmor.d/" + name)
+                for name in ("job.example.json", "receipts.example.json"):
+                    copy("packaging/worker-publisher/" + name, doc + "examples/" + name)
+                provision = private + "provisioning/"
+                copy(
+                    "packaging/worker-provisioning/provision.py",
+                    provision + "provision.py",
+                )
+                copy("provisioning/codex_upstream.py", provision + "codex_upstream.py")
+                copy(
+                    "provisioning/codex-release-lock.json",
+                    provision + "codex-release-lock.json",
+                )
+                release = json.loads(
+                    checked_file(source / "provisioning/codex-release-lock.json")
+                )
+                code = ast.parse(
+                    checked_file(source / "provisioning/codex_upstream.py")
+                )
+                lock_digest = next(
+                    ast.literal_eval(n.value)
+                    for n in code.body
+                    if isinstance(n, ast.Assign)
+                    and any(
+                        isinstance(t, ast.Name) and t.id == "LOCK_SHA256"
+                        for t in n.targets
+                    )
+                )
+                if (
+                    hashlib.sha256(
+                        checked_file(source / "provisioning/codex-release-lock.json")
+                    ).hexdigest()
+                    != lock_digest
+                ):
+                    raise ValueError("review_codex_release_lock")
+                evidence = set()
+                for pin in release["releases"]:
+                    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pin["version"]):
+                        raise ValueError("review_codex_version")
+                    path = pin["provenance"]["evidence"]
+                    if path != f"evidence/codex-{pin['version']}-provenance.json":
+                        raise ValueError("review_provisioning_evidence")
+                    proof = json.loads(checked_file(source / "provisioning" / path))
+                    if (
+                        not re.fullmatch("[0-9a-f]{64}", proof["trusted_root_sha256"])
+                        or hashlib.sha256(
+                            checked_file(source / "provisioning" / path)
+                        ).hexdigest()
+                        != pin["provenance"]["evidence_sha256"]
+                    ):
+                        raise ValueError("review_provisioning_evidence")
+                    evidence.update(
+                        (
+                            path,
+                            f"evidence/codex-{pin['version']}.sigstore",
+                            "evidence/sigstore-trusted-root-"
+                            + proof["trusted_root_sha256"]
+                            + ".json",
+                        )
+                    )
+                for path in sorted(evidence):
+                    copy("provisioning/" + path, provision + path)
+                copy("docs/worker-provisioning.md", doc + "worker-provisioning.md")
+                # Pure pre-unpack collision guard; no configure/remove service hooks.
+                preinst = copy("packaging/worker-provisioning/preinst")
+                owned = sorted(
+                    "/" + str(p.relative_to(stage))
+                    for p in stage.rglob("*")
+                    if p.is_file()
+                    and str(p.relative_to(stage)).startswith(
+                        (
+                            "usr/lib/ap-worker-publisher/",
+                            "usr/libexec/ap-worker-publisher",
+                            "usr/lib/agent-platform-worker/provisioning/",
+                            "usr/lib/systemd/system/ap-worker-publisher",
+                            "etc/apparmor.d/ap-worker-publisher",
+                        )
+                    )
+                )
+                closed = set()
+                for item in owned:
+                    if item.startswith(
+                        (
+                            "/usr/lib/ap-worker-publisher/",
+                            "/usr/lib/agent-platform-worker/provisioning/",
+                        )
+                    ):
+                        closed.add(item)
+                        for parent in Path(item).parents:
+                            text = str(parent)
+                            if text.startswith(
+                                (
+                                    "/usr/lib/ap-worker-publisher",
+                                    "/usr/lib/agent-platform-worker/provisioning",
+                                )
+                            ):
+                                closed.add(text)
+                preinst_data = preinst.replace(
+                    b"@OWNED_PATHS@", "\n".join(owned).encode()
+                ).replace(
+                    b"@CLOSED_ROOT_ENTRIES@",
+                    " | ".join(shlex.quote(x) for x in sorted(closed)).encode(),
+                )
+
             provenance = {
                 "schema": 2,
                 "package": package,
-                "phase": "P0",
+                "phase": "P1_INSTALL_INERT" if p1 else "P0",
                 "status": "CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY",
                 "application_version": "0.1.0",
                 "debian_version": version,
                 "source_commit": commit,
                 "source_date_epoch": epoch,
                 "modules": sorted(MODULES[role]),
-                "dependencies": DEPENDENCIES[role],
+                "dependencies": P1_DEPENDENCIES if p1 else DEPENDENCIES[role],
                 "inputs": inputs,
                 "synthetic_baseline": revision == 3,
             }
+            if p1:
+                provenance["publisher_modules"] = sorted(PUBLISHER_MODULES)
+                provenance["operator_tools"] = ["provision.py", "codex_upstream.py"]
             put(stage, doc + "build.json", encoded(provenance))
             manifest_path = doc + "manifest.json"
             inventory = [
@@ -332,6 +505,8 @@ Display command help.
                 ),
             )
             size = sum(p.stat().st_size for p in stage.rglob("*") if p.is_file())
+            if preinst_data is not None:
+                put(stage, "DEBIAN/preinst", preinst_data, 0o755)
             put(
                 stage,
                 "DEBIAN/control",
@@ -340,7 +515,7 @@ Display command help.
                     + f"Installed-Size: {(size + 1023) // 1024}\n"
                 ).encode(),
             )
-            put(stage, "DEBIAN/conffiles", f"/etc/{package}/package.conf\n".encode())
+            put(stage, "DEBIAN/conffiles", ("\n".join(conffiles) + "\n").encode())
             sums = [
                 hashlib.md5(p.read_bytes()).hexdigest()
                 + "  "
@@ -409,7 +584,7 @@ Display command help.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--revision", type=int, choices=(3, 4), default=4)
+    parser.add_argument("--revision", type=int, choices=(3, 4, 5, 6), default=6)
     parser.add_argument(
         "--source-commit", default="HEAD", help="Exact committed source (default HEAD)"
     )
