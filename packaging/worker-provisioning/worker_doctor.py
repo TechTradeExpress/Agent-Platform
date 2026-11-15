@@ -25,6 +25,11 @@ BAD_ATTRS = {
     "system.nfs4_acl",
     "security.capability",
 }
+NETWORK_APPROVAL = "/etc/agent-platform-worker/publisher-network.json"
+NETWORK_DROPIN = (
+    "/etc/systemd/system/ap-worker-publisher.service.d/50-agent-platform-network.conf"
+)
+NETWORK_JOB = "/etc/ap-publisher/job.json"
 FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
 STATES = frozenset(
     ("INSTALLED", "CONFIGURED", "READY_FOR_SUPERVISED_PUBLISHING", "BLOCKED", "NOT_RUN")
@@ -44,6 +49,8 @@ config_acl_invalid unit_missing unit_constraints_rejected profiles_not_enforcing
 profile_attachment_evidence_missing bpf_attachment_evidence_missing
 process_isolation_evidence_missing independent_continuity_evidence_missing
 bpf_interface_missing bpf_egress_policy_missing
+network_approval_invalid network_approval_expired network_binding_mismatch
+network_observation_changed network_verification_required
 app_identity_not_authenticated operator_authorization_not_observed
 account_lock_not_observed diagnostic_timeout""".split()
 )
@@ -162,6 +169,85 @@ def read(path, limit=262144, mode=0o644):
             os.close(file)
 
 
+def network_read(path, mode, accounts=None):
+    """Bounded fixed nonsecret inputs, with namespace/metadata revalidation.
+
+    The job's existing explicit read ACL is allowed only for validated service
+    identities; this is not a general ACL exception or a caller-selected path.
+    """
+    need(
+        path in (NETWORK_APPROVAL, NETWORK_DROPIN, NETWORK_JOB, "/etc/machine-id"),
+        "network_approval_invalid",
+    )
+    is_job = path == NETWORK_JOB
+    if is_job:
+        need(accounts is not None, "network_verification_required")
+    chain = []
+    with contextlib.ExitStack() as stack:
+        parent = os.open("/", FLAGS | os.O_DIRECTORY)
+        stack.callback(os.close, parent)
+        before = meta(parent, directory=True)
+        chain.append((parent, before, None, None, False, None, True))
+        parts = path.split("/")[1:]
+        for index, part in enumerate(parts):
+            folder = index < len(parts) - 1
+            acl = is_job and (index == len(parts) - 1 or part == "ap-publisher")
+            fd = os.open(part, FLAGS | (os.O_DIRECTORY if folder else 0), dir_fd=parent)
+            stack.callback(os.close, fd)
+            exact = (0o750 if acl else None) if folder else mode
+            if folder and path == NETWORK_DROPIN and part.endswith(".service.d"):
+                exact = 0o755
+            before = meta(fd, mode=exact, directory=folder, acl=acl)
+            if folder and path == NETWORK_DROPIN and part.endswith(".service.d"):
+                need(
+                    set(os.listdir(fd)) == {"50-agent-platform-network.conf"},
+                    "network_approval_invalid",
+                )
+            chain.append((fd, before, parent, part, acl, exact, folder))
+            if acl:
+                name = "/" + "/".join(parts[: index + 1])
+                observed = query(
+                    [
+                        "/usr/bin/getfacl",
+                        "--absolute-names",
+                        "--numeric",
+                        "--omit-header",
+                        name,
+                    ]
+                ).split()
+                rights = "r-x" if folder else "r--"
+                expected = {
+                    "user::" + ("rwx" if folder else "r--"),
+                    "group::" + rights,
+                    "mask::" + rights,
+                    "other::---",
+                }
+                expected |= {f"user:{accounts[r]['uid']}:{rights}" for r in ROLES}
+                need(
+                    len(observed) == len(expected) and set(observed) == expected,
+                    "config_acl_invalid",
+                )
+            parent = fd
+        need(0 <= before.st_size <= 65536, "network_approval_invalid")
+        data = os.read(parent, 65537)
+        need(len(data) == before.st_size, "network_observation_changed")
+        for fd, before, parent, name, acl, exact, folder in reversed(chain):
+            after = meta(fd, mode=exact, directory=folder, acl=acl)
+            need(stamp(before) == stamp(after), "network_observation_changed")
+            if parent is not None:
+                need(
+                    stamp(before)
+                    == stamp(os.stat(name, dir_fd=parent, follow_symlinks=False)),
+                    "network_observation_changed",
+                )
+        return data, tuple(stamp(item[1]) for item in chain)
+
+
+def network_dropin(peer):
+    # A reset plus precisely one IPv4 /32. No other systemd syntax is accepted.
+    return ("[Service]\nIPAddressAllow=\nIPAddressAllow=" + peer + "/32\n").encode()
+
+
 def parse(data):
     def pairs(items):
         out = {}
@@ -233,10 +319,12 @@ class Observer:
         self.accounts = None
         self.artifacts = None
         self._codex_identity = None
+        self._network_verified = None
 
     def package(self):
         self.artifacts = None
         self._codex_identity = None
+        self._network_verified = None
         build = parse(read(DOC + "/build.json"))
         inventory = parse(read(DOC + "/manifest.json"))
         need(
@@ -560,9 +648,118 @@ class Observer:
             "inode": m.st_ino,
         }
 
+    def _network(self):
+        try:
+            raw, approval_identity = network_read(NETWORK_APPROVAL, 0o600)
+        except FileNotFoundError:
+            # No authorization must not silently ignore an unloaded local drop-in.
+            try:
+                network_read(NETWORK_DROPIN, 0o644)
+            except FileNotFoundError:
+                return None
+            raise Blocked("network_approval_invalid") from None
+        record = parse(raw)
+        need(
+            set(record)
+            == {
+                "schema",
+                "authority",
+                "machine_id_sha256",
+                "job_sha256",
+                "dropin_sha256",
+                "github_ipv4",
+                "peer_cert_sha256",
+                "issued_at",
+                "expires_at",
+            }
+            and record["schema"] == "AP-WORKER-NETWORK/1"
+            and record["authority"] == "root_operator_network_only",
+            "network_approval_invalid",
+        )
+        need(
+            raw
+            == (
+                json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+            ).encode(),
+            "network_approval_invalid",
+        )
+        for field in (
+            "machine_id_sha256",
+            "job_sha256",
+            "dropin_sha256",
+            "peer_cert_sha256",
+        ):
+            need(
+                type(record[field]) is str
+                and re.fullmatch("[0-9a-f]{64}", record[field]),
+                "network_approval_invalid",
+            )
+        need(type(record["github_ipv4"]) is str, "network_approval_invalid")
+        peer = ipaddress.IPv4Address(record["github_ipv4"])
+        need(
+            str(peer) == record["github_ipv4"]
+            and peer.is_global
+            and not peer.is_multicast,
+            "network_approval_invalid",
+        )
+        self._network_time(record)
+        machine, machine_identity = network_read("/etc/machine-id", None)
+        need(re.fullmatch(b"[0-9a-f]{32}\n", machine), "network_approval_invalid")
+        dropin, dropin_identity = network_read(NETWORK_DROPIN, 0o644)
+        need(
+            dropin == network_dropin(str(peer))
+            and hashlib.sha256(dropin).hexdigest() == record["dropin_sha256"]
+            and hashlib.sha256(machine).hexdigest() == record["machine_id_sha256"],
+            "network_binding_mismatch",
+        )
+        need(
+            self.artifacts is not None and self.accounts is not None,
+            "network_verification_required",
+        )
+        raw_job, job_identity = network_read(NETWORK_JOB, 0o440, self.accounts)
+        job = parse(raw_job)
+        need(
+            hashlib.sha256(raw_job).hexdigest() == record["job_sha256"]
+            and job.get("version") == "AP-WP/1"
+            and job.get("github_ipv4") == str(peer)
+            and job.get("peer_cert_sha256") == record["peer_cert_sha256"]
+            and type(job.get("expires")) is int
+            and job["expires"] == record["expires_at"],
+            "network_binding_mismatch",
+        )
+        self._network_time(record)
+        return (
+            record,
+            (approval_identity, machine_identity, dropin_identity, job_identity),
+            hashlib.sha256(raw).hexdigest(),
+        )
+
+    @staticmethod
+    def _network_time(record):
+        need(
+            type(record["issued_at"]) is int
+            and type(record["expires_at"]) is int
+            and 0 < record["expires_at"] - record["issued_at"] <= 300,
+            "network_approval_invalid",
+        )
+        need(
+            record["issued_at"] <= time.time() < record["expires_at"],
+            "network_approval_expired",
+        )
+
     def units(self):
+        self._network_verified = None
+        network = self._network()
+        self._units(network)
+        need(self._network() == network, "network_observation_changed")
+        if network is not None:
+            self._network_verified = network
+        return "CONFIGURED", "verified_effective_unit_settings"
+
+    def _units(self, network):
         common = {
             "LoadState": "loaded",
+            "NeedDaemonReload": "no",
             "ActiveState": "inactive",
             "UnitFileState": "static",
             "NoNewPrivileges": "yes",
@@ -613,6 +810,16 @@ class Observer:
                 if role.endswith("signer")
                 else "/etc/ap-publisher-keys /var/lib/ap-publisher-signer",
             }
+            if role == "ap-publisher":
+                expected.update(
+                    DropInPaths=NETWORK_DROPIN if network is not None else "",
+                    IPAddressDeny="0.0.0.0/0 ::/0",
+                    IPAddressAllow=(network[0]["github_ipv4"] + "/32")
+                    if network is not None
+                    else "",
+                    SocketBindDeny="any",
+                    RestrictAddressFamilies="AF_INET",
+                )
             expected["FragmentPath"] = "/usr/lib/systemd/system/" + unit + ".service"
             if role.endswith("signer"):
                 expected["PrivateNetwork"] = "yes"
@@ -635,8 +842,16 @@ class Observer:
             )
             actual = dict(rows)
             need(actual.get("LoadState") == "loaded", "unit_missing")
+            if role == "ap-publisher":
+                # systemd can render the two default routes in either order.
+                # Check cardinality before set equality so duplicates cannot hide.
+                deny = actual.get("IPAddressDeny", "").split()
+                need(
+                    len(deny) == 2 and set(deny) == {"0.0.0.0/0", "::/0"},
+                    "unit_constraints_rejected",
+                )
+                actual["IPAddressDeny"] = expected["IPAddressDeny"]
             need(actual == expected, "unit_constraints_rejected")
-        return "CONFIGURED", "verified_effective_unit_settings"
 
     def apparmor(self):
         # Kernel pseudo-file: bounded read, no profile attachment inference.
@@ -661,44 +876,14 @@ class Observer:
         except FileNotFoundError as exc:
             raise Blocked("bpf_interface_missing") from exc
         need(stat.S_ISDIR(interface.st_mode), "bpf_interface_missing")
-        text = query(
-            [
-                "/usr/bin/systemctl",
-                "show",
-                "--no-pager",
-                "--property=IPAddressDeny,IPAddressAllow,SocketBindDeny,RestrictAddressFamilies",
-                "--all",
-                "--no-ask-password",
-                "ap-worker-publisher.service",
-            ]
-        )
-        rows = [line.split("=", 1) for line in text.splitlines()]
-        need(
-            all(len(r) == 2 for r in rows)
-            and len(rows) == 4
-            and len({r[0] for r in rows}) == 4,
-            "bpf_egress_policy_missing",
-        )
-        props = dict(rows)
-        need(
-            set(props)
-            == {
-                "IPAddressDeny",
-                "IPAddressAllow",
-                "SocketBindDeny",
-                "RestrictAddressFamilies",
-            }
-            and set(props["IPAddressDeny"].split()) == {"0.0.0.0/0", "::/0"}
-            and props["SocketBindDeny"] == "any"
-            and props["RestrictAddressFamilies"] == "AF_INET",
-            "bpf_egress_policy_missing",
-        )
-        peers = props["IPAddressAllow"].split()
-        need(0 < len(peers) <= 8, "bpf_egress_policy_missing")
-        need(
-            all(ipaddress.ip_network(p, strict=True).num_addresses == 1 for p in peers),
-            "bpf_egress_policy_missing",
-        )
+        network = self._network()
+        need(network is not None, "bpf_egress_policy_missing")
+        need(self._network_verified is not None, "network_verification_required")
+        need(network == self._network_verified, "network_observation_changed")
+        # Recheck all hardening, both units, exact DropInPaths and network fields.
+        # Manager properties and files are point-in-time observations, not BPF.
+        self._units(network)
+        need(self._network() == network, "network_observation_changed")
         return "NOT_RUN", "bpf_attachment_evidence_missing"
 
 
