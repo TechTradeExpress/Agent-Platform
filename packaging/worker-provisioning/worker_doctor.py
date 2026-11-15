@@ -17,6 +17,7 @@ import time
 
 PREFIX = "/usr/lib/agent-platform-worker/provisioning"
 DOC = "/usr/share/doc/agent-platform-worker"
+MANAGED_BASE = "/opt/agent-platform-codex"
 ROLES = ("ap-publisher", "ap-publisher-signer")
 UNITS = ("ap-worker-publisher", "ap-worker-publisher-signer")
 BAD_ATTRS = {
@@ -36,6 +37,8 @@ STATES = frozenset(
 )
 REASONS = frozenset(
     """verified_local_package verified_managed_codex
+verified_absolute_codex_candidate managed_selection_changed
+trusted_absolute_exec_unobserved
 verified_dependencies verified_local_identities verified_state_metadata
 verified_effective_unit_settings verified_enforced_profiles
 package_verification_required object_missing observation_denied observation_failed
@@ -44,7 +47,8 @@ object_changed invalid_record package_record_invalid installed_payload_changed
 package_version_mismatch codex_verification_failed path_shadowing path_invalid
 codex_verification_required caller_path_only coding_identity_invalid
 coding_environment_scope_unverified
-home_codex_present dependencies_missing identity_invalid state_metadata_invalid
+personal_codex_requires_exec_binding
+dependencies_missing identity_invalid state_metadata_invalid
 config_acl_invalid unit_missing unit_constraints_rejected profiles_not_enforcing
 profile_attachment_evidence_missing bpf_attachment_evidence_missing
 process_isolation_evidence_missing independent_continuity_evidence_missing
@@ -64,7 +68,7 @@ SCOPE_REASONS = {
         "codex_verification_required",
         "coding_identity_invalid",
         "coding_environment_scope_unverified",
-        "home_codex_present",
+        "personal_codex_requires_exec_binding",
     },
     "caller_path": SCOPE_FAILURES
     | {"caller_path_only", "path_invalid", "path_shadowing"},
@@ -87,7 +91,18 @@ CHECKS = (
     "app_identity",
     "operator_authorization",
     "caller_path",
+    "managed_executable",
+    "execution_binding",
 )
+DEFERRED_CHECKS = {
+    "account_lock": "account_lock_not_observed",
+    "profile_attachment": "profile_attachment_evidence_missing",
+    "process_isolation": "process_isolation_evidence_missing",
+    "continuity": "independent_continuity_evidence_missing",
+    "app_identity": "app_identity_not_authenticated",
+    "operator_authorization": "operator_authorization_not_observed",
+    "execution_binding": "trusted_absolute_exec_unobserved",
+}
 
 
 class Blocked(Exception):
@@ -248,6 +263,92 @@ def network_dropin(peer):
     return ("[Service]\nIPAddressAllow=\nIPAddressAllow=" + peer + "/32\n").encode()
 
 
+def absolute_codex_candidate(m, current, pin):
+    """AP-CODEX-SELECTION/1 candidate observation, NEVER an exec/binding API."""
+    need(m.BASE == MANAGED_BASE and current == m.key(pin), "managed_selection_changed")
+    path = MANAGED_BASE + "/versions/" + current + "/codex"
+    bindings = []
+    with contextlib.ExitStack() as stack:
+        root = stack.enter_context(directory(MANAGED_BASE))
+        first = meta(root, mode=0o755, directory=True)
+        held = [(root, first, None, None, True)]
+        parent = root
+        for name, folder in (("versions", True), (current, True), ("codex", False)):
+            fd = os.open(name, FLAGS | (os.O_DIRECTORY if folder else 0), dir_fd=parent)
+            stack.callback(os.close, fd)
+            before = meta(fd, mode=0o755, directory=folder)
+            need(before.st_dev == first.st_dev, "unsafe_metadata")
+            held.append((fd, before, parent, name, folder))
+            parent = fd
+        version, binary = held[-2][0], held[-1][0]
+        m.link(root, "current", "versions/" + current)
+        link_before = stamp(os.stat("current", dir_fd=root, follow_symlinks=False))
+        record_before = stamp(
+            os.stat("record.json", dir_fd=version, follow_symlinks=False)
+        )
+        expected_record = m.encoded(m.record(pin))
+        need(
+            m.read_file(version, "record.json", 8192) == expected_record,
+            "managed_selection_changed",
+        )
+        need(
+            held[-1][1].st_size == pin["binary_size"] <= m.MAX_BINARY,
+            "managed_selection_changed",
+        )
+        digest, count, end = hashlib.sha256(), 0, time.monotonic() + 60
+        while True:
+            need(time.monotonic() < end, "diagnostic_timeout")
+            chunk = os.read(binary, 65536)
+            if not chunk:
+                break
+            count += len(chunk)
+            need(count <= pin["binary_size"], "managed_selection_changed")
+            digest.update(chunk)
+        need(
+            count == pin["binary_size"] and digest.hexdigest() == pin["binary_sha256"],
+            "managed_selection_changed",
+        )
+        for fd, before, parent, name, folder in reversed(held):
+            need(
+                stamp(meta(fd, mode=0o755, directory=folder)) == stamp(before),
+                "object_changed",
+            )
+            if parent is not None:
+                need(
+                    stamp(os.stat(name, dir_fd=parent, follow_symlinks=False))
+                    == stamp(before),
+                    "object_changed",
+                )
+            bindings.append(stamp(before))
+        m.link(root, "current", "versions/" + current)
+        need(
+            stamp(os.stat("current", dir_fd=root, follow_symlinks=False)) == link_before
+            and m.read_file(version, "record.json", 8192) == expected_record
+            and stamp(os.stat("record.json", dir_fd=version, follow_symlinks=False))
+            == record_before,
+            "object_changed",
+        )
+        with directory(MANAGED_BASE) as fresh:
+            need(
+                stamp(meta(fresh, mode=0o755, directory=True)) == stamp(first),
+                "object_changed",
+            )
+    # This closed in-memory record is never loaded from JSON, env or a report.
+    # Only its digest is diagnostic output; no consumer may treat it as authority.
+    return {
+        "schema": "AP-CODEX-SELECTION/1",
+        "absolute_path": path,
+        "binary_sha256": digest.hexdigest(),
+        "binary_size": count,
+        "release_pin_sha256": m.sha(m.encoded(pin)),
+        "record_sha256": m.sha(expected_record),
+        "file_bindings": bindings,
+        "current_binding": link_before,
+        "record_binding": record_before,
+        "execution_authorized": False,
+    }
+
+
 def parse(data):
     def pairs(items):
         out = {}
@@ -319,11 +420,15 @@ class Observer:
         self.accounts = None
         self.artifacts = None
         self._codex_identity = None
+        self._codex_policy = None
+        self._managed_identity = None
         self._network_verified = None
 
     def package(self):
         self.artifacts = None
         self._codex_identity = None
+        self._codex_policy = None
+        self._managed_identity = None
         self._network_verified = None
         build = parse(read(DOC + "/build.json"))
         inventory = parse(read(DOC + "/manifest.json"))
@@ -421,6 +526,10 @@ class Observer:
 
     def codex(self):
         self._codex_identity = None
+        self._codex_policy = None
+        self._managed_identity = None
+        if self.artifacts is not None:
+            self.artifacts.pop("managed_identity_sha256", None)
         need(self.artifacts is not None, "package_verification_required")
         m = sibling("codex_upstream")
         try:
@@ -451,7 +560,57 @@ class Observer:
             self.artifacts[k]
             for k in ("effective_path", "binary_sha256", "release_pin_sha256")
         )
+        self._codex_policy = (m, current, m.encoded(pin))
         return "INSTALLED", "verified_managed_codex"
+
+    def managed_executable(self):
+        previous = self._managed_identity
+        verified, policy = self._codex_identity, self._codex_policy
+        self._codex_identity = self._codex_policy = None
+        self._managed_identity = None
+        if self.artifacts is not None:
+            self.artifacts.pop("managed_identity_sha256", None)
+        need(
+            policy is not None
+            and verified is not None
+            and self.artifacts is not None
+            and tuple(
+                self.artifacts.get(k)
+                for k in ("effective_path", "binary_sha256", "release_pin_sha256")
+            )
+            == verified,
+            "codex_verification_required",
+        )
+        m, current, encoded_pin = policy
+        try:
+            pins = m.load_lock()
+            with m.directory(m.BASE) as root:
+                actual, installed, transaction = m.inspect_store(root, pins)
+            need(
+                actual == current
+                and transaction is None
+                and m.encoded(installed[current]) == encoded_pin,
+                "managed_selection_changed",
+            )
+            with m.directory(m.BIN) as fd:
+                m.link(fd, "codex", m.BASE + "/current/codex")
+            with m.directory(m.SYSTEM_BIN) as fd:
+                m.need(m.exists(fd, "codex") is None, "foreign_usr_bin_codex")
+            candidate = absolute_codex_candidate(m, current, installed[current])
+        except m.Blocked as exc:
+            raise Blocked("codex_verification_failed") from exc
+        need(
+            candidate["absolute_path"] == self.artifacts["effective_path"],
+            "managed_selection_changed",
+        )
+        identity = hashlib.sha256(
+            json.dumps(candidate, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        need(previous is None or previous == identity, "managed_selection_changed")
+        self._codex_identity, self._codex_policy = verified, policy
+        self._managed_identity = identity
+        self.artifacts["managed_identity_sha256"] = identity
+        return "INSTALLED", "verified_absolute_codex_candidate"
 
     @staticmethod
     def exists_name(path):
@@ -526,7 +685,7 @@ class Observer:
         # Only lstat the named candidate. No home/binary/session contents read.
         need(
             not self.exists_name(home.rstrip("/") + "/.local/bin/codex"),
-            "home_codex_present",
+            "personal_codex_requires_exec_binding",
         )
         # No safe observation of the actual coding session PATH/aliases exists.
         # Root's clean PATH, or even a matching caller UID/HOME, cannot fill it.
@@ -889,7 +1048,14 @@ class Observer:
 
 def report(observer):
     checks = {}
-    for name in (*CHECKS[:8], "bpf", "caller_path"):
+    for name in (
+        "package",
+        "codex",
+        "managed_executable",
+        *CHECKS[2:8],
+        "bpf",
+        "caller_path",
+    ):
         try:
             state, reason = getattr(observer, name)()
         except Blocked as exc:
@@ -916,22 +1082,15 @@ def report(observer):
             state not in ("BLOCKED", "NOT_RUN") or reason not in SCOPE_REASONS[name]
         ):
             state, reason = "BLOCKED", "observation_failed"
+        if name == "managed_executable" and (
+            state == "CONFIGURED"
+            or state == "READY_FOR_SUPERVISED_PUBLISHING"
+            or (state == "INSTALLED" and reason != "verified_absolute_codex_candidate")
+        ):
+            state, reason = "BLOCKED", "observation_failed"
         checks[name] = {"state": state, "reason": reason}
-    for name, reason in zip(
-        CHECKS[8:-1],
-        (
-            "account_lock_not_observed",
-            "profile_attachment_evidence_missing",
-            "bpf_attachment_evidence_missing",
-            "process_isolation_evidence_missing",
-            "independent_continuity_evidence_missing",
-            "app_identity_not_authenticated",
-            "operator_authorization_not_observed",
-        ),
-        strict=True,
-    ):
-        if name != "bpf":
-            checks[name] = {"state": "NOT_RUN", "reason": reason}
+    for name, reason in DEFERRED_CHECKS.items():
+        checks[name] = {"state": "NOT_RUN", "reason": reason}
     return {
         "schema": "AP-WORKER-DOCTOR/1",
         "status": "BLOCKED",
@@ -939,12 +1098,8 @@ def report(observer):
         "artifacts": observer.artifacts,
         "launch_allowed": False,
         "installation": checks["package"]["state"],
-        "configuration": "CONFIGURED"
-        if all(
-            checks[n]["state"] == "CONFIGURED"
-            for n in ("path", "identities", "state", "units", "apparmor")
-        )
-        else "BLOCKED",
+        # No authenticated absolute-exec producer or effective session proof.
+        "configuration": "BLOCKED",
         "host_evidence": "HOST_NOT_RUN",
         "runtime": "LIVE_NO_GO",
         "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",

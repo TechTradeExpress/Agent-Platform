@@ -46,6 +46,9 @@ class GoodObservations:
     def bpf(self):
         return "NOT_RUN", "bpf_attachment_evidence_missing"
 
+    def managed_executable(self):
+        return "NOT_RUN", "codex_verification_required"
+
     def __getattr__(self, name):
         return lambda: (
             "INSTALLED"
@@ -78,7 +81,7 @@ def test_report_has_closed_redacted_deterministic_shape_and_never_ready(doctor):
     assert first["host_evidence"] == "HOST_NOT_RUN"
     assert first["runtime"] == "LIVE_NO_GO" and first["gate_73"] == "BLOCKED"
     assert not first["launch_allowed"]
-    assert all(first["checks"][n]["state"] == "NOT_RUN" for n in doctor.CHECKS[8:-1])
+    assert all(first["checks"][n]["state"] == "NOT_RUN" for n in doctor.DEFERRED_CHECKS)
     assert "READY_FOR_SUPERVISED_PUBLISHING" not in json.dumps(first)
 
 
@@ -811,7 +814,7 @@ def test_root_clean_environment_cannot_hide_agentdev_codex(
         "exists_name",
         staticmethod(lambda path: path == "/home/agentdev/.local/bin/codex"),
     )
-    with pytest.raises(doctor.Blocked, match="home_codex_present"):
+    with pytest.raises(doctor.Blocked, match="personal_codex_requires_exec_binding"):
         coding_scope.path()
     assert coding_scope.caller_path() == ("NOT_RUN", "caller_path_only")
 

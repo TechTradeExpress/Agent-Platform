@@ -48,11 +48,11 @@
             "config_acl_invalid",
             "dependencies_missing",
             "diagnostic_timeout",
-            "home_codex_present",
             "identity_invalid",
             "independent_continuity_evidence_missing",
             "installed_payload_changed",
             "invalid_record",
+            "managed_selection_changed",
             "network_approval_expired",
             "network_approval_invalid",
             "network_binding_mismatch",
@@ -68,14 +68,17 @@
             "package_version_mismatch",
             "path_invalid",
             "path_shadowing",
+            "personal_codex_requires_exec_binding",
             "process_isolation_evidence_missing",
             "profile_attachment_evidence_missing",
             "profiles_not_enforcing",
             "state_metadata_invalid",
+            "trusted_absolute_exec_unobserved",
             "unit_constraints_rejected",
             "unit_missing",
             "unsafe_attributes",
             "unsafe_metadata",
+            "verified_absolute_codex_candidate",
             "verified_dependencies",
             "verified_effective_unit_settings",
             "verified_enforced_profiles",
@@ -101,6 +104,55 @@
       ],
       "type": "object"
     },
+    "execution_binding_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "const": "trusted_absolute_exec_unobserved"
+        },
+        "state": {
+          "const": "NOT_RUN"
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "managed_executable_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "codex_verification_failed",
+            "codex_verification_required",
+            "diagnostic_timeout",
+            "invalid_record",
+            "managed_selection_changed",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "unsafe_attributes",
+            "unsafe_metadata",
+            "verified_absolute_codex_candidate"
+          ]
+        },
+        "state": {
+          "enum": [
+            "INSTALLED",
+            "BLOCKED",
+            "NOT_RUN"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
     "path_check": {
       "additionalProperties": false,
       "properties": {
@@ -109,12 +161,12 @@
             "codex_verification_required",
             "coding_environment_scope_unverified",
             "coding_identity_invalid",
-            "home_codex_present",
             "invalid_record",
             "object_changed",
             "object_missing",
             "observation_denied",
             "observation_failed",
+            "personal_codex_requires_exec_binding",
             "unsafe_attributes",
             "unsafe_metadata"
           ]
@@ -166,6 +218,10 @@
             },
             "effective_path": {
               "pattern": "^/opt/agent-platform-codex/versions/[0-9]+\\.[0-9]+\\.[0-9]+-[0-9a-f]{64}/codex$",
+              "type": "string"
+            },
+            "managed_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
               "type": "string"
             },
             "manifest_sha256": {
@@ -225,8 +281,14 @@
         "dependencies": {
           "$ref": "#/$defs/check"
         },
+        "execution_binding": {
+          "$ref": "#/$defs/execution_binding_check"
+        },
         "identities": {
           "$ref": "#/$defs/check"
+        },
+        "managed_executable": {
+          "$ref": "#/$defs/managed_executable_check"
         },
         "operator_authorization": {
           "$ref": "#/$defs/check"
@@ -266,7 +328,9 @@
         "continuity",
         "app_identity",
         "operator_authorization",
-        "caller_path"
+        "caller_path",
+        "managed_executable",
+        "execution_binding"
       ],
       "type": "object"
     },

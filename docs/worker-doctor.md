@@ -38,7 +38,7 @@ transaction journals, tampering, ownership, mode or xattr failures block. The
 installer does not retain the downloaded archive: the archive digest is verified
 against the trusted receipt and release pin, **not rehashed from an absent archive**.
 An operator's acquisition evidence must retain that original archive digest.
-The two path observations have separate, closed scopes:
+The caller/session path observations have separate, closed scopes:
 
 - `caller_path` inspects names preceding the managed command in the current
   process PATH. It does not inspect HOME or confirm a coding session. A clean
@@ -54,7 +54,9 @@ The two path observations have separate, closed scopes:
   It reads only public local `/etc/passwd` metadata for the fixed coding principal
   `agentdev`, rejecting missing/ambiguous/root/UID-alias identities or unsafe home
   names. It lstat-inspects only that candidate home's `.local/bin/codex` name.
-  Existing personal Codex blocks with `home_codex_present`; denied metadata is
+  Existing personal Codex blocks with `personal_codex_requires_exec_binding`:
+  missing trusted absolute-exec proof, **not** a request to remove the user's tool.
+  Denied metadata is
   NOT_RUN, not absence. No private home, shell, session, credential or binary
   contents are read, and neither caller HOME/PATH nor root's identity substitutes
   for coding-user scope.
@@ -317,3 +319,110 @@ References: systemd's [unit load and drop-in rules](https://www.freedesktop.org/
 and [IP allow/deny resource controls](https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html).
 IP rules rely on cgroup BPF and can be ineffective when kernel support is unavailable;
 configuration and live enforcement must remain separate evidence classes.
+
+
+## PKG-07: managed candidate identity is separate from interactive Codex
+
+There are four distinct observations, not four interchangeable readiness claims:
+
+| Check | Evidence and maximum meaning |
+| --- | --- |
+| codex | INSTALLED / verified_managed_codex: unchanged PKG-03R root store, compiled release lock/provenance, AP-CODEX-INSTALL/1, all retained bytes/hash/ELF and managed links |
+| managed_executable | INSTALLED / verified_absolute_codex_candidate: freshly verified exact absolute versioned file plus descriptor/namespace identity; **candidate metadata only**, not a selected/running process |
+| caller_path / path | Caller name lookup and the coding-user scope remain separate BLOCKED/NOT_RUN observations; root's login is never agentdev's session |
+| execution_binding | Always NOT_RUN / trusted_absolute_exec_unobserved: no reviewed authenticated absolute-exec/session evidence producer exists |
+
+This source change does not implement a launcher, execute Codex, resolve a command
+name, read a user-provided selector or accept an evidence JSON. It keeps status and
+configuration unconditionally BLOCKED, launch_allowed=false, host HOST_NOT_RUN,
+LIVE_NO_GO, subscription isolation, Gate #73 and exit 13. Static metadata cannot
+produce CONFIGURED or READY. The closed schema requires both new check names;
+consumers must reject incompatible reports instead of dropping the missing scope.
+
+### AP-CODEX-SELECTION/1 inert candidate contract
+
+The only candidate is derived inside trusted installed code from the verified
+PKG-03R current release pin:
+`/opt/agent-platform-codex/versions/<version>-<binary-sha256>/codex`.
+It is never /usr/local/bin/codex, current/codex, a caller-selected executable,
+PATH result, HOME candidate, wrapper, --version output or copied report value.
+The installer and interactive developer environment are unchanged. The existing
+root-managed symlinks are revalidated as store invariants but are not the proposed
+exec authority.
+
+managed_executable requires codex's successful private in-process correlation.
+It freshly reloads the unchanged compiled release lock/provenance, revalidates
+all store records/bytes/ELF and both conventional-link invariants, and requires the
+same current pin. It then opens the fixed store and selected versions directories
+and file without following links, retaining FDs across a streaming SHA-256 read.
+Root:root, directory/file 0755, regular single-link executable, no ACL/capability
+(including NFSv4 ACL), and a single device inside the store are required. All
+selected parent/file namespace bindings, stable metadata, record and current
+link identities are rechecked; a fresh no-follow traversal must still reach the
+same store. Selected bytes must match the pinned size/hash. Reads are 64 KiB,
+bounded by the existing PKG-03R binary ceiling and a 60-second monotonic read
+budget. The existing PKG-03R full-store verification retains its existing bounded
+reads; repeated verification adds I/O, not an execution shortcut. Blocking kernel
+filesystem calls are not converted into a hard wall-clock guarantee.
+
+The closed internal record contains schema, absolute_path, binary_sha256,
+binary_size, release_pin_sha256, record_sha256, file_bindings, current_binding,
+record_binding and execution_authorized=false. Bindings include device/inode,
+mode/ownership/link/size/mtime/ctime snapshots of retained objects. Only its
+SHA-256 is added as artifacts.managed_identity_sha256; no inode, timestamp, HOME,
+shell state or private contents are reported. This hash is local consistency,
+not an authenticated receipt or an input format. No reader ingests that record.
+Repeated candidate observation requires the same identity; package/Codex rechecks
+and every failed managed observation discard the old correlation/digest. A valid
+upgrade or rollback needs a fresh full observation, never stale binding reuse.
+
+### Personal install and honest stop conditions
+
+A preserved personal ~/.local/bin/codex can coexist with a verified managed
+absolute candidate. Neither its bytes nor its symlink target, authentication,
+configuration or ongoing session are read/changed. The development workflow may
+continue using that separate personal installation.
+
+Today there is **no trusted invocation binding**, so a personal candidate remains
+BLOCKED / personal_codex_requires_exec_binding in path. A missing personal
+candidate remains NOT_RUN / coding_environment_scope_unverified. Root's clean
+PATH is NOT_RUN / caller_path_only; an earlier name candidate remains BLOCKED /
+path_shadowing even after managed_executable succeeds. This does not globally
+ignore a shadowing binary or falsely label a name lookup as absolute execution.
+Do not remove/relink/chmod a personal Codex to make the report green.
+
+Only a future independently reviewed trusted absolute-exec producer could justify
+classifying a personal name collision as unrelated to that specific managed run.
+This change explicitly does **not** implement or claim that producer. Unknown or
+ambiguous agentdev identity, inaccessible metadata, missing/changed store/current,
+foreign path, symlink in the selected path, hardlink, writable/set-ID/foreign-owned
+file, cross-device uncertainty, bad ACL/capabilities, changed release/record/hash,
+namespace drift or stale correlation mean STOP/BLOCKED/NOT_RUN as appropriate.
+No user JSON, root's ambient shell, test fixture or cached digest fills that gap.
+Root-controlled ancestors/policy and honest storage observations remain trust
+inputs, not protection against root compromise, rollback or metadata-indistinguishable
+edits. Observation is not an atomic verification-to-exec transaction or continuous
+attestation. Kernel/runtime isolation is still unproven.
+
+### Future operator/host evidence, not executed here
+
+After independent source review, a separate human decision is required for each
+host. Keep the personal developer install and all credentials untouched. On an
+approved host, verify package/provenance/store, identities and exact absolute
+candidate metadata using existing read access; inaccessible data is NOT_RUN, not
+an escalation request. Preserve all unresolved report reasons and inert services.
+
+A future launcher design must independently bind the reviewed job, host, caller
+identity, pinned argv/environment and the already verified executable object to
+actual exec, retaining/revalidating its descriptor through that boundary rather
+than reopening a pathname or performing shell/PATH lookup. It must authenticate
+fresh evidence, address expiry/replay/replacement and reject environment/loader
+injection; an example report is not that protocol. Effective session/process,
+mount/AppArmor/BPF/proc/FD/credential isolation and all existing gates need their
+own separately authorized evidence. No file-exec syscall, privileged broker,
+loader or service is introduced by PKG-07. If those conditions cannot be proven,
+remain BLOCKED/NOT_RUN. worker01 evidence/approval never transfers to worker02.
+
+All new store/owner/PATH observations in tests are explicitly synthetic, including
+the regression of worker01's committed 0.166.0 pin and preserved personal-name
+condition. No actual worker path or official Codex binary was accessed/executed.
