@@ -842,6 +842,15 @@ class Observer:
             )
             actual = dict(rows)
             need(actual.get("LoadState") == "loaded", "unit_missing")
+            if role == "ap-publisher":
+                # systemd can render the two default routes in either order.
+                # Check cardinality before set equality so duplicates cannot hide.
+                deny = actual.get("IPAddressDeny", "").split()
+                need(
+                    len(deny) == 2 and set(deny) == {"0.0.0.0/0", "::/0"},
+                    "unit_constraints_rejected",
+                )
+                actual["IPAddressDeny"] = expected["IPAddressDeny"]
             need(actual == expected, "unit_constraints_rejected")
 
     def apparmor(self):

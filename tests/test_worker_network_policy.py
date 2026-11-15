@@ -609,3 +609,114 @@ def test_normal_getfacl_trailing_blank_line_is_not_an_extra_acl(network, monkeyp
     monkeypatch.setattr(n.doctor, "query", query)
     assert n.observer.units()[0] == "CONFIGURED"
     assert n.observer.bpf() == ("NOT_RUN", "bpf_attachment_evidence_missing")
+
+
+DENY_ORDERS = ("0.0.0.0/0 ::/0", "::/0 0.0.0.0/0")
+INVALID_DENY = (
+    "",
+    "0.0.0.0/0",
+    "::/0",
+    "0.0.0.0/0 0.0.0.0/0",
+    "::/0 ::/0",
+    "0.0.0.0/0 ::/0 ::/0",
+    "::/0 0.0.0.0/0 0.0.0.0/0",
+    "0.0.0.0/0 ::/0 192.0.2.1/32",
+    "any",
+    "any ::/0",
+    "0/0 ::/0",
+    "0.0.0.0/0 0:0:0:0:0:0:0:0/0",
+    "0.0.0.0/1 ::/0",
+    "0.0.0.0/0 ::/1",
+)
+
+
+def deny_query(network, value, approved=True, **overrides):
+    """Vary only explicit publisher properties; retain signer/ACL responses."""
+    base = network.query if approved else network.helpers.unit_response
+    changes = {"IPAddressDeny": value} | overrides
+
+    def query(argv):
+        text = base(argv)
+        if (
+            argv[0] == "/usr/bin/systemctl"
+            and argv[-1] == "ap-worker-publisher.service"
+        ):
+            rows = [line.split("=", 1) for line in text.splitlines()]
+            text = "\n".join(k + "=" + changes.get(k, v) for k, v in rows)
+        return text
+
+    return query
+
+
+def unconfigure_network(network):
+    network.paths[network.doctor.NETWORK_APPROVAL].unlink()
+    network.paths[network.doctor.NETWORK_DROPIN].unlink()
+    network.paths[network.doctor.NETWORK_DROPIN].parent.rmdir()
+
+
+@pytest.mark.parametrize("approved", [False, True], ids=["inert", "approved"])
+@pytest.mark.parametrize(
+    "value", DENY_ORDERS, ids=["ipv4-first", "worker01-ipv6-first"]
+)
+def test_deny_prefix_order_is_not_an_egress_or_bpf_authorization(
+    network, monkeypatch, approved, value
+):
+    n = network
+    if not approved:
+        unconfigure_network(n)
+    monkeypatch.setattr(n.doctor, "query", deny_query(n, value, approved))
+    assert n.observer.units() == ("CONFIGURED", "verified_effective_unit_settings")
+    if approved:
+        assert n.observer.bpf() == ("NOT_RUN", "bpf_attachment_evidence_missing")
+    else:
+        with pytest.raises(n.doctor.Blocked, match="bpf_egress_policy_missing"):
+            n.observer.bpf()
+
+
+@pytest.mark.parametrize("approved", [False, True], ids=["inert", "approved"])
+@pytest.mark.parametrize("value", INVALID_DENY)
+def test_deny_requires_exactly_two_distinct_canonical_default_prefixes(
+    network, monkeypatch, approved, value
+):
+    n = network
+    if not approved:
+        unconfigure_network(n)
+    monkeypatch.setattr(n.doctor, "query", deny_query(n, value, approved))
+    with pytest.raises(n.doctor.Blocked, match="unit_constraints_rejected"):
+        n.observer.units()
+    assert n.observer._network_verified is None
+
+
+@pytest.mark.parametrize("value", INVALID_DENY)
+def test_bpf_rechecks_deny_cardinality_and_canonical_membership(
+    network, monkeypatch, value
+):
+    n = network
+    n.observer.units()
+    monkeypatch.setattr(n.doctor, "query", deny_query(n, value))
+    with pytest.raises(n.doctor.Blocked, match="unit_constraints_rejected"):
+        n.observer.bpf()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("DropInPaths", ""),
+        ("DropInPaths", "EXTRA"),
+        ("IPAddressAllow", "140.82.112.5/32 140.82.112.6/32"),
+        ("SocketBindDeny", ""),
+        ("RestrictAddressFamilies", "AF_INET AF_INET6"),
+        ("NeedDaemonReload", "yes"),
+    ],
+)
+def test_ipv6_first_deny_does_not_relax_other_exact_properties(
+    network, monkeypatch, field, value
+):
+    n = network
+    if value == "EXTRA":
+        value = n.doctor.NETWORK_DROPIN + " /run/foreign.conf"
+    monkeypatch.setattr(
+        n.doctor, "query", deny_query(n, DENY_ORDERS[1], **{field: value})
+    )
+    with pytest.raises(n.doctor.Blocked, match="unit_constraints_rejected"):
+        n.observer.units()

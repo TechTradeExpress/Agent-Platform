@@ -211,9 +211,14 @@ with empty IPAddressAllow; BPF remains BLOCKED / bpf_egress_policy_missing. An
 unauthorized physical drop-in, even unloaded, is not silently ignored. An approved
 record requires exactly that single DropInPaths entry for publisher, empty for
 signer, the existing fixed fragments and every previously checked hardening
-property. IPAddressDeny must render both default routes, SocketBindDeny=any,
-RestrictAddressFamilies=AF_INET, IPAddressAllow exactly P/32. Both units must remain
-inactive/static with NeedDaemonReload=no. Runtime, transient, inherited or foreign
+property. IPAddressDeny must contain exactly two unique canonical tokens,
+`0.0.0.0/0` and `::/0`, each once, in either order (including worker01's observed
+IPv6-first rendering). Missing, extra, duplicate or noncanonical tokens block;
+only this list's ordering is ignored. SocketBindDeny=any,
+RestrictAddressFamilies=AF_INET, IPAddressAllow exactly P/32 remain exact text
+comparisons, as do DropInPaths, NeedDaemonReload and all other reviewed properties.
+The same cardinality/membership check runs again in bpf() through _units(). Both
+units must remain inactive/static with NeedDaemonReload=no. Runtime, transient, inherited or foreign
 effective drop-ins, duplicate/unknown/missing properties and stale manager cache
 are rejected. No daemon reload or service start is performed by doctor.
 
