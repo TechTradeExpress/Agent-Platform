@@ -196,11 +196,12 @@ def test_byte_identical_inode_replacement_invalidates_existing_observation(
     assert n.observer._managed_identity is None
 
 
-def test_direct_candidate_rejects_foreign_device(managed, monkeypatch):
+@pytest.mark.parametrize("name", ["codex", "record.json"])
+def test_direct_candidate_rejects_foreign_device(managed, monkeypatch, name):
     n = managed
     n.observer.codex()
     inode = (
-        (Path(n.m.BASE) / "versions" / n.m.key(n.pins["1.0.0"]) / "codex").stat().st_ino
+        (Path(n.m.BASE) / "versions" / n.m.key(n.pins["1.0.0"]) / name).stat().st_ino
     )
     original = n.doctor.meta
 
@@ -342,3 +343,21 @@ def test_permission_denial_is_not_a_candidate_or_binding_proof(managed, monkeypa
     assert report["checks"]["execution_binding"]["state"] == "NOT_RUN"
     assert report["configuration"] == "BLOCKED" and not report["launch_allowed"]
     assert "SECRET" not in json.dumps(report)
+
+
+def test_install_record_nfs4_acl_is_not_selection_evidence(managed, monkeypatch):
+    n = managed
+    n.observer.codex()
+    path = Path(n.m.BASE) / "versions" / n.m.key(n.pins["1.0.0"]) / "record.json"
+    inode = path.stat().st_ino
+    original = os.listxattr
+    monkeypatch.setattr(
+        os,
+        "listxattr",
+        lambda fd: (
+            ["system.nfs4_acl"] if os.fstat(fd).st_ino == inode else original(fd)
+        ),
+    )
+    with pytest.raises(n.doctor.Blocked, match="unsafe_attributes"):
+        n.observer.managed_executable()
+    assert n.observer._codex_identity is None

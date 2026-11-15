@@ -283,9 +283,11 @@ def absolute_codex_candidate(m, current, pin):
         version, binary = held[-2][0], held[-1][0]
         m.link(root, "current", "versions/" + current)
         link_before = stamp(os.stat("current", dir_fd=root, follow_symlinks=False))
-        record_before = stamp(
-            os.stat("record.json", dir_fd=version, follow_symlinks=False)
-        )
+        record_fd = os.open("record.json", FLAGS, dir_fd=version)
+        stack.callback(os.close, record_fd)
+        record_info = meta(record_fd, mode=0o644)
+        need(record_info.st_dev == first.st_dev, "unsafe_metadata")
+        record_before = stamp(record_info)
         expected_record = m.encoded(m.record(pin))
         need(
             m.read_file(version, "record.json", 8192) == expected_record,
@@ -324,6 +326,7 @@ def absolute_codex_candidate(m, current, pin):
         need(
             stamp(os.stat("current", dir_fd=root, follow_symlinks=False)) == link_before
             and m.read_file(version, "record.json", 8192) == expected_record
+            and stamp(meta(record_fd, mode=0o644)) == record_before
             and stamp(os.stat("record.json", dir_fd=version, follow_symlinks=False))
             == record_before,
             "object_changed",
