@@ -101,6 +101,37 @@ def main():
     foreign.unlink()
     call(["apt-get", "--no-install-recommends", "-y", "install", control, worker])
     diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    if diagnostic["checks"]["package"] == {
+        "state": "BLOCKED",
+        "reason": "unsafe_metadata",
+    }:
+        # Evidence only: the original INSTALLED assertion below is unchanged.
+        evidence = {
+            "schema": "AP-PKG-METADATA-EVIDENCE/1",
+            "status": "EVIDENCE_UNAVAILABLE",
+            "host": "HOST_NOT_RUN",
+        }
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "metadata_evidence", "/opt/ap-tests/worker_metadata_evidence.py"
+            )
+            helper = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(helper)
+            spec = importlib.util.spec_from_file_location(
+                "installed_doctor_evidence",
+                "/usr/lib/agent-platform-worker/provisioning/worker_doctor.py",
+            )
+            doctor = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(doctor)
+            evidence = helper.capture(doctor)
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        encoded = json.dumps(evidence, sort_keys=True)
+        assert len(encoded) <= 16384
+        Path("/evidence/worker-p1-metadata-" + case + ".json").write_text(
+            encoded + "\n"
+        )
+        print(encoded, flush=True)
     assert diagnostic["installation"] == "INSTALLED", diagnostic["checks"]["package"]
     assert diagnostic["status"] == "BLOCKED" and not diagnostic["launch_allowed"]
     assert diagnostic["host_evidence"] == "HOST_NOT_RUN"

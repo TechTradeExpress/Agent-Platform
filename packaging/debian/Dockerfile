@@ -30,7 +30,7 @@ RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbi
     printf '%s\n' "$P1_CASE" > /ap-worker-p1-case && \
     apt-get --no-install-recommends -y install \
     python3 python3-cryptography git gh ca-certificates systemd apparmor apparmor-utils acl passwd
-COPY worker_p1_lifecycle.py /opt/ap-tests/
+COPY worker_p1_lifecycle.py worker_metadata_evidence.py /opt/ap-tests/
 ENTRYPOINT ["/usr/bin/python3", "-IB", "/opt/ap-tests/worker_p1_lifecycle.py"]
 
 # Separate Codex installer fixture, with synthetic pins/ELFs and loopback HTTP.
