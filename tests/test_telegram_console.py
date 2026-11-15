@@ -657,28 +657,66 @@ def test_bootstrap_cannot_adopt_or_repair_unknown_state(task, kind):
     assert not g.path.exists()
 
 
-@pytest.mark.parametrize("kind", ["journal", "lock"])
+@pytest.mark.parametrize("kind", ["journal", "journal_content", "lock"])
 def test_changing_evidence_before_write_is_blocked(gateway, monkeypatch, kind):
     original = gateway._load
     calls = []
     before = gateway.path.read_bytes()
+    injected = []
+    if kind == "journal_content":
+        fingerprint = console.task_status.fingerprint
+        initial = fingerprint(gateway.path.lstat())
+
+        def coarse_journal_times(info):
+            value = fingerprint(info)
+            # Explicitly model unchanged timestamps for this one fixture inode;
+            # ownership, mode, size, links and every other object's checks remain.
+            return value[:-2] + initial[-2:] if value[:2] == initial[:2] else value
+
+        monkeypatch.setattr(console.task_status, "fingerprint", coarse_journal_times)
 
     def changing(*args, **kwargs):
         result = original(*args, **kwargs)
         calls.append(1)
         if len(calls) == 1:
             if kind == "journal":
-                gateway.path.touch()
+                # Create the new inode before replacing the old one. Keep the
+                # bytes and namespace unchanged; touch() need not change time.
+                old = gateway.path.stat()
+                replacement = gateway.directory.parent / "replacement-replay.json"
+                replacement.write_bytes(before)
+                replacement.chmod(0o600)
+                os.replace(replacement, gateway.path)
+                assert gateway.path.stat().st_ino != old.st_ino
+            elif kind == "journal_content":
+                # A valid but different record must also be rejected, regardless
+                # of whether the filesystem exposes a timestamp change.
+                changed = json.loads(before)
+                changed["generation"] += 1
+                # Preserve the exact writer's encoding and size, too: this
+                # exercises data correlation rather than a metadata-only refusal.
+                raw = (json.dumps(changed, sort_keys=True) + "\n").encode("ascii")
+                assert len(raw) == len(before)
+                gateway.path.write_bytes(raw)
+                assert coarse_journal_times(gateway.path.lstat()) == initial
             else:
                 p = state.LOCK_DIR / "prepare.lock"
                 p.rename(p.with_name("preserved"))
                 p.write_text("")
                 p.chmod(0o600)
+            injected.append(gateway.path.read_bytes())
         return result
 
+    def no_write(*_args, **_kwargs):
+        pytest.fail("evidence drift must be refused before any durable write")
+
     monkeypatch.setattr(gateway, "_load", changing)
+    monkeypatch.setattr(state, "write_checkpoint", no_write)
     assert handle(gateway).outcome == console.Outcome.NEEDS_HUMAN
-    assert gateway.path.read_bytes() == before and not gateway.pending.exists()
+    assert len(injected) == 1
+    assert gateway.path.read_bytes() == injected[0] and not gateway.pending.exists()
+    if kind != "journal_content":
+        assert injected[0] == before
 
 
 def test_pending_marker_survives_directory_sync_failure(gateway, monkeypatch):
