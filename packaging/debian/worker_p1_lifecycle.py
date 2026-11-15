@@ -100,6 +100,31 @@ def main():
     )
     foreign.unlink()
     call(["apt-get", "--no-install-recommends", "-y", "install", control, worker])
+    dependency_versions = call(
+        [
+            "/usr/bin/dpkg-query",
+            "-W",
+            "-f=${Package}\t${Version}\n",
+            "base-files",
+            "dpkg",
+            "python3",
+            "python3-cryptography",
+            "git",
+            "gh",
+            "ca-certificates",
+            "systemd",
+            "apparmor",
+            "apparmor-utils",
+            "acl",
+            "passwd",
+            "agent-platform-control",
+            "agent-platform-worker",
+        ]
+    )
+    assert len(dependency_versions) <= 8192
+    Path("/evidence/worker-p1-dependencies-" + case + ".txt").write_text(
+        dependency_versions
+    )
     diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
     if diagnostic["checks"]["package"] == {
         "state": "BLOCKED",

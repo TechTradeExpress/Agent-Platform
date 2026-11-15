@@ -61,6 +61,12 @@ jobs:
           docker build --platform linux/amd64 --target codex-pkg05 -t ap-codex-pkg05 -f packaging/debian/Dockerfile packaging/debian
           docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" ap-codex-pkg05
           test -s "$RUNNER_TEMP/ap-evidence/codex-pkg05-lifecycle.json"
+      - name: Prior slim manpage 0775 remains BLOCKED
+        if: ${{ !cancelled() }}
+        run: |
+          docker build --platform linux/amd64 --target manpage-negative -t ap-manpage-negative -f packaging/debian/Dockerfile packaging/debian
+          docker run --rm --platform linux/amd64 --network none --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 -v "$PWD:/source:ro" -v "$RUNNER_TEMP/ap-evidence:/evidence" ap-manpage-negative
+          test -s "$RUNNER_TEMP/ap-evidence/prior-slim-manpage-negative.json"
       - name: Inspect archives, lintian and autopkgtest in separate container
         if: always()
         run: |

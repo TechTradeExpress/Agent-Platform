@@ -1,0 +1,468 @@
+{
+  "apt_source_sha256": {
+    "etc/apt/sources.list.d/debian.sources": "6f39f606e1410de5f356e85b2ad188b6fd35856cd4884802e023431e9de8ba93"
+  },
+  "debian_version_previous": "13.7",
+  "debian_version_selected": "13.7",
+  "directories_previous": {
+    "/etc": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/opt": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/bin": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib/systemd": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib/systemd/system": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/libexec": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/local": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/local/bin": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/doc": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/man": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/man/man1": {
+      "gid": 0,
+      "mode": "0775",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/var": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/var/lib": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    }
+  },
+  "directories_selected": {
+    "/etc": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/opt": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/bin": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib/systemd": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/lib/systemd/system": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/libexec": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/local": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/local/bin": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/doc": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/man": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/usr/share/man/man1": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/var": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    },
+    "/var/lib": {
+      "gid": 0,
+      "mode": "0755",
+      "pax_keys": [],
+      "type": "directory",
+      "uid": 0
+    }
+  },
+  "directory_differences": [
+    "/usr/share/man/man1"
+  ],
+  "docker_lifecycle": "NOT_RUN locally; no Docker/Podman",
+  "gates": [
+    "INSTALL_INERT",
+    "LIVE_NO_GO",
+    "HOST_NOT_RUN",
+    "SUBSCRIPTION_ISOLATION_BLOCKED",
+    "Gate #73 BLOCKED",
+    "exit 13"
+  ],
+  "installed_base_package_count": 78,
+  "installed_base_package_versions": {
+    "apt": "3.0.3",
+    "base-files": "13.8+deb13u7",
+    "base-passwd": "3.6.7",
+    "bash": "5.2.37-2+b10",
+    "bsdutils": "1:2.41.5-0+deb13u1",
+    "coreutils": "9.7-3",
+    "dash": "0.5.12-12",
+    "debconf": "1.5.91",
+    "debian-archive-keyring": "2025.1",
+    "debianutils": "5.23.2",
+    "diffutils": "1:3.10-4",
+    "dpkg": "1.22.22",
+    "findutils": "4.10.0-3",
+    "gcc-14-base": "14.2.0-19",
+    "grep": "3.11-4",
+    "gzip": "1.13-1+deb13u1",
+    "hostname": "3.25",
+    "init-system-helpers": "1.69~deb13u1",
+    "libacl1": "2.3.2-2+b1",
+    "libapt-pkg7.0": "3.0.3",
+    "libattr1": "1:2.5.2-3",
+    "libaudit-common": "1:4.0.2-2+deb13u1",
+    "libaudit1": "1:4.0.2-2+deb13u1",
+    "libblkid1": "2.41.5-0+deb13u1",
+    "libbsd0": "0.12.2-2",
+    "libbz2-1.0": "1.0.8-6",
+    "libc-bin": "2.41-12+deb13u4",
+    "libc6": "2.41-12+deb13u4",
+    "libcap-ng0": "0.8.5-4+b1",
+    "libcap2": "1:2.75-10+deb13u1+b3",
+    "libcrypt1": "1:4.4.38-1",
+    "libdb5.3t64": "5.3.28+dfsg2-9",
+    "libdebconfclient0": "0.280",
+    "libgcc-s1": "14.2.0-19",
+    "libgmp10": "2:6.3.0+dfsg-3",
+    "libhogweed6t64": "3.10.1-1",
+    "liblastlog2-2": "2.41.5-0+deb13u1",
+    "liblz4-1": "1.10.0-4",
+    "liblzma5": "5.8.1-1+deb13u2",
+    "libmd0": "1.1.0-2+b1",
+    "libmount1": "2.41.5-0+deb13u1",
+    "libnettle8t64": "3.10.1-1",
+    "libpam-modules": "1.7.0-5",
+    "libpam-modules-bin": "1.7.0-5",
+    "libpam-runtime": "1.7.0-5",
+    "libpam0g": "1.7.0-5",
+    "libpcre2-8-0": "10.46-1~deb13u3",
+    "libseccomp2": "2.6.0-2",
+    "libselinux1": "3.8.1-1",
+    "libsemanage-common": "3.8.1-1",
+    "libsemanage2": "3.8.1-1",
+    "libsepol2": "3.8.1-1",
+    "libsmartcols1": "2.41.5-0+deb13u1",
+    "libsqlite3-0": "3.46.1-7+deb13u2",
+    "libssl3t64": "3.5.7-1~deb13u3",
+    "libstdc++6": "14.2.0-19",
+    "libsystemd0": "257.13-1~deb13u1",
+    "libtinfo6": "6.5+20250216-2",
+    "libudev1": "257.13-1~deb13u1",
+    "libuuid1": "2.41.5-0+deb13u1",
+    "libxxhash0": "0.8.3-2",
+    "libzstd1": "1.5.7+dfsg-1",
+    "login": "1:4.16.0-2+really2.41.5-0+deb13u1",
+    "login.defs": "1:4.17.4-2",
+    "mawk": "1.3.4.20250131-1",
+    "mount": "2.41.5-0+deb13u1",
+    "ncurses-base": "6.5+20250216-2",
+    "ncurses-bin": "6.5+20250216-2",
+    "openssl-provider-legacy": "3.5.7-1~deb13u3",
+    "passwd": "1:4.17.4-2",
+    "perl-base": "5.40.1-6+deb13u1",
+    "sed": "4.9-2+deb13u1",
+    "sqv": "1.3.0-3+b2",
+    "sysvinit-utils": "3.14-4",
+    "tar": "1.35+dfsg-3.1",
+    "tzdata": "2026e-0+deb13u1",
+    "util-linux": "2.41.5-0+deb13u1",
+    "zlib1g": "1:1.3.dfsg+really1.3.1-1+b1"
+  },
+  "p1_dependencies_not_in_base": [
+    "python3",
+    "python3-cryptography",
+    "git",
+    "gh",
+    "systemd",
+    "apparmor",
+    "apparmor-utils",
+    "acl",
+    "ca-certificates"
+  ],
+  "p1_depends_unchanged": "python3 (>= 3.12), python3-cryptography (>= 43.0.0), python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), apparmor (>= 4.1), apparmor-utils, acl, passwd",
+  "platform": {
+    "architecture": "amd64",
+    "os": "linux"
+  },
+  "post_apt_versions": "NOT_RUN locally; mutable signed trixie indices, original acquisition policy unchanged",
+  "previous": {
+    "index_digest": "sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4",
+    "manifest_digest": "sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d",
+    "platform": "linux/amd64",
+    "repository": "docker.io/library/debian",
+    "source": "https://hub.docker.com/v2/repositories/library/debian/tags/trixie-slim",
+    "tag": "trixie-slim"
+  },
+  "previous_layer_digest": "sha256:6fc242d221a673263eabd14a9ad9584d3177c96e5cb504c891497338e2f912f5",
+  "runtime_root_inode": "NOT_DECLARED in layer; checked by unchanged doctor in actual lifecycle",
+  "same_apt_sources": true,
+  "same_installed_base_package_versions": true,
+  "schema": "AP-PKG-CI-IMAGE-SELECTION/1",
+  "selected": {
+    "index_digest": "sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1",
+    "manifest_digest": "sha256:e2914ec98e08b24b4cee3cefcb9f90dfb5519f8d215a2ccf0c9a49b10b6e43de",
+    "platform": "linux/amd64",
+    "repository": "docker.io/library/debian",
+    "selection_evidence": "docs/evidence/pkg05-debian-image-selection.json",
+    "source": "https://hub.docker.com/v2/repositories/library/debian/tags/trixie-20261027",
+    "tag": "trixie-20261027"
+  },
+  "selected_config_digest": "sha256:e94e0ef014004824e778a450941b2d74896bd1be7ebd5b31f0465134797c38c8",
+  "selected_created": "2026-10-27T00:00:00Z",
+  "selected_layer_digests": [
+    "sha256:a1d156b0aab5fb07d822a7f4681f6d3ed1689073531c34f5668818c233633f11"
+  ],
+  "selection": "same-date full official Debian 13 amd64; no permission mutation",
+  "source_head": "ae83e1895b54001643cbf8cda5ffed2552aed73e",
+  "source_of_measurements": "SHA-256 verified official OCI archives only; no extraction/execution",
+  "survey": [
+    {
+      "dpkg": "1.22.22",
+      "index_digest": "sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6",
+      "man1": {
+        "gid": 0,
+        "mode": "0755",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:bfc36aecdece0387418759dba474aa856c026ca8087da3606b41b90ab0509c99",
+      "tag": "trixie"
+    },
+    {
+      "dpkg": "1.22.22",
+      "index_digest": "sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2",
+      "man1": {
+        "gid": 0,
+        "mode": "0775",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:7378260c0a098d27ac206225db5e7d92b8c7c84ea7afccc86eeb513756bbd392",
+      "tag": "trixie-slim"
+    },
+    {
+      "dpkg": "1.22.21",
+      "index_digest": "sha256:6d87375016340817ac2391e670971725a9981cfc24e221c47734681ed0f6c0f5",
+      "man1": {
+        "gid": 0,
+        "mode": "0755",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:a9114963cf3cd27fdae799d3c987758a26709515db3673ce85e2c4befd88199e",
+      "tag": "13.0"
+    },
+    {
+      "dpkg": "1.22.21",
+      "index_digest": "sha256:c85a2732e97694ea77237c61304b3bb410e0e961dd6ee945997a06c788c545bb",
+      "man1": {
+        "gid": 0,
+        "mode": "0775",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:f2306da7a8fb6440535937baed0ce0018736742d6dc5beec9d6a31355b259726",
+      "tag": "13.0-slim"
+    },
+    {
+      "dpkg": "1.22.21",
+      "index_digest": "sha256:01a723bf5bfb21b9dda0c9a33e0538106e4d02cce8f557e118dd61259553d598",
+      "man1": {
+        "gid": 0,
+        "mode": "0755",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:75a32e5b9e4aecc3454bab811b66fb98c8a44679915cf93f7d47370f6a7fb643",
+      "tag": "13.1"
+    },
+    {
+      "dpkg": "1.22.21",
+      "index_digest": "sha256:a347fd7510ee31a84387619a492ad6c8eb0af2f2682b916ff3e643eb076f925a",
+      "man1": {
+        "gid": 0,
+        "mode": "0775",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:ae614fe11cb373155bf26b938154c34bed87aa701f2f55a4ef03f872e4314ab0",
+      "tag": "13.1-slim"
+    },
+    {
+      "dpkg": "1.22.22",
+      "index_digest": "sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1",
+      "man1": {
+        "gid": 0,
+        "mode": "0755",
+        "pax_keys": [],
+        "type": "directory",
+        "uid": 0
+      },
+      "manifest_digest": "sha256:e2914ec98e08b24b4cee3cefcb9f90dfb5519f8d215a2ccf0c9a49b10b6e43de",
+      "tag": "trixie-20261027"
+    }
+  ]
+}
