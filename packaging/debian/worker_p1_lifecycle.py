@@ -50,6 +50,7 @@ def main():
             "#!/bin/sh\nprintf forbidden >> /tmp/forbidden-p1-call\nexit 99\n"
         )
         path.chmod(0o755)
+    control = "/packages/p1/agent-platform-control_0.1.0-5_amd64.deb"
     worker = "/packages/p1/agent-platform-worker_0.1.0-5_amd64.deb"
     newer = "/packages/p1-next/agent-platform-worker_0.1.0-6_amd64.deb"
     case = Path("/ap-worker-p1-case").read_text().strip()
@@ -98,7 +99,67 @@ def main():
         before is None or fingerprint(journal) == before
     )
     foreign.unlink()
-    call(["apt-get", "--no-install-recommends", "-y", "install", worker])
+    call(["apt-get", "--no-install-recommends", "-y", "install", control, worker])
+    dependency_versions = call(
+        [
+            "/usr/bin/dpkg-query",
+            "-W",
+            "-f=${Package}\t${Version}\n",
+            "base-files",
+            "dpkg",
+            "python3",
+            "python3-cryptography",
+            "git",
+            "gh",
+            "ca-certificates",
+            "systemd",
+            "apparmor",
+            "apparmor-utils",
+            "acl",
+            "passwd",
+            "agent-platform-control",
+            "agent-platform-worker",
+        ]
+    )
+    assert len(dependency_versions) <= 8192
+    Path("/evidence/worker-p1-dependencies-" + case + ".txt").write_text(
+        dependency_versions
+    )
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    if diagnostic["checks"]["package"] == {
+        "state": "BLOCKED",
+        "reason": "unsafe_metadata",
+    }:
+        # Evidence only: the original INSTALLED assertion below is unchanged.
+        evidence = {
+            "schema": "AP-PKG-METADATA-EVIDENCE/1",
+            "status": "EVIDENCE_UNAVAILABLE",
+            "host": "HOST_NOT_RUN",
+        }
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "metadata_evidence", "/opt/ap-tests/worker_metadata_evidence.py"
+            )
+            helper = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(helper)
+            spec = importlib.util.spec_from_file_location(
+                "installed_doctor_evidence",
+                "/usr/lib/agent-platform-worker/provisioning/worker_doctor.py",
+            )
+            doctor = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(doctor)
+            evidence = helper.capture(doctor)
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        encoded = json.dumps(evidence, sort_keys=True)
+        assert len(encoded) <= 16384
+        Path("/evidence/worker-p1-metadata-" + case + ".json").write_text(
+            encoded + "\n"
+        )
+        print(encoded, flush=True)
+    assert diagnostic["installation"] == "INSTALLED", diagnostic["checks"]["package"]
+    assert diagnostic["status"] == "BLOCKED" and not diagnostic["launch_allowed"]
+    assert diagnostic["host_evidence"] == "HOST_NOT_RUN"
     if original is not None:
         assert pwd.getpwnam("ap-publisher") == original
     else:
@@ -130,6 +191,10 @@ def main():
         raise AssertionError("interruption missing")
     call(["agent-platform-worker", "provision", "--approve"], 13)
     call(["agent-platform-worker", "provision", "--approve", "--recover"])
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    assert diagnostic["checks"]["identities"]["state"] == "CONFIGURED"
+    assert diagnostic["checks"]["state"]["state"] == "CONFIGURED"
+    assert diagnostic["checks"]["continuity"]["state"] == "NOT_RUN"
     signer = pwd.getpwnam("ap-publisher-signer")
     publisher = pwd.getpwnam("ap-publisher")
     assert signer.pw_uid != publisher.pw_uid and signer.pw_gid != publisher.pw_gid
@@ -171,6 +236,24 @@ for path in sys.argv[1:]:
                 *paths,
             ]
         )
+    # The new doctor is also usable without reading protected journal/receipt data.
+    unprivileged = json.loads(
+        call(
+            [
+                "/usr/bin/setpriv",
+                "--reuid",
+                "2000",
+                "--regid",
+                "2000",
+                "--clear-groups",
+                "/usr/bin/agent-platform-worker",
+                "doctor",
+            ],
+            13,
+        )
+    )
+    assert unprivileged["checks"]["state"]["state"] == "NOT_RUN"
+    assert unprivileged["checks"]["state"]["reason"] == "observation_denied"
     if before is None:
         journal.write_text("UNKNOWN synthetic retained publication\n")
         before = fingerprint(journal)
@@ -218,6 +301,18 @@ for path in sys.argv[1:]:
     assert fingerprint(journal) == before and pwd.getpwnam("ap-publisher") == original
     assert pwd.getpwnam("ap-publisher-signer") == signer
     assert not marker.exists() and not Path("/usr/bin/codex").exists()
+    # Reinstall after purge must restore code but retain both identities/history.
+    call(["apt-get", "--no-install-recommends", "-y", "install", newer])
+    assert fingerprint(journal) == before and receipt.read_bytes() == previous
+    assert pwd.getpwnam("ap-publisher") == original
+    assert pwd.getpwnam("ap-publisher-signer") == signer
+    diagnostic = json.loads(call(["agent-platform-worker", "doctor"], 13))
+    assert diagnostic["installation"] == "INSTALLED"
+    assert diagnostic["checks"]["state"]["state"] == "CONFIGURED"
+    assert not marker.exists()
+    assert "install ok installed" in call(
+        ["dpkg-query", "-W", "-f=${Status}", "agent-platform-control"]
+    )
     Path("/evidence/worker-p1-lifecycle-" + case + ".json").write_text(
         json.dumps(
             {
@@ -227,6 +322,9 @@ for path in sys.argv[1:]:
                 "no_activation": True,
                 "retained_unknown_history": True,
                 "uid_gid_separation": "PASS",
+                "doctor_read_only_blocked": True,
+                "reinstall_retains_state": True,
+                "two_role_coinstall": True,
                 "kernel_apparmor_bpf_boot": "NOT_RUN",
                 "real_credentials_and_runtime": "NOT_RUN",
             },

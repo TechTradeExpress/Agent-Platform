@@ -11,7 +11,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "resume", "doctor"):
         command = commands.add_parser(name)
-        command.add_argument("--issue", required=True, type=int)
+        command.add_argument("--issue", required=name != "doctor", type=int)
         command.add_argument("--trusted-actor", action="append", default=[])
         if name == "doctor":
             command.add_argument("--resume", action="store_true")
@@ -27,6 +27,16 @@ def main():
     codex.add_argument("--operator-path", required=True)
     codex.add_argument("--upgrade", action="store_true")
     args = parser.parse_args()
+    if args.command == "doctor" and args.issue is None:
+        if args.trusted_actor or args.resume:
+            parser.error("legacy doctor options require --issue")
+        argv = [
+            "/usr/bin/python3",
+            "-IB",
+            "/usr/lib/agent-platform-worker/provisioning/worker_doctor.py",
+        ]
+        os.execv(argv[0], argv)
+        return 13
     if args.command in ("run", "resume", "doctor"):
         if args.issue <= 0:
             parser.error("positive Issue required")

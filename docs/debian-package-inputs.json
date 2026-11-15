@@ -1,12 +1,13 @@
 {
-  "observed_on": "2026-11-04",
+  "observed_on": "2026-11-15",
   "image": {
     "repository": "docker.io/library/debian",
-    "tag": "trixie-slim",
+    "tag": "trixie-20261027",
     "platform": "linux/amd64",
-    "index_digest": "sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4",
-    "manifest_digest": "sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d",
-    "source": "https://hub.docker.com/v2/repositories/library/debian/tags/trixie-slim"
+    "index_digest": "sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1",
+    "manifest_digest": "sha256:e2914ec98e08b24b4cee3cefcb9f90dfb5519f8d215a2ccf0c9a49b10b6e43de",
+    "source": "https://hub.docker.com/v2/repositories/library/debian/tags/trixie-20261027",
+    "selection_evidence": "docs/evidence/pkg05-debian-image-selection.json"
   },
   "upload_action": {
     "repository": "actions/upload-artifact",

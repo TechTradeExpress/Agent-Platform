@@ -1,0 +1,317 @@
+{
+  "$defs": {
+    "caller_path_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "caller_path_only",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "path_invalid",
+            "path_shadowing",
+            "unsafe_attributes",
+            "unsafe_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "NOT_RUN"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "account_lock_not_observed",
+            "app_identity_not_authenticated",
+            "bpf_attachment_evidence_missing",
+            "bpf_egress_policy_missing",
+            "bpf_interface_missing",
+            "caller_path_only",
+            "codex_verification_failed",
+            "codex_verification_required",
+            "coding_environment_scope_unverified",
+            "coding_identity_invalid",
+            "config_acl_invalid",
+            "dependencies_missing",
+            "diagnostic_timeout",
+            "home_codex_present",
+            "identity_invalid",
+            "independent_continuity_evidence_missing",
+            "installed_payload_changed",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "operator_authorization_not_observed",
+            "package_record_invalid",
+            "package_verification_required",
+            "package_version_mismatch",
+            "path_invalid",
+            "path_shadowing",
+            "process_isolation_evidence_missing",
+            "profile_attachment_evidence_missing",
+            "profiles_not_enforcing",
+            "state_metadata_invalid",
+            "unit_constraints_rejected",
+            "unit_missing",
+            "unsafe_attributes",
+            "unsafe_metadata",
+            "verified_dependencies",
+            "verified_effective_unit_settings",
+            "verified_enforced_profiles",
+            "verified_local_identities",
+            "verified_local_package",
+            "verified_managed_codex",
+            "verified_state_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "CONFIGURED",
+            "INSTALLED",
+            "NOT_RUN",
+            "READY_FOR_SUPERVISED_PUBLISHING"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "path_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "codex_verification_required",
+            "coding_environment_scope_unverified",
+            "coding_identity_invalid",
+            "home_codex_present",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "unsafe_attributes",
+            "unsafe_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "NOT_RUN"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "archive_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "binary_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "codex_release_tag": {
+              "pattern": "^rust-v[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
+            "codex_release_url": {
+              "pattern": "^https://github\\.com/openai/codex/releases/download/rust-v[0-9]+\\.[0-9]+\\.[0-9]+/codex-x86_64-unknown-linux-musl\\.tar\\.gz$",
+              "type": "string"
+            },
+            "codex_version": {
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
+            "effective_path": {
+              "pattern": "^/opt/agent-platform-codex/versions/[0-9]+\\.[0-9]+\\.[0-9]+-[0-9a-f]{64}/codex$",
+              "type": "string"
+            },
+            "manifest_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "release_lock_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "release_pin_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "source_commit": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "worker_version": {
+              "pattern": "^0\\.1\\.0-[5-9][0-9]*$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "worker_version",
+            "source_commit",
+            "manifest_sha256"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "checks": {
+      "additionalProperties": false,
+      "properties": {
+        "account_lock": {
+          "$ref": "#/$defs/check"
+        },
+        "app_identity": {
+          "$ref": "#/$defs/check"
+        },
+        "apparmor": {
+          "$ref": "#/$defs/check"
+        },
+        "bpf": {
+          "$ref": "#/$defs/check"
+        },
+        "caller_path": {
+          "$ref": "#/$defs/caller_path_check"
+        },
+        "codex": {
+          "$ref": "#/$defs/check"
+        },
+        "continuity": {
+          "$ref": "#/$defs/check"
+        },
+        "dependencies": {
+          "$ref": "#/$defs/check"
+        },
+        "identities": {
+          "$ref": "#/$defs/check"
+        },
+        "operator_authorization": {
+          "$ref": "#/$defs/check"
+        },
+        "package": {
+          "$ref": "#/$defs/check"
+        },
+        "path": {
+          "$ref": "#/$defs/path_check"
+        },
+        "process_isolation": {
+          "$ref": "#/$defs/check"
+        },
+        "profile_attachment": {
+          "$ref": "#/$defs/check"
+        },
+        "state": {
+          "$ref": "#/$defs/check"
+        },
+        "units": {
+          "$ref": "#/$defs/check"
+        }
+      },
+      "required": [
+        "package",
+        "codex",
+        "path",
+        "dependencies",
+        "identities",
+        "state",
+        "units",
+        "apparmor",
+        "account_lock",
+        "profile_attachment",
+        "bpf",
+        "process_isolation",
+        "continuity",
+        "app_identity",
+        "operator_authorization",
+        "caller_path"
+      ],
+      "type": "object"
+    },
+    "configuration": {
+      "const": "BLOCKED"
+    },
+    "gate_73": {
+      "const": "BLOCKED"
+    },
+    "host_evidence": {
+      "const": "HOST_NOT_RUN"
+    },
+    "installation": {
+      "enum": [
+        "BLOCKED",
+        "CONFIGURED",
+        "INSTALLED",
+        "NOT_RUN",
+        "READY_FOR_SUPERVISED_PUBLISHING"
+      ]
+    },
+    "launch_allowed": {
+      "const": false
+    },
+    "runtime": {
+      "const": "LIVE_NO_GO"
+    },
+    "schema": {
+      "const": "AP-WORKER-DOCTOR/1"
+    },
+    "status": {
+      "const": "BLOCKED"
+    },
+    "subscription": {
+      "const": "SUBSCRIPTION_ISOLATION_BLOCKED"
+    }
+  },
+  "required": [
+    "schema",
+    "status",
+    "launch_allowed",
+    "host_evidence",
+    "runtime",
+    "subscription",
+    "gate_73",
+    "installation",
+    "configuration",
+    "checks",
+    "artifacts"
+  ],
+  "title": "AP-WORKER-DOCTOR/1",
+  "type": "object"
+}

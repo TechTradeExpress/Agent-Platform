@@ -327,7 +327,7 @@ def test_workflow_inputs_match_reviewed_public_provenance():
     assert action["repository"] + "@" + action["commit"] in workflow
     assert "# " + action["version"] in workflow
     dockerfile = (ROOT / "packaging/debian/Dockerfile").read_text()
-    assert "debian:trixie-slim@" + pins["image"]["manifest_digest"] in dockerfile
+    assert "debian:trixie-20261027@" + pins["image"]["manifest_digest"] in dockerfile
     assert pins["image"]["platform"] == "linux/amd64"
 
 
