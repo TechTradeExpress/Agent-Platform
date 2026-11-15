@@ -331,7 +331,8 @@ def test_malformed_elf_is_rejected(candidate, fault):
     rejected(candidate)
 
 
-def test_file_mutation_after_digest_read_is_detected(candidate, monkeypatch):
+@pytest.mark.parametrize("mutation", ["grow", "shrink"])
+def test_file_mutation_after_digest_read_is_detected(candidate, monkeypatch, mutation):
     path = candidate.root / native.BINARY
     original = os.pread
     changed = False
@@ -341,14 +342,37 @@ def test_file_mutation_after_digest_read_is_detected(candidate, monkeypatch):
         data = original(fd, count, offset)
         if os.fstat(fd).st_ino == path.stat().st_ino and not changed:
             changed = True
+            assert offset == 0 and len(data) == path.stat().st_size
+            # pread has captured the original hash input. Make the mutation
+            # observable through size, independent of timestamp granularity.
             with path.open("r+b") as f:
-                f.seek(119)
-                f.write(b"x")
+                if mutation == "grow":
+                    f.seek(0, os.SEEK_END)
+                    f.write(b"x")
+                else:
+                    f.truncate(len(data) - 1)
+            assert path.stat().st_size != len(data)
         return data
 
     monkeypatch.setattr(os, "pread", mutate)
-    rejected(candidate, "file_changed")
+    with pytest.raises(legacy.InvalidRuntime) as error:
+        inspect(candidate)
+    assert error.value.reason == "file_changed"
     assert changed
+
+
+def test_original_same_size_mutation_is_rejected_as_malformed_load():
+    # Offset 119 is the high byte of PT_LOAD.p_align, not neutral payload.
+    # When timestamps do not move, this is the parser refusal seen in baseline.
+    raw = bytearray(elf())
+    raw[119] = ord("x")
+    with pytest.raises(legacy.InvalidRuntime) as error:
+        parser.inspect(
+            lambda offset, count: raw[offset : offset + count],
+            len(raw),
+            executable=True,
+        )
+    assert error.value.reason == "invalid_load"
 
 
 def test_same_content_path_replacement_detected(candidate, monkeypatch):

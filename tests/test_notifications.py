@@ -1,7 +1,8 @@
 """Trusted synthetic facts and scripted Bot API replies, never real Telegram."""
 
 import json
-from dataclasses import FrozenInstanceError, asdict, replace
+import sys
+from dataclasses import FrozenInstanceError, asdict, fields, replace
 
 import pytest
 from test_prepare import task as task
@@ -255,9 +256,59 @@ def test_bot_request_exact_contract_and_no_token(event):
     }
     assert "parse_mode" not in data and "entities" not in data
     assert "token" not in repr(request).lower()
-    for name in ["origin", "method", "timeout", "redirects"]:
-        with pytest.raises(ValueError):
+    # These are non-init frozen fields; the stdlib rejection class changed
+    # in CPython 3.13. Do not translate that API detail into a product exception.
+    expected = ValueError if sys.version_info < (3, 13) else TypeError
+    policy = {
+        "origin": request.origin,
+        "method": request.method,
+        "timeout": request.timeout,
+        "redirects": request.redirects,
+    }
+    for name in policy:
+        with pytest.raises(expected) as error:
             replace(request, **{name: "https://evil.invalid"})
+        assert type(error.value) is expected
+        assert str(error.value) == (
+            f"field {name} is declared with init=False, "
+            "it cannot be specified with replace()"
+        )
+    assert {name: getattr(request, name) for name in policy} == policy
+
+
+@pytest.mark.parametrize(
+    "name,value",
+    [
+        ("origin", "https://evil.invalid"),
+        ("method", "deleteMessage"),
+        ("timeout", 0),
+        ("redirects", True),
+    ],
+)
+def test_request_policy_cannot_be_supplied_or_mutated(event, name, value):
+    request = TelegramRequest(12345, format_event(event))
+    before = asdict(request)
+    assert next(f for f in fields(request) if f.name == name).init is False
+    with pytest.raises(TypeError):
+        TelegramRequest(12345, request.notification, **{name: value})
+    with pytest.raises(FrozenInstanceError):
+        setattr(request, name, value)
+    assert asdict(request) == before
+
+
+def test_allowed_dataclass_copy_preserves_fixed_token_free_transport_policy(event):
+    original = TelegramRequest(12345, format_event(event))
+    copied = replace(original, chat_id=12346)
+    assert copied.chat_id == 12346 and original.chat_id == 12345
+    assert copied.notification == original.notification
+    assert (copied.origin, copied.method, copied.timeout, copied.redirects) == (
+        "https://api.telegram.org",
+        "sendMessage",
+        5,
+        False,
+    )
+    assert json.loads(copied.body) == {**json.loads(original.body), "chat_id": 12346}
+    assert "token" not in repr(copied).lower()
 
 
 def test_exact_private_chat_ack_and_payload_binding(event):
