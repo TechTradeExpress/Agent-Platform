@@ -22,7 +22,7 @@ def test_external_actions_have_reviewed_official_commit_pins():
     pins = {v["repository"]: v for v in evidence["actions"]}
     assert set(pins) == set(allowed)
     uses = re.findall(r"uses:\s*(\S+)\s+# (v\d+\.\d+\.\d+)", WORKFLOW.read_text())
-    assert len(uses) == 3
+    assert len(uses) == 2
     assert WORKFLOW.read_text().count("uses:") == len(uses)
     for ref, version in uses:
         repository, sha = ref.split("@")
@@ -71,13 +71,17 @@ def test_only_offline_required_job_commands_and_bounded_runtime():
     jobs = text.split("\njobs:\n", 1)[1]
     assert re.findall(r"^  ([\w-]+):$", jobs, re.M) == ["checks"]
     assert re.findall(r"^      - run: (.+)$", jobs, re.M) == [
-        "uv sync --locked",
-        "uv run ruff check .",
-        "uv run pytest",
+        "uv sync --locked --python /usr/bin/python3.12 "
+        "--no-managed-python --no-python-downloads",
+        "uv run --no-sync --python /usr/bin/python3.12 --no-managed-python "
+        "--no-python-downloads ruff check .",
+        "uv run --no-sync --python /usr/bin/python3.12 --no-managed-python "
+        "--no-python-downloads python ci/cp08_pytest.py",
         "git diff --check",
     ]
     assert jobs.count("run:") == 4
     assert re.findall(r"timeout-minutes: (\d+)", jobs) == ["20"]
-    assert "    runs-on: ubuntu-latest\n" in jobs
-    assert "          python-version: '3.12'\n" in jobs
+    assert "    runs-on: ubuntu-24.04\n" in jobs
+    assert "actions/setup-python@" not in jobs
+    assert "chmod" not in jobs and "chown" not in jobs
     assert "          version: '0.13.6'\n" in jobs

@@ -835,3 +835,21 @@ def test_diagnostic_observation_and_report_validation_never_start_children(
     for category in _RUNTIME_CATEGORIES:
         assert _current_runtime_diagnostic(category) is None
     check(lr.exercise(replace(config, version="bad"), lr.Case.HYGIENE))
+
+
+@pytest.mark.parametrize(
+    "bit,name",
+    [
+        (0o4000, "setuid"),
+        (0o2000, "setgid"),
+        (0o020, "group_write"),
+        (0o002, "other_write"),
+    ],
+)
+def test_current_runtime_forbidden_bit_categories(bit, name):
+    try:
+        meta = os.stat(os.path.realpath(lr.sys.executable), follow_symlinks=False)
+    except Exception:
+        pytest.fail("runtime_permission_metadata_unavailable", pytrace=False)
+    if meta.st_mode & bit:
+        pytest.fail("runtime_bit_" + name + "_present", pytrace=False)

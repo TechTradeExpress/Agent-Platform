@@ -349,3 +349,13 @@ and remediation remain unresolved. Local results prove the diagnostic/refusal
 logic only. CP-06, Publisher, closed Debian SOURCE_ONLY classification,
 LIVE_NO_GO, Gate #73, native/public exit 13 and human-only merge remain unchanged.
 Real host isolation remains HOST_NOT_RUN/BLOCKED.
+
+### CI permission incompatibility follow-up
+
+The next source-only CI change is documented in
+[CI interpreter selection](ci-cp08-interpreter.md). It selects a pre-existing
+OS interpreter explicitly instead of repairing the shared tool cache, and binds
+the original validation to pytest in one process. The CP-08 runtime validator,
+ownership/capability requirements, SHA-256 checks, limits and negative cases are
+unchanged. Actual CI-image acceptance still requires a new observed run; no
+local replay changes HOST_NOT_RUN/BLOCKED or supplies production authority.
