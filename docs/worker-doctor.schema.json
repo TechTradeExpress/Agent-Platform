@@ -1,5 +1,35 @@
 {
   "$defs": {
+    "caller_path_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "caller_path_only",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "path_invalid",
+            "path_shadowing",
+            "unsafe_attributes",
+            "unsafe_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "NOT_RUN"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
     "check": {
       "additionalProperties": false,
       "properties": {
@@ -10,7 +40,11 @@
             "bpf_attachment_evidence_missing",
             "bpf_egress_policy_missing",
             "bpf_interface_missing",
+            "caller_path_only",
             "codex_verification_failed",
+            "codex_verification_required",
+            "coding_environment_scope_unverified",
+            "coding_identity_invalid",
             "config_acl_invalid",
             "dependencies_missing",
             "diagnostic_timeout",
@@ -53,6 +87,37 @@
             "INSTALLED",
             "NOT_RUN",
             "READY_FOR_SUPERVISED_PUBLISHING"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "path_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "codex_verification_required",
+            "coding_environment_scope_unverified",
+            "coding_identity_invalid",
+            "home_codex_present",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "unsafe_attributes",
+            "unsafe_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "NOT_RUN"
           ]
         }
       },
@@ -143,6 +208,9 @@
         "bpf": {
           "$ref": "#/$defs/check"
         },
+        "caller_path": {
+          "$ref": "#/$defs/caller_path_check"
+        },
         "codex": {
           "$ref": "#/$defs/check"
         },
@@ -162,7 +230,7 @@
           "$ref": "#/$defs/check"
         },
         "path": {
-          "$ref": "#/$defs/check"
+          "$ref": "#/$defs/path_check"
         },
         "process_isolation": {
           "$ref": "#/$defs/check"
@@ -192,15 +260,13 @@
         "process_isolation",
         "continuity",
         "app_identity",
-        "operator_authorization"
+        "operator_authorization",
+        "caller_path"
       ],
       "type": "object"
     },
     "configuration": {
-      "enum": [
-        "CONFIGURED",
-        "BLOCKED"
-      ]
+      "const": "BLOCKED"
     },
     "gate_73": {
       "const": "BLOCKED"

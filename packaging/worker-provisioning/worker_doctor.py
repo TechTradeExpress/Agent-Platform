@@ -37,6 +37,8 @@ package_verification_required object_missing observation_denied observation_fail
 unsafe_metadata unsafe_attributes
 object_changed invalid_record package_record_invalid installed_payload_changed
 package_version_mismatch codex_verification_failed path_shadowing path_invalid
+codex_verification_required caller_path_only coding_identity_invalid
+coding_environment_scope_unverified
 home_codex_present dependencies_missing identity_invalid state_metadata_invalid
 config_acl_invalid unit_missing unit_constraints_rejected profiles_not_enforcing
 profile_attachment_evidence_missing bpf_attachment_evidence_missing
@@ -45,6 +47,22 @@ bpf_interface_missing bpf_egress_policy_missing
 app_identity_not_authenticated operator_authorization_not_observed
 account_lock_not_observed diagnostic_timeout""".split()
 )
+SCOPE_FAILURES = frozenset(
+    """object_missing observation_denied observation_failed
+unsafe_metadata unsafe_attributes object_changed invalid_record""".split()
+)
+SCOPE_REASONS = {
+    "path": SCOPE_FAILURES
+    | {
+        "codex_verification_required",
+        "coding_identity_invalid",
+        "coding_environment_scope_unverified",
+        "home_codex_present",
+    },
+    "caller_path": SCOPE_FAILURES
+    | {"caller_path_only", "path_invalid", "path_shadowing"},
+}
+
 CHECKS = (
     "package",
     "codex",
@@ -61,6 +79,7 @@ CHECKS = (
     "continuity",
     "app_identity",
     "operator_authorization",
+    "caller_path",
 )
 
 
@@ -213,8 +232,11 @@ class Observer:
     def __init__(self):
         self.accounts = None
         self.artifacts = None
+        self._codex_identity = None
 
     def package(self):
+        self.artifacts = None
+        self._codex_identity = None
         build = parse(read(DOC + "/build.json"))
         inventory = parse(read(DOC + "/manifest.json"))
         need(
@@ -310,6 +332,7 @@ class Observer:
         return "INSTALLED", "verified_local_package"
 
     def codex(self):
+        self._codex_identity = None
         need(self.artifacts is not None, "package_verification_required")
         m = sibling("codex_upstream")
         try:
@@ -336,6 +359,10 @@ class Observer:
                 )
         except m.Blocked as exc:
             raise Blocked("codex_verification_failed") from exc
+        self._codex_identity = tuple(
+            self.artifacts[k]
+            for k in ("effective_path", "binary_sha256", "release_pin_sha256")
+        )
         return "INSTALLED", "verified_managed_codex"
 
     @staticmethod
@@ -346,7 +373,8 @@ class Observer:
         except FileNotFoundError:
             return False
 
-    def path(self):
+    def caller_path(self):
+        """Caller PATH names only; never proof of any user's session environment."""
         value = os.environ.get("PATH", "")
         parts = value.split(":")
         need(
@@ -358,18 +386,6 @@ class Observer:
             ),
             "path_invalid",
         )
-        # Inspect names only. Never open homes, binaries, shell files or sessions.
-        home = os.environ.get("HOME", "")
-        need(
-            home.startswith("/")
-            and len(home) <= 4096
-            and not {".", ".."}.intersection(home.split("/")),
-            "path_invalid",
-        )
-        need(
-            not self.exists_name(home.rstrip("/") + "/.local/bin/codex"),
-            "home_codex_present",
-        )
         found = False
         for part in parts:
             if part == "/usr/local/bin":
@@ -377,7 +393,56 @@ class Observer:
                 break
             need(not self.exists_name(part.rstrip("/") + "/codex"), "path_shadowing")
         need(found, "path_invalid")
-        return "CONFIGURED", "verified_managed_codex"
+        return "NOT_RUN", "caller_path_only"
+
+    def path(self):
+        """Fail-closed coding-user scope, independent of caller HOME/PATH/UID."""
+        need(
+            self._codex_identity is not None
+            and self.artifacts is not None
+            and tuple(
+                self.artifacts.get(k)
+                for k in ("effective_path", "binary_sha256", "release_pin_sha256")
+            )
+            == self._codex_identity,
+            "codex_verification_required",
+        )
+        # Fixed public local account metadata, never NSS plugins or shell files.
+        # A matching local record is still not authenticated session/NSS proof.
+        rows = [
+            line.split(":")
+            for line in read("/etc/passwd", 2 * 1024**2).decode().splitlines()
+        ]
+        need(
+            len(rows) <= 10000 and all(len(row) == 7 for row in rows),
+            "coding_identity_invalid",
+        )
+        matches = [row for row in rows if row[0] == "agentdev"]
+        need(len(matches) == 1, "coding_identity_invalid")
+        account = matches[0]
+        need(
+            re.fullmatch("[1-9][0-9]{0,9}", account[2])
+            and int(account[2]) < 2**32 - 1
+            and all(re.fullmatch("[0-9]{1,10}", row[2]) for row in rows)
+            and sum(int(row[2]) == int(account[2]) for row in rows) == 1,
+            "coding_identity_invalid",
+        )
+        home = account[5]
+        need(
+            home.startswith("/")
+            and home not in ("/", "/root")
+            and len(home) <= 4096
+            and not {".", ".."}.intersection(home.split("/")),
+            "coding_identity_invalid",
+        )
+        # Only lstat the named candidate. No home/binary/session contents read.
+        need(
+            not self.exists_name(home.rstrip("/") + "/.local/bin/codex"),
+            "home_codex_present",
+        )
+        # No safe observation of the actual coding session PATH/aliases exists.
+        # Root's clean PATH, or even a matching caller UID/HOME, cannot fill it.
+        return "NOT_RUN", "coding_environment_scope_unverified"
 
     def dependencies(self):
         need(sys.version_info >= (3, 12), "dependencies_missing")
@@ -639,7 +704,7 @@ class Observer:
 
 def report(observer):
     checks = {}
-    for name in (*CHECKS[:8], "bpf"):
+    for name in (*CHECKS[:8], "bpf", "caller_path"):
         try:
             state, reason = getattr(observer, name)()
         except Blocked as exc:
@@ -662,9 +727,13 @@ def report(observer):
         ):
             state, reason = "BLOCKED", "observation_failed"
         need(state in STATES and reason in REASONS, "invalid_record")
+        if name in SCOPE_REASONS and (
+            state not in ("BLOCKED", "NOT_RUN") or reason not in SCOPE_REASONS[name]
+        ):
+            state, reason = "BLOCKED", "observation_failed"
         checks[name] = {"state": state, "reason": reason}
     for name, reason in zip(
-        CHECKS[8:],
+        CHECKS[8:-1],
         (
             "account_lock_not_observed",
             "profile_attachment_evidence_missing",
@@ -688,7 +757,7 @@ def report(observer):
         "configuration": "CONFIGURED"
         if all(
             checks[n]["state"] == "CONFIGURED"
-            for n in ("identities", "state", "units", "apparmor")
+            for n in ("path", "identities", "state", "units", "apparmor")
         )
         else "BLOCKED",
         "host_evidence": "HOST_NOT_RUN",

@@ -9,7 +9,7 @@ Read full current #112 (including its authoritative AP-PKG/2 amendment), #116,
 #109's observed merge is `790dc17382689552bbf8f16823f7f16956ff37f5`.
 No GitHub credentials, write API, push, PR creation or pilot was used.
 
-## Executed checks
+## Initial implementation be133771 (historical checks)
 
 Local Python 3.13.5, uv 0.13.7, Ruff 0.17.3, pytest 9.1.1. Cached dependencies
 only (`uv run --offline`); no host package installation or privilege substitution.
@@ -68,3 +68,40 @@ claiming a rehash of absent bytes. These limits remain explicit in the runbook.
 
 INSTALL_INERT, LIVE_NO_GO, SUBSCRIPTION_ISOLATION_BLOCKED, Gate #73 BLOCKED,
 HOST_NOT_RUN, legacy/native exit 13, fail-closed and human-only merge remain.
+
+## Independent review correction (additional local commit)
+
+The initial implementation above received REQUEST_CHANGES for an unverified
+positive PATH result and caller/root HOME/PATH being mistaken for coding scope.
+The original PATH description/results are superseded by [the corrected scope
+contract](worker-doctor.md). This is a follow-up on the same feature branch with
+be133771a8b95f9b26fad3acb18ba5c86125d431 as its exact parent; no amend or merge.
+
+- A positive Codex check creates only an in-process correlation of its verified
+  effective path, binary hash and release pin. Package/Codex rechecks invalidate
+  that correlation first. Artifact fields alone cannot satisfy it.
+- Caller PATH names are a separate NOT_RUN/caller_path_only observation. The
+  coding check uses fixed public local agentdev metadata and lstat only, never
+  caller HOME/PATH as authority. Ambiguous identities, existing personal Codex or
+  denied metadata cannot yield positive confirmation. Even a clean candidate
+  remains NOT_RUN/coding_environment_scope_unverified without session proof.
+- Schema requires caller_path and restricts both scope checks to BLOCKED/NOT_RUN
+  with closed reasons; global configuration is pinned BLOCKED. Report generation
+  rejects unexpected positive scope claims. Root or matching caller identities
+  never prove the coding environment.
+- Ruff PASS. Focused PKG-05/PKG-03R/PKG-04/package tests: **275 passed**.
+- Full Python 3.13.5 pytest: **3487 passed, 3 failed, 1 skipped**. The same native
+  artifact, notification and Telegram journal cases listed above failed. Fresh
+  exact-parent full comparison: **3467 passed, 3 failed, 1 skipped**, with the
+  same three failures. Targeted parent reproduction also failed for native and
+  notifications while Telegram passed alone. Logs are retained in the review
+  delivery report; no full-suite PASS is claimed.
+- No PKG-03R installer/pins/proof/tests, PKG-04 provisioner/CLI/lifecycle/tests,
+  Publisher, runtime source, builder or workflow was changed in this correction.
+  Only doctor, its regressions, schema and related documentation changed.
+- Actual Docker/multi-UID lifecycle and all real host/security/pilot operations
+  remain NOT_RUN/HOST_NOT_RUN. No credentials, private home/session contents,
+  other binaries, login/su/sudo, repairs or actual Publisher were used.
+
+The delivery report supplies full commit/tree SHA, patches against the original
+main and the immediate review parent, fresh baseline logs and integrity hashes.

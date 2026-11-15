@@ -65,3 +65,9 @@ rollback may restore reviewed compatible package/tool bytes only after schema an
 continuity review. It must retain identities, journals, anchors and uncertainty;
 Codex rollback uses only PKG-03R's intact verified version store. Incompatible
 state, partial recovery or unknown external effects require human reconciliation.
+
+PKG-05 review correction: a root/caller PATH observation never confirms the coding
+principal's session. Treat caller_path_only and coding_environment_scope_unverified
+as NOT_RUN / STOP for configuration confirmation. A fixed public agentdev record
+and name-only home candidate check do not authenticate effective session PATH.
+No login/su/sudo or private shell/home inspection is authorized to fill that gap.

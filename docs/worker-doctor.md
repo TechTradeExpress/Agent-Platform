@@ -38,11 +38,38 @@ transaction journals, tampering, ownership, mode or xattr failures block. The
 installer does not retain the downloaded archive: the archive digest is verified
 against the trusted receipt and release pin, **not rehashed from an absent archive**.
 An operator's acquisition evidence must retain that original archive digest.
-PATH is inspected by names only; preceding Codex candidates and an existing
-`HOME/.local/bin/codex` block without opening their contents or changing them.
-This cannot discover shell aliases, shell command caches or other users' PATH.
-The supplied process PATH is the observation scope, not authenticated operator
-identity. Trusted future callers must use the verified absolute binary path.
+The two path observations have separate, closed scopes:
+
+- `caller_path` inspects names preceding the managed command in the current
+  process PATH. It does not inspect HOME or confirm a coding session. A clean
+  list yields **NOT_RUN / caller_path_only**, never CONFIGURED, even after Codex
+  verification. A preceding candidate blocks with `path_shadowing`; denied
+  metadata is NOT_RUN / observation_denied.
+- `path` requires a successful `codex()` check and an unchanged in-process
+  correlation of its effective path, binary SHA-256 and release pin SHA-256.
+  Missing verification (including artifacts=None or an arbitrary artifact dict)
+  blocks with `codex_verification_required`. Package/Codex rechecks invalidate the
+  previous correlation before observing anything; failed checks cannot leave it
+  usable. This correlation is not serialized authority or continuous attestation.
+  It reads only public local `/etc/passwd` metadata for the fixed coding principal
+  `agentdev`, rejecting missing/ambiguous/root/UID-alias identities or unsafe home
+  names. It lstat-inspects only that candidate home's `.local/bin/codex` name.
+  Existing personal Codex blocks with `home_codex_present`; denied metadata is
+  NOT_RUN, not absence. No private home, shell, session, credential or binary
+  contents are read, and neither caller HOME/PATH nor root's identity substitutes
+  for coding-user scope.
+
+A safe local account record and absence of that candidate still cannot establish
+agentdev's effective NSS/session PATH, aliases or shell cache. There is no trusted
+session-environment observation contract, and no su/sudo/login or shell inspection
+is introduced. Therefore `path` returns **NOT_RUN /
+coding_environment_scope_unverified**, never CONFIGURED. Global configuration
+also remains BLOCKED when this required scope is unverified. Root's clean PATH
+cannot hide a coding-home candidate or turn its own environment into Worker proof.
+Trusted future callers must use the verified absolute binary path.
+The updated closed AP-WORKER-DOCTOR/1 schema requires `caller_path`, and limits
+both scope checks to BLOCKED/NOT_RUN with fixed reasons. Old consumers must reject
+unknown/missing checks rather than silently ignoring this schema revision.
 
 Python >=3.12 and a fixed Git version query are checked. Public local passwd/group
 records are validated with PKG-04's identity policy, including UID/GID separation,

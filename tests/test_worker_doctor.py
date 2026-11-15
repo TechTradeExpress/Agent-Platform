@@ -30,6 +30,12 @@ def doctor():
 class GoodObservations:
     artifacts = None
 
+    def path(self):
+        return "NOT_RUN", "coding_environment_scope_unverified"
+
+    def caller_path(self):
+        return "NOT_RUN", "caller_path_only"
+
     def bpf(self):
         return "NOT_RUN", "bpf_attachment_evidence_missing"
 
@@ -61,11 +67,11 @@ def test_report_has_closed_redacted_deterministic_shape_and_never_ready(doctor):
         "gate_73",
     }
     assert set(first["checks"]) == set(doctor.CHECKS)
-    assert first["status"] == "BLOCKED" and first["configuration"] == "CONFIGURED"
+    assert first["status"] == "BLOCKED" and first["configuration"] == "BLOCKED"
     assert first["host_evidence"] == "HOST_NOT_RUN"
     assert first["runtime"] == "LIVE_NO_GO" and first["gate_73"] == "BLOCKED"
     assert not first["launch_allowed"]
-    assert all(first["checks"][n]["state"] == "NOT_RUN" for n in doctor.CHECKS[8:])
+    assert all(first["checks"][n]["state"] == "NOT_RUN" for n in doctor.CHECKS[8:-1])
     assert "READY_FOR_SUPERVISED_PUBLISHING" not in json.dumps(first)
 
 
@@ -148,43 +154,33 @@ def test_legacy_options_never_select_new_doctor(monkeypatch, option):
 
 
 @pytest.mark.parametrize(
-    "path,home,exists,reason",
+    "path,exists,reason",
     [
-        (
-            "/foreign:/usr/local/bin:/usr/bin",
-            "/home/synthetic",
-            "/foreign/codex",
-            "path_shadowing",
-        ),
-        (
-            "/usr/local/bin:/usr/bin",
-            "/home/synthetic",
-            "/home/synthetic/.local/bin/codex",
-            "home_codex_present",
-        ),
-        (":/usr/local/bin", "/home/synthetic", "", "path_invalid"),
-        ("relative:/usr/local/bin", "/home/synthetic", "", "path_invalid"),
-        ("/usr/bin", "/home/synthetic", "", "path_invalid"),
-        ("/usr/local/bin", "../foreign", "", "path_invalid"),
-        ("/usr/local/bin/../bin", "/home/synthetic", "", "path_invalid"),
+        ("/foreign:/usr/local/bin:/usr/bin", "/foreign/codex", "path_shadowing"),
+        (":/usr/local/bin", "", "path_invalid"),
+        ("relative:/usr/local/bin", "", "path_invalid"),
+        ("/usr/bin", "", "path_invalid"),
+        ("/usr/local/bin/../bin", "", "path_invalid"),
     ],
 )
-def test_shadowing_uses_names_only(doctor, monkeypatch, path, home, exists, reason):
+def test_caller_shadowing_uses_names_only(doctor, monkeypatch, path, exists, reason):
     monkeypatch.setenv("PATH", path)
-    monkeypatch.setenv("HOME", home)
     monkeypatch.setattr(
         doctor.Observer, "exists_name", staticmethod(lambda p: p == exists)
     )
     monkeypatch.setattr(os, "open", lambda *_a, **_k: pytest.fail("content read"))
     with pytest.raises(doctor.Blocked, match=reason):
-        doctor.Observer().path()
+        doctor.Observer().caller_path()
 
 
-def test_clean_path(doctor, monkeypatch):
+def test_clean_caller_path_never_confirms_coding_environment(doctor, monkeypatch):
     monkeypatch.setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
-    monkeypatch.setenv("HOME", "/home/synthetic")
+    monkeypatch.setenv("HOME", "/root")
     monkeypatch.setattr(doctor.Observer, "exists_name", staticmethod(lambda _: False))
-    assert doctor.Observer().path()[0] == "CONFIGURED"
+    observer = doctor.Observer()
+    assert observer.caller_path() == ("NOT_RUN", "caller_path_only")
+    with pytest.raises(doctor.Blocked, match="codex_verification_required"):
+        observer.path()
 
 
 @pytest.mark.parametrize(
@@ -728,3 +724,189 @@ def test_effective_unit_response_must_be_complete_and_unique(
     monkeypatch.setattr(doctor, "query", query)
     with pytest.raises(doctor.Blocked):
         doctor.Observer().units()
+
+
+@pytest.fixture
+def coding_scope(doctor, monkeypatch):
+    observer = doctor.Observer()
+    # Test-only correlation seam. Real production pin comes solely from codex().
+    observer.artifacts = {
+        "effective_path": "/opt/agent-platform-codex/versions/fixture/codex",
+        "binary_sha256": "a" * 64,
+        "release_pin_sha256": "b" * 64,
+    }
+    observer._codex_identity = tuple(
+        observer.artifacts[k]
+        for k in ("effective_path", "binary_sha256", "release_pin_sha256")
+    )
+
+    def public_passwd(path, *_):
+        assert path == "/etc/passwd"
+        return (
+            b"root:x:0:0::/root:/bin/bash\n"
+            b"agentdev:x:1001:1001::/home/agentdev:/bin/bash\n"
+        )
+
+    monkeypatch.setattr(doctor, "read", public_passwd)
+    return observer
+
+
+@pytest.mark.parametrize("artifacts", [None, {}, {"binary_sha256": "a" * 64}])
+def test_path_requires_successful_codex_identity_not_artifact_claims(
+    doctor, monkeypatch, artifacts
+):
+    observer = doctor.Observer()
+    observer.artifacts = artifacts
+    monkeypatch.setenv("PATH", "/usr/local/bin:/usr/bin")
+    monkeypatch.setattr(
+        doctor, "read", lambda *_: pytest.fail("scope before Codex verification")
+    )
+    with pytest.raises(doctor.Blocked, match="codex_verification_required"):
+        observer.path()
+
+
+@pytest.mark.parametrize(
+    "uid,home",
+    [(0, "/root"), (1001, "/home/agentdev"), (1001, "/root"), (1234, "/home/foreign")],
+)
+def test_caller_uid_home_path_never_confirm_agentdev(
+    doctor, coding_scope, monkeypatch, uid, home
+):
+    monkeypatch.setattr(os, "getuid", lambda: uid)
+    monkeypatch.setattr(os, "geteuid", lambda: uid)
+    monkeypatch.setenv("HOME", home)
+    monkeypatch.setenv("PATH", "/usr/local/bin:/usr/bin")
+    seen = []
+
+    def names_only(path):
+        seen.append(path)
+        return False
+
+    monkeypatch.setattr(doctor.Observer, "exists_name", staticmethod(names_only))
+    assert coding_scope.path() == ("NOT_RUN", "coding_environment_scope_unverified")
+    assert seen == ["/home/agentdev/.local/bin/codex"]
+    assert coding_scope.caller_path() == ("NOT_RUN", "caller_path_only")
+
+
+def test_root_clean_environment_cannot_hide_agentdev_codex(
+    doctor, coding_scope, monkeypatch
+):
+    monkeypatch.setenv("HOME", "/root")
+    monkeypatch.setenv("PATH", "/usr/local/bin:/usr/bin")
+    monkeypatch.setattr(os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        doctor.Observer,
+        "exists_name",
+        staticmethod(lambda path: path == "/home/agentdev/.local/bin/codex"),
+    )
+    with pytest.raises(doctor.Blocked, match="home_codex_present"):
+        coding_scope.path()
+    assert coding_scope.caller_path() == ("NOT_RUN", "caller_path_only")
+
+
+@pytest.mark.parametrize("denial", ["passwd", "home", "caller"])
+def test_missing_access_never_becomes_clean_scope(
+    doctor, coding_scope, monkeypatch, denial
+):
+    def denied(*_):
+        raise PermissionError("SECRET/private/path")
+
+    if denial == "passwd":
+        monkeypatch.setattr(doctor, "read", denied)
+    else:
+        monkeypatch.setattr(doctor.Observer, "exists_name", staticmethod(denied))
+    if denial == "caller":
+        monkeypatch.setenv("PATH", "/private:/usr/local/bin")
+    observed = GoodObservations()
+    if denial == "caller":
+        observed.caller_path = coding_scope.caller_path
+    else:
+        observed.path = coding_scope.path
+    result = doctor.report(observed)
+    check = "caller_path" if denial == "caller" else "path"
+    assert result["checks"][check] == {
+        "state": "NOT_RUN",
+        "reason": "observation_denied",
+    }
+    assert "SECRET" not in json.dumps(result)
+    assert result["configuration"] == "BLOCKED"
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"",
+        b"root:x:0:0::/root:/bin/sh\n",
+        b"agentdev:x:0:0::/root:/bin/sh\n",
+        b"agentdev:x:1001:1001::/home/agentdev:/bin/sh\nother:x:01001:5::/home/other:/bin/sh\n",
+        b"agentdev:x:1001:1001::/home/../private:/bin/sh\n",
+        b"agentdev:x:1001:1001::/home/agentdev:/bin/sh\nagentdev:x:1002:1002::/home/other:/bin/sh\n",
+    ],
+)
+def test_unknown_or_ambiguous_coding_identity_blocks(
+    doctor, coding_scope, monkeypatch, data
+):
+    monkeypatch.setattr(doctor, "read", lambda *_: data)
+    monkeypatch.setattr(
+        doctor.Observer,
+        "exists_name",
+        staticmethod(lambda _: pytest.fail("ambiguous home inspection")),
+    )
+    with pytest.raises(doctor.Blocked, match="coding_identity_invalid"):
+        coding_scope.path()
+
+
+def test_mutated_codex_correlation_cannot_confirm_scope(doctor, coding_scope):
+    coding_scope.artifacts["binary_sha256"] = "c" * 64
+    with pytest.raises(doctor.Blocked, match="codex_verification_required"):
+        coding_scope.path()
+
+
+def test_failed_codex_recheck_discards_previous_identity(doctor, coding_scope):
+    coding_scope.artifacts = None
+    with pytest.raises(doctor.Blocked, match="package_verification_required"):
+        coding_scope.codex()
+    assert coding_scope._codex_identity is None
+
+
+@pytest.mark.parametrize("name", ["path", "caller_path"])
+def test_report_refuses_positive_scope_claim(doctor, name):
+    observed = GoodObservations()
+    setattr(observed, name, lambda: ("CONFIGURED", "verified_managed_codex"))
+    result = doctor.report(observed)
+    assert result["checks"][name] == {
+        "state": "BLOCKED",
+        "reason": "observation_failed",
+    }
+    assert result["configuration"] == "BLOCKED"
+
+
+def test_scoped_report_is_deterministic_redacted_and_schema_constrained(
+    doctor, coding_scope, monkeypatch
+):
+    monkeypatch.setenv("HOME", "/root/SECRET")
+    monkeypatch.setenv("PATH", "/usr/local/bin:/usr/bin")
+    monkeypatch.setattr(doctor.Observer, "exists_name", staticmethod(lambda _: False))
+    observed = GoodObservations()
+    observed.path = coding_scope.path
+    observed.caller_path = coding_scope.caller_path
+    first = doctor.report(observed)
+    assert json.dumps(first, sort_keys=True) == json.dumps(
+        doctor.report(observed), sort_keys=True
+    )
+    assert all(
+        word not in json.dumps(first) for word in ("SECRET", "/home/agentdev", "/root")
+    )
+    schema = json.loads((ROOT / "docs/worker-doctor.schema.json").read_text())
+    assert set(first["checks"]) == set(schema["properties"]["checks"]["required"])
+    for name in ("path", "caller_path"):
+        ref = schema["properties"]["checks"]["properties"][name]["$ref"]
+        definition = schema["$defs"][ref.rsplit("/", 1)[1]]
+        assert definition["properties"]["state"]["enum"] == ["BLOCKED", "NOT_RUN"]
+        assert (
+            first["checks"][name]["reason"]
+            in definition["properties"]["reason"]["enum"]
+        )
+        assert (
+            "verified_managed_codex" not in definition["properties"]["reason"]["enum"]
+        )
