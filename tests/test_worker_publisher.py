@@ -911,7 +911,10 @@ def test_cli_execute_complete_flow_without_any_real_credentials(
     monkeypatch.setattr(p, "receipts", lambda *args: None)
     monkeypatch.setattr(p, "Journal", lambda *args: Session())
     monkeypatch.setattr(p, "HTTPS", lambda *args: wire)
-    monkeypatch.setenv("CREDENTIALS_DIRECTORY", "/fabricated")
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY",
+        "/run/credentials/ap-worker-publisher.service",
+    )
     assert p.main(["--job", "job", "--artifact", "artifact", "--execute"]) == 0
     output = capsys.readouterr().out
     assert json.loads(output)["head"] == head and "FAKE_PRIVATE" not in output
@@ -919,8 +922,9 @@ def test_cli_execute_complete_flow_without_any_real_credentials(
     assert wire.token is False and wire.pr_number == 111
 
 
+@pytest.mark.parametrize("interrupted", [False, True])
 def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
-    store, tmp_path, monkeypatch, capsys
+    store, tmp_path, monkeypatch, capsys, interrupted
 ):
     journal, _ = store
     data, head, tree, _ = artifact()
@@ -940,7 +944,7 @@ def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
         seen.append(path)
         if path == "/etc/ap-publisher/job.json":
             return original
-        assert path == "/fabricated/app-key"
+        assert path == "/run/credentials/ap-worker-publisher-signer.service/app-key"
         return b"FABRICATED_KEY_NOT_A_PEM"
 
     monkeypatch.setattr(signer, "read_file", read)
@@ -951,9 +955,13 @@ def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
         signer.serialization, "load_pem_private_key", lambda *args, **kwargs: object()
     )
     monkeypatch.setattr(signer, "jwt_for", lambda *args: b"JWT_FAKE")
-    monkeypatch.setenv("CREDENTIALS_DIRECTORY", "/fabricated")
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY",
+        "/run/credentials/ap-worker-publisher-signer.service",
+    )
     real = signer.os.open
     output = tmp_path / "app-jwt"
+    monkeypatch.setattr(signer.os.path, "lexists", lambda _: output.exists())
 
     def open_private(path, *args, **kwargs):
         return real(
@@ -963,13 +971,31 @@ def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
         )
 
     monkeypatch.setattr(signer.os, "open", open_private)
-    assert signer.main() == 0
+    real_fsync = signer.os.fsync
+
+    def sync(fd):
+        if (
+            interrupted
+            and output.exists()
+            and os.fstat(fd).st_ino == output.stat().st_ino
+        ):
+            raise OSError("FABRICATED interruption")
+        return real_fsync(fd)
+
+    monkeypatch.setattr(signer.os, "fsync", sync)
+    assert signer.main() == (1 if interrupted else 0)
+    if interrupted:
+        assert journal.events[-1]["record"]["phase"] == "UNKNOWN"
     bundle = a.decode(output.read_bytes())
     assert bundle == {"job_sha256": a.digest(original), "jwt": "JWT_FAKE"}
     assert output.stat().st_mode & 0o777 == 0o400
     count = len(seen)
+    if not interrupted:
+        # Only this exact fabricated fixture: model separately reconciled cleanup.
+        # Restart must still be denied by the journal even with no output present.
+        output.unlink()
     assert signer.main() == 1
-    assert len(seen) == count + 1  # replay stops before another key read
+    assert len(seen) == count + 1  # replay/stale state stops before another key read
     assert "JWT_FAKE" not in capsys.readouterr().out
 
 
@@ -1103,3 +1129,82 @@ def test_native_issue_inventory_rejects_hidden_conflicting_pr(store):
         invoke(j, data, journal, wire)
     assert wire.tip is None and wire.pr_number is None
     assert not any(path.endswith("/git/blobs") for _, path in wire.calls)
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [None, "", "/fabricated", "/run/credentials/ap-worker-publisher.service"],
+)
+def test_signer_wrong_namespace_blocks_before_journal(
+    store, monkeypatch, capsys, namespace
+):
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    monkeypatch.setattr(signer, "read_file", lambda *args, **kwargs: a.encoded(j))
+    monkeypatch.setattr(signer, "confinement", lambda *a: None)
+    monkeypatch.setattr(signer, "receipts", lambda *a: None)
+    monkeypatch.setattr(signer, "Journal", lambda *a: pytest.fail("journal claim"))
+    if namespace is None:
+        monkeypatch.delenv("CREDENTIALS_DIRECTORY", raising=False)
+    else:
+        monkeypatch.setenv("CREDENTIALS_DIRECTORY", namespace)
+    assert signer.main() == 1
+    assert capsys.readouterr().out == '{"status":"BLOCKED","code":"signer_stopped"}\n'
+
+
+def test_stale_handoff_blocks_before_claim_or_key_read(store, monkeypatch, capsys):
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    monkeypatch.setattr(signer, "read_file", lambda *args, **kwargs: a.encoded(j))
+    monkeypatch.setattr(signer, "confinement", lambda *args: None)
+    monkeypatch.setattr(signer, "receipts", lambda *args: None)
+    monkeypatch.setattr(signer, "Journal", lambda *args: pytest.fail("journal claim"))
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher-signer.service"
+    )
+    monkeypatch.setattr(signer.os.path, "lexists", lambda _: True)
+    assert signer.main() == 1
+    assert "signer_stopped" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("offset", [0, -1, 301])
+def test_signer_jwt_lifetime_is_bounded(offset):
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    with pytest.raises(a.Blocked):
+        signer.jwt_for(key, 10, 1000 + offset, 1000)
+
+
+def test_missing_signer_credential_retains_unknown_and_blocks_restart(
+    store, monkeypatch, capsys
+):
+    journal, _ = store
+    data, head, tree, _ = artifact()
+    job = job_for(data, head, tree)
+    seen = []
+
+    def read(path, *args, **kwargs):
+        if path == "/etc/ap-publisher/job.json":
+            return a.encoded(job)
+        seen.append(path)
+        raise FileNotFoundError
+
+    class Session:
+        def __getattr__(self, name):
+            return getattr(journal, name)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(signer, "read_file", read)
+    monkeypatch.setattr(signer, "confinement", lambda *args: None)
+    monkeypatch.setattr(signer, "receipts", lambda *args: None)
+    monkeypatch.setattr(signer, "Journal", lambda *args: Session())
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher-signer.service"
+    )
+    monkeypatch.setattr(signer.os.path, "lexists", lambda _: False)
+    assert signer.main() == 1
+    assert journal.events[-1]["record"]["phase"] == "UNKNOWN"
+    assert signer.main() == 1
+    assert seen == ["/run/credentials/ap-worker-publisher-signer.service/app-key"]
+    assert "signer_stopped" in capsys.readouterr().out

@@ -925,3 +925,142 @@ def test_scoped_report_is_deterministic_redacted_and_schema_constrained(
         assert (
             "verified_managed_codex" not in definition["properties"]["reason"]["enum"]
         )
+
+
+@pytest.mark.parametrize(
+    "defect",
+    [
+        None,
+        "mode",
+        "symlink",
+        "hardlink",
+        "missing",
+        "foreign_owner",
+        "extra_reader",
+        "missing_reader",
+        "signer_candidate",
+        "directory_acl",
+    ],
+)
+def test_staged_job_access_is_metadata_only_and_exact(
+    doctor, tmp_path, monkeypatch, defect
+):
+    # Explicit symbolic root metadata, never real root/DAC evidence.
+    base = tmp_path / "ap-publisher"
+    base.mkdir(mode=0o750)
+    base.chmod(0o750)
+    for name in ["job", "receipts", "candidate"]:
+        p = base / (name + ".json")
+        p.write_bytes(b"MUST_NOT_READ")
+        p.chmod(0o440)
+    if defect == "mode":
+        (base / "job.json").chmod(0o444)
+    if defect == "symlink":
+        (base / "job.json").unlink()
+        (base / "job.json").symlink_to(base / "candidate.json")
+    if defect == "hardlink":
+        os.link(base / "job.json", tmp_path / "alias")
+    if defect == "missing":
+        (base / "job.json").unlink()
+    real_meta = doctor.meta
+
+    def metadata(fd, uid=0, gid=0, **kw):
+        assert uid == gid == 0
+        wanted = os.getuid()
+        if defect == "foreign_owner" and stat.S_ISREG(os.fstat(fd).st_mode):
+            wanted += 1
+        m = real_meta(fd, wanted, os.getgid(), **kw)
+        values = {
+            k: getattr(m, k)
+            for k in [
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_size",
+                "st_mtime_ns",
+                "st_ctime_ns",
+            ]
+        }
+        return SimpleNamespace(**values, st_uid=0, st_gid=0)
+
+    @contextlib.contextmanager
+    def directory(path):
+        assert path == "/etc"
+        fd = os.open(tmp_path, doctor.FLAGS | os.O_DIRECTORY)
+        try:
+            yield fd
+        finally:
+            os.close(fd)
+
+    def query(argv):
+        assert argv[:4] == [
+            "/usr/bin/getfacl",
+            "--absolute-names",
+            "--numeric",
+            "--omit-header",
+        ]
+        path = argv[-1]
+        readers = [999] if path.endswith("candidate.json") else [999, 998]
+        perm = "r-x" if path == "/etc/ap-publisher" else "r--"
+        rows = {
+            "user::rwx" if perm == "r-x" else "user::r--",
+            "group::" + perm,
+            "mask::" + perm,
+            "other::---",
+        }
+        rows |= {f"user:{u}:{perm}" for u in readers}
+        if defect in ("extra_reader", "directory_acl") and (
+            defect != "directory_acl" or perm == "r-x"
+        ):
+            rows.add("user:2000:" + perm)
+        if defect == "missing_reader" and path.endswith("job.json"):
+            rows.remove("user:999:r--")
+        if defect == "signer_candidate" and path.endswith("candidate.json"):
+            rows.add("user:998:r--")
+        return "\n".join(sorted(rows))
+
+    # Stable path recheck must use the same explicitly modeled owner.
+    real_stat = os.stat
+
+    def metadata_stat(path, *args, **kwargs):
+        m = real_stat(path, *args, **kwargs)
+        if kwargs.get("dir_fd") is None:
+            return m
+        values = {
+            k: getattr(m, k)
+            for k in [
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_size",
+                "st_mtime_ns",
+                "st_ctime_ns",
+            ]
+        }
+        return SimpleNamespace(**values, st_uid=0, st_gid=0)
+
+    monkeypatch.setattr(doctor, "directory", directory)
+    monkeypatch.setattr(doctor, "meta", metadata)
+    monkeypatch.setattr(doctor, "query", query)
+    monkeypatch.setattr(os, "stat", metadata_stat)
+    monkeypatch.setattr(os, "read", lambda *a: pytest.fail("private content read"))
+    monkeypatch.setattr(os, "pread", lambda *a: pytest.fail("private content read"))
+    observer = doctor.Observer()
+    observer.accounts = {
+        "ap-publisher": {"uid": 999, "gid": 989},
+        "ap-publisher-signer": {"uid": 998, "gid": 988},
+    }
+    if defect is None:
+        assert observer.job_access() == ("CONFIGURED", "verified_job_access_metadata")
+    else:
+        with pytest.raises((doctor.Blocked, OSError)):
+            observer.job_access()
+
+
+def test_job_namespace_and_handoff_are_always_deferred(doctor):
+    report = doctor.report(GoodObservations())
+    for name in ["job_namespace", "credential_handoff"]:
+        assert report["checks"][name]["state"] == "NOT_RUN"
+    assert report["status"] == "BLOCKED" and report["launch_allowed"] is False

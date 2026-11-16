@@ -360,6 +360,7 @@ Display command help.
                     copy("packaging/worker-publisher/" + name, doc + "examples/" + name)
                 for document in (
                     "worker-doctor.md",
+                    "publisher-isolation-readiness.md",
                     "worker-doctor.schema.json",
                     "worker-pilot-checklist.md",
                 ):

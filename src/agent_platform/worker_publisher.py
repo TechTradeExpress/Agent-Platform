@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from . import worker_publish_artifact as art
-from .worker_publish_io import HTTPS, Journal, read_file
+from .worker_publish_io import HTTPS, Journal, credential_path, read_file
 
 REPOSITORY = "TechTradeExpress/Agent-Platform"
 REPO_ID = 1436076348
@@ -906,7 +906,7 @@ def main(argv=None):
 
         authorize()
         journal = Journal("/var/lib/ap-publisher/journal", job["journal_sha256"])
-        credential = Path(os.environ.get("CREDENTIALS_DIRECTORY", "")) / "app-jwt"
+        credential = credential_path("publisher")
         bundle = art.decode(
             read_file(
                 str(credential), os.getuid(), 16384, writable_parent=True, private=True

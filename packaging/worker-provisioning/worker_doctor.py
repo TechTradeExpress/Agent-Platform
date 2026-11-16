@@ -56,7 +56,9 @@ bpf_interface_missing bpf_egress_policy_missing
 network_approval_invalid network_approval_expired network_binding_mismatch
 network_observation_changed network_verification_required
 app_identity_not_authenticated operator_authorization_not_observed
-account_lock_not_observed diagnostic_timeout""".split()
+account_lock_not_observed diagnostic_timeout
+verified_job_access_metadata job_access_invalid
+job_namespace_evidence_missing credential_handoff_evidence_missing""".split()
 )
 SCOPE_FAILURES = frozenset(
     """object_missing observation_denied observation_failed
@@ -93,8 +95,13 @@ CHECKS = (
     "caller_path",
     "managed_executable",
     "execution_binding",
+    "job_access",
+    "job_namespace",
+    "credential_handoff",
 )
 DEFERRED_CHECKS = {
+    "job_namespace": "job_namespace_evidence_missing",
+    "credential_handoff": "credential_handoff_evidence_missing",
     "account_lock": "account_lock_not_observed",
     "profile_attachment": "profile_attachment_evidence_missing",
     "process_isolation": "process_isolation_evidence_missing",
@@ -800,6 +807,57 @@ class Observer:
         need(saved["paths"] == records, "state_metadata_invalid")
         return "CONFIGURED", "verified_state_metadata"
 
+    def job_access(self):
+        """Metadata only; never read staged files, keys or runtime JWTs."""
+        need(self.accounts is not None, "identity_invalid")
+        with directory("/etc") as parent:
+            fd = os.open("ap-publisher", FLAGS | os.O_DIRECTORY, dir_fd=parent)
+            try:
+                meta(fd, mode=0o750, directory=True, acl=True)
+                expected = {"user::rwx", "group::r-x", "mask::r-x", "other::---"}
+                expected |= {f"user:{self.accounts[r]['uid']}:r-x" for r in ROLES}
+                self._access_acl("/etc/ap-publisher", expected)
+                for name in ("job", "receipts", "candidate"):
+                    # Metadata only: no read/pread of this descriptor.
+                    leaf = os.open(name + ".json", FLAGS, dir_fd=fd)
+                    try:
+                        m = meta(leaf, mode=0o440, acl=True)
+                        need(
+                            stat.S_ISREG(m.st_mode)
+                            and m.st_nlink == 1
+                            and m.st_uid == m.st_gid == 0
+                            and stat.S_IMODE(m.st_mode) == 0o440,
+                            "job_access_invalid",
+                        )
+                        path = "/etc/ap-publisher/" + name + ".json"
+                        wanted = {"user::r--", "group::r--", "mask::r--", "other::---"}
+                        readers = ROLES[:1] if name == "candidate" else ROLES
+                        wanted |= {
+                            f"user:{self.accounts[r]['uid']}:r--" for r in readers
+                        }
+                        self._access_acl(path, wanted)
+                        need(
+                            stamp(m)
+                            == stamp(
+                                os.stat(
+                                    name + ".json", dir_fd=fd, follow_symlinks=False
+                                )
+                            ),
+                            "object_changed",
+                        )
+                    finally:
+                        os.close(leaf)
+            finally:
+                os.close(fd)
+        return "CONFIGURED", "verified_job_access_metadata"
+
+    @staticmethod
+    def _access_acl(path, expected):
+        text = query(
+            ["/usr/bin/getfacl", "--absolute-names", "--numeric", "--omit-header", path]
+        )
+        need(set(text.split()) == expected, "job_access_invalid")
+
     @staticmethod
     def record(m):
         return {
@@ -1058,6 +1116,7 @@ def report(observer):
         *CHECKS[2:8],
         "bpf",
         "caller_path",
+        "job_access",
     ):
         try:
             state, reason = getattr(observer, name)()
