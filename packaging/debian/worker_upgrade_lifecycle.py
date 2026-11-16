@@ -14,9 +14,103 @@ DOC = Path("/usr/share/doc/agent-platform-worker")
 RECEIPT = Path("/var/lib/agent-platform-worker-provisioning/receipt.json")
 
 
-def call(argv, code=0):
-    result = subprocess.run(argv, capture_output=True, text=True, timeout=90)
-    assert result.returncode == code, (argv[0], result.returncode, code)
+FIXTURE_ENV = {
+    "PATH": "/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "LC_ALL": "C",
+    "DEBIAN_FRONTEND": "noninteractive",
+}
+DIAGNOSTICS = (
+    (
+        "apt_local_archive_path_not_absolute",
+        "Internal Error, Pathname to install is not absolute",
+        "APT: Internal Error, Pathname to install is not absolute [local archive]",
+    ),
+    (
+        "apt_downgrade_not_authorized",
+        "-y was used without --allow-downgrades",
+        "APT: downgrade refused without explicit --allow-downgrades",
+    ),
+    (
+        "package_path_conflict",
+        "worker_package_path_conflict",
+        "preinst: worker_package_path_conflict",
+    ),
+    ("apt_unmet_dependencies", "unmet dependencies", "APT: unmet dependencies"),
+    (
+        "apt_broken_packages",
+        "held broken packages",
+        "APT: dependency resolution failed",
+    ),
+    (
+        "dpkg_preinst_failed",
+        "pre-installation script subprocess returned error",
+        "dpkg: pre-installation script failed",
+    ),
+    (
+        "archive_access_denied",
+        "Permission denied",
+        "package command: permission denied",
+    ),
+)
+
+
+def command_diagnostic(argv, result, expected, stage):
+    """Closed bounded report, never raw stdout/stderr, argv paths or environment.
+
+    Only public fixed APT/dpkg messages are recognized. Unknown output stays
+    unclassified/failed rather than being exposed or guessed into a cause.
+    """
+    program = Path(argv[0]).name
+    if program not in {
+        "apt-get",
+        "dpkg",
+        "dpkg-query",
+        "agent-platform-worker",
+        "agent-platform-control",
+        "getfacl",
+    }:
+        program = "fixture_command"
+    if stage not in {"fixture", "historical_install", "downgrade"}:
+        stage = "fixture"
+    stdout, stderr = result.stdout or "", result.stderr or ""
+    sample = stdout[-8192:] + "\n" + stderr[-8192:]
+    matched = [
+        (code, message) for code, needle, message in DIAGNOSTICS if needle in sample
+    ]
+    return {
+        "schema": "AP-PKG-COMMAND-FAILURE/1",
+        "stage": stage,
+        "command": program,
+        "returncode": result.returncode,
+        "expected": expected,
+        "stdout_chars": len(stdout),
+        "stderr_chars": len(stderr),
+        "sample_truncated": len(stdout) > 8192 or len(stderr) > 8192,
+        "reasons": [item[0] for item in matched] or ["unclassified_command_failure"],
+        "messages": [item[1] for item in matched],
+    }
+
+
+def local_install_argv(*archives):
+    # Offline is enforced by the disposable container's --network none.
+    # Do not disable APT's local archive acquisition with --no-download.
+    return [
+        "apt-get",
+        "--no-install-recommends",
+        "-y",
+        "install",
+        *(str(path) for path in archives),
+    ]
+
+
+def call(argv, code=0, *, stage="fixture"):
+    result = subprocess.run(
+        argv, capture_output=True, text=True, timeout=90, env=FIXTURE_ENV
+    )
+    if result.returncode != code:
+        report = command_diagnostic(argv, result, code, stage)
+        print(json.dumps(report, sort_keys=True), flush=True)
+        raise AssertionError((report["command"], result.returncode, code))
     return result.stdout
 
 
@@ -122,17 +216,7 @@ def main():
             "#!/bin/sh\nprintf forbidden >> /tmp/pkg09-activation-forbidden\nexit 99\n"
         )
         stub.chmod(0o755)
-    call(
-        [
-            "apt-get",
-            "--no-download",
-            "--no-install-recommends",
-            "-y",
-            "install",
-            str(old_control),
-            str(old),
-        ]
-    )
+    call(local_install_argv(old_control, old), stage="historical_install")
     assert digest(DOC / "manifest.json") == BASE_MANIFEST
     assert json.loads((DOC / "build.json").read_text())["source_commit"] == BASE_COMMIT
     assert (
@@ -179,11 +263,19 @@ def main():
         assert digest(Path("/etc/apparmor.d/" + name)) == expected
     # Ordinary APT must refuse a downgrade; never force one to test recovery.
     result = subprocess.run(
-        ["apt-get", "--no-download", "-y", "install", str(old)],
+        local_install_argv(old),
         capture_output=True,
+        text=True,
         timeout=90,
+        env=FIXTURE_ENV,
     )
-    assert result.returncode != 0
+    refusal = command_diagnostic(["apt-get"], result, None, "downgrade")
+    if (
+        result.returncode == 0
+        or "apt_downgrade_not_authorized" not in refusal["reasons"]
+    ):
+        print(json.dumps(refusal, sort_keys=True), flush=True)
+        raise AssertionError("expected_explicit_APT_downgrade_refusal")
     assert (
         call(["dpkg-query", "-W", "-f=${Version}", "agent-platform-worker"])
         == "0.1.0-7"

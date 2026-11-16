@@ -168,3 +168,47 @@ source/tree and manifests; dependency/tool versions; UID/GID and ACL metadata;
 dpkg state; conffile/units/profile observations; preserved-state proof; doctor
 checks including all NOT_RUN; uncertainty and STOP decision. No raw credentials,
 private traces or assertion that CI equals worker01 evidence.
+
+## PR #141 initial-install failure: APT local acquisition (#138 follow-up)
+
+Reviewed failure: run `43909729542`, job `133448032430`, checkout
+`da1fcd8c995216cf683b3c7ec8ca6295f35932a8`. PR remained open/Draft.
+Package builds and the historical manifest check passed. Initial baseline APT
+installation failed before the -7 upgrade; the old wrapper discarded its output.
+The original CI stderr is therefore not recoverable from that job log.
+
+A nonprivileged Debian APT 3.0.4 fixture reproduced the command-option failure:
+
+```text
+E: Internal Error, Pathname to install is not absolute 'ap-pkg09-acquire-one_1.0_amd64.deb'
+```
+
+The fixture has empty private APT state/config/sources/cache, two synthetic local
+.debs with no scripts/dependencies, and a sentinel replacing dpkg. With
+`--no-download`, APT stops with code 100 before the unpack sentinel. Without it,
+APT resolves absolute local archive paths and reaches that sentinel, which
+intentionally refuses unpack with code 99. Nothing is installed. This isolates
+local acquisition from preinst, identities, ACLs and journals; none is relaxed.
+It is not a reproduction of a complete Docker installation or worker01 state.
+
+Offline is enforced by the existing Docker `--network none`, not by disabling
+APT's local .deb acquisition. Remove --no-download from local archive transactions;
+dependencies still must be preconfigured in the image. The downgrade negative
+also requires the actual APT `--allow-downgrades` refusal message; an unrelated
+nonzero acquisition error must not count as rollback protection.
+
+On unexpected command status, the fixture now emits a bounded closed JSON record:
+command/stage/returncode, output lengths, truncation indication and fixed public
+APT/dpkg message classifications. Raw stdout/stderr, argv paths, environment and
+unknown text are never echoed. Unrecognized output remains unclassified and
+failed. Expected BLOCKED/exit13 output is returned unchanged to the test. English
+locale and a fixed test PATH retain activation tripwires. Both fresh containers
+(empty and UNKNOWN cases) run independently even if one fails; either failure
+fails the CI step. No retry or state cleanup is introduced.
+
+Local full apt/dpkg upgrade remains NOT_RUN: Docker/Podman unavailable. The
+nonprivileged acquisition/downgrade tests use a dpkg sentinel and cannot prove
+preinst or real install success. The next approved GitHub Actions run must pass
+both complete cases before acceptance; prior lintian/autopkgtest success does
+not establish this. No host, services, App credentials, permissions or BPF were
+changed, and all runtime gates remain unchanged.
