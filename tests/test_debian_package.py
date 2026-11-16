@@ -395,7 +395,9 @@ def test_worker_rejects_unimplemented_or_invalid_commands(args):
     assert result.returncode == 2
 
 
-@pytest.mark.parametrize("name", ["control_plane_local_runner", "harness_admission"])
+@pytest.mark.parametrize(
+    "name", ["control_plane_local_runner", "harness_admission", "claude_adapter"]
+)
 def test_source_only_contracts_in_closed_role_manifests(name):
     assert name in builder.SOURCE_ONLY
     assert all(name not in modules for modules in builder.MODULES.values())
@@ -405,7 +407,9 @@ def test_source_only_contracts_in_closed_role_manifests(name):
 @pytest.mark.parametrize(
     "role,module", [("control", "cli"), ("worker", "native_artifact")]
 )
-@pytest.mark.parametrize("name", ["control_plane_local_runner", "harness_admission"])
+@pytest.mark.parametrize(
+    "name", ["control_plane_local_runner", "harness_admission", "claude_adapter"]
+)
 def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, name):
     import shutil
 
@@ -422,7 +426,9 @@ def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, na
 
 
 @pytest.mark.parametrize("revision", [3, 4, 5, 6])
-@pytest.mark.parametrize("name", ["control_plane_local_runner", "harness_admission"])
+@pytest.mark.parametrize(
+    "name", ["control_plane_local_runner", "harness_admission", "claude_adapter"]
+)
 def test_source_only_contract_excluded_from_every_role_phase_archive(
     tmp_path, revision, name
 ):
@@ -444,7 +450,9 @@ def test_source_only_contract_excluded_from_every_role_phase_archive(
             assert provenance["publisher_modules"] == sorted(builder.PUBLISHER_MODULES)
 
 
-@pytest.mark.parametrize("name", ["control_plane_local_runner", "harness_admission"])
+@pytest.mark.parametrize(
+    "name", ["control_plane_local_runner", "harness_admission", "claude_adapter"]
+)
 def test_p1_publisher_import_cannot_pull_source_only_contract(tmp_path, name):
     import shutil
 

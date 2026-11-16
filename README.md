@@ -289,6 +289,10 @@ unchanged. Claude compatibility and instruction loading remain unverified.
 assignment/continuity checks and explicit Codex-only compatibility. It remains
 SOURCE_ONLY and grants no reservation, launch, resume or publication authority.
 
+[HAR-03 Claude parser](docs/claude-adapter.md) validates a closed offline profile
+for Claude Code 2.1.295, with separate session/continuation types and redacted
+lifecycle projections. It invokes no CLI and does not change the active harness.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
