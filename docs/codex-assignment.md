@@ -181,3 +181,10 @@ App has Metadata read only; no public Bot profile or metadata result satisfies
 AP-CA/1's writer, admission, queue, authorization or durable-claim requirements.
 Do not synthesize an assignment or reviewer receipt from it. See the updated
 [operator milestone](coding-app-gate-b.md#operator-reported-mvp8b-milestone-and-mvp8c).
+
+## HAR-02 compatibility companion
+
+[Worker-pinned harness admission](harness-admission.md) can correlate the full
+original AP-CA/1 digest with an explicitly approved Codex worker selection. This
+separate SOURCE_ONLY offline comparison does not replace this module's advice,
+alter its schemas or admit Claude through AP-CA/1. Native execution stays exit 13.

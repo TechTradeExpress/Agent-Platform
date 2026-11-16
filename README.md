@@ -285,6 +285,10 @@ schemas, fixtures and migration gates; it implements no selector or launcher.
 Existing Codex-only runtime quarantine, exit 13 and all live security gates remain
 unchanged. Claude compatibility and instruction loading remain unverified.
 
+[HAR-02 offline binding](docs/harness-admission.md) adds typed worker selection,
+assignment/continuity checks and explicit Codex-only compatibility. It remains
+SOURCE_ONLY and grants no reservation, launch, resume or publication authority.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
