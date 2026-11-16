@@ -276,6 +276,15 @@ verified Action pins, read-only job policy, private-repository enforcement gaps
 and separately proposed operator configuration. Successful CI is offline evidence,
 not native isolation or authenticated runtime readiness.
 
+## Proposed multi-harness architecture (design only)
+
+[ADR 008 / HAR-01](docs/multi-harness-architecture.md) proposes one explicitly
+selected Codex CLI or Claude Code harness per worker, closed versioned bindings,
+separate native parsers and one canonical root AGENTS.md. It includes inert
+schemas, fixtures and migration gates; it implements no selector or launcher.
+Existing Codex-only runtime quarantine, exit 13 and all live security gates remain
+unchanged. Claude compatibility and instruction loading remain unverified.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)

@@ -1,0 +1,27 @@
+{
+  "schema": "AP-HCAP/1",
+  "scope": "DESIGN_ONLY",
+  "codex": {
+    "native_event_parser": "OFFLINE_CONTRACT",
+    "exact_managed_build_parser_compatibility": "REQUIRED_UNVERIFIED",
+    "native_session_resume": "REQUIRED_UNVERIFIED",
+    "root_agents_loading": "REQUIRED_UNVERIFIED",
+    "official_executable_provenance": "REQUIRED_UNVERIFIED",
+    "complete_tool_auth_isolation": "REQUIRED_UNVERIFIED",
+    "process_tree_death": "REQUIRED_UNVERIFIED",
+    "native_account_eligibility": "REQUIRED_UNVERIFIED",
+    "product_execution": "BLOCKED"
+  },
+  "claude_code": {
+    "native_event_parser": "REQUIRED_UNVERIFIED",
+    "exact_managed_build_parser_compatibility": "REQUIRED_UNVERIFIED",
+    "native_session_resume": "REQUIRED_UNVERIFIED",
+    "root_agents_loading": "REQUIRED_UNVERIFIED",
+    "official_executable_provenance": "REQUIRED_UNVERIFIED",
+    "complete_tool_auth_isolation": "REQUIRED_UNVERIFIED",
+    "process_tree_death": "REQUIRED_UNVERIFIED",
+    "native_account_eligibility": "REQUIRED_UNVERIFIED",
+    "product_execution": "BLOCKED"
+  },
+  "launch_allowed": false
+}
