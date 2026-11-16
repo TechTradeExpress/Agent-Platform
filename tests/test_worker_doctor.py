@@ -940,13 +940,26 @@ def test_scoped_report_is_deterministic_redacted_and_schema_constrained(
         "missing_reader",
         "signer_candidate",
         "directory_acl",
+        "duplicate_file",
+        "duplicate_directory",
+        "descriptor_metadata",
+        "file_metadata",
+        "directory_metadata",
+        "parent_metadata",
+        "root_metadata",
+        "directory_identity",
+        "parent_identity",
+        "file_identity",
+        "earlier_job",
+        "earlier_receipts",
     ],
 )
 def test_staged_job_access_is_metadata_only_and_exact(
     doctor, tmp_path, monkeypatch, defect
 ):
     # Explicit symbolic root metadata, never real root/DAC evidence.
-    base = tmp_path / "ap-publisher"
+    (tmp_path / "etc").mkdir()
+    base = tmp_path / "etc/ap-publisher"
     base.mkdir(mode=0o750)
     base.chmod(0o750)
     for name in ["job", "receipts", "candidate"]:
@@ -962,6 +975,10 @@ def test_staged_job_access_is_metadata_only_and_exact(
         os.link(base / "job.json", tmp_path / "alias")
     if defect == "missing":
         (base / "job.json").unlink()
+    acl_queried = set()
+    job_inode = (
+        (base / "job.json").stat().st_ino if defect == "descriptor_metadata" else None
+    )
     real_meta = doctor.meta
 
     def metadata(fd, uid=0, gid=0, **kw):
@@ -982,16 +999,19 @@ def test_staged_job_access_is_metadata_only_and_exact(
                 "st_ctime_ns",
             ]
         }
+        if (
+            defect == "descriptor_metadata"
+            and m.st_ino == job_inode
+            and "/etc/ap-publisher/job.json" in acl_queried
+        ):
+            values["st_mtime_ns"] += 1
         return SimpleNamespace(**values, st_uid=0, st_gid=0)
 
-    @contextlib.contextmanager
-    def directory(path):
-        assert path == "/etc"
-        fd = os.open(tmp_path, doctor.FLAGS | os.O_DIRECTORY)
-        try:
-            yield fd
-        finally:
-            os.close(fd)
+    real_open = os.open
+
+    def opened(path, *args, **kwargs):
+        # Only the root descriptor is mapped; production traverses every child.
+        return real_open(tmp_path if path == "/" else path, *args, **kwargs)
 
     def query(argv):
         assert argv[:4] == [
@@ -1018,6 +1038,49 @@ def test_staged_job_access_is_metadata_only_and_exact(
             rows.remove("user:999:r--")
         if defect == "signer_candidate" and path.endswith("candidate.json"):
             rows.add("user:998:r--")
+        acl_queried.add(path)
+        if defect in ("duplicate_file", "duplicate_directory") and (
+            path.endswith("job.json") if defect == "duplicate_file" else perm == "r-x"
+        ):
+            return "\n".join(sorted(rows) + [sorted(rows)[0]])
+        if defect in (
+            "file_metadata",
+            "directory_metadata",
+            "parent_metadata",
+            "root_metadata",
+        ) and path.endswith("job.json"):
+            target = {
+                "file_metadata": base / "job.json",
+                "directory_metadata": base,
+                "parent_metadata": base.parent,
+                "root_metadata": tmp_path,
+            }[defect]
+            observed = target.stat()
+            os.utime(
+                target, ns=(observed.st_atime_ns, observed.st_mtime_ns + 1000000000)
+            )
+        if defect in ("directory_identity", "parent_identity") and perm == "r-x":
+            target = base if defect == "directory_identity" else base.parent
+            target.rename(tmp_path / "retained")
+            base.mkdir(parents=True)
+            base.chmod(0o750)
+            for name in ("job", "receipts", "candidate"):
+                replacement = base / (name + ".json")
+                replacement.write_bytes(b"MUST_NOT_READ")
+                replacement.chmod(0o440)
+        if defect in ("earlier_job", "earlier_receipts") and path.endswith(
+            "candidate.json"
+        ):
+            target = base / ("job.json" if defect == "earlier_job" else "receipts.json")
+            observed = target.stat()
+            os.utime(
+                target, ns=(observed.st_atime_ns, observed.st_mtime_ns + 1000000000)
+            )
+        if defect == "file_identity" and path.endswith("job.json"):
+            target = base / "job.json"
+            target.rename(tmp_path / "retained-job")
+            target.write_bytes(b"MUST_NOT_READ")
+            target.chmod(0o440)
         return "\n".join(sorted(rows))
 
     # Stable path recheck must use the same explicitly modeled owner.
@@ -1041,7 +1104,7 @@ def test_staged_job_access_is_metadata_only_and_exact(
         }
         return SimpleNamespace(**values, st_uid=0, st_gid=0)
 
-    monkeypatch.setattr(doctor, "directory", directory)
+    monkeypatch.setattr(os, "open", opened)
     monkeypatch.setattr(doctor, "meta", metadata)
     monkeypatch.setattr(doctor, "query", query)
     monkeypatch.setattr(os, "stat", metadata_stat)
