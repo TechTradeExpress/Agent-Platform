@@ -1,3 +1,7 @@
+Current build/version/upgrade rules: [PKG-09](worker-pkg09-upgrade.md).
+Default candidates are `0.1.0-7~git<FULL_SHA>`; old revisions require the explicit
+`--synthetic-fixture` flag and are not deployable historical artifacts.
+
 # Inert Debian role candidates (PKG-02)
 
 **CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY.** Debian 13 trixie,
@@ -16,8 +20,8 @@ builds **both** role archives. No wildcard admits new modules. The exact CLI
 source export, rather than mutable worktree bytes, supplies every packaged input.
 
 ```sh
-python3 packaging/build_deb.py --source-commit HEAD --revision 3 --output /tmp/ap-role-n
-python3 packaging/build_deb.py --source-commit HEAD --revision 4 --output /tmp/ap-role-next
+python3 packaging/build_deb.py --source-commit "$SOURCE_SHA" --synthetic-fixture --revision 3 --output /tmp/ap-role-n
+python3 packaging/build_deb.py --source-commit "$SOURCE_SHA" --synthetic-fixture --revision 4 --output /tmp/ap-role-next
 ```
 
 Output contains `agent-platform-{control,worker}_0.1.0-{3,4}_amd64.deb`,

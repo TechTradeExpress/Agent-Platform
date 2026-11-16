@@ -447,9 +447,23 @@ class Observer:
             and build.get("package") == "agent-platform-worker"
             and build.get("phase") == "P1_INSTALL_INERT"
             and re.fullmatch("[0-9a-f]{40}", build.get("source_commit", ""))
-            and re.fullmatch(r"0\.1\.0-[5-9][0-9]*", build.get("debian_version", "")),
+            and re.fullmatch(
+                r"0\.1\.0-(?:[5-9][0-9]*|7~git[0-9a-f]{40})",
+                build.get("debian_version", ""),
+            ),
             "package_record_invalid",
         )
+        if build["debian_version"].startswith("0.1.0-7"):
+            need(
+                re.fullmatch("[0-9a-f]{40}", build.get("source_tree", ""))
+                and (
+                    build["debian_version"] == "0.1.0-7~git" + build["source_commit"]
+                    and build.get("build_kind") == "candidate"
+                    or build["debian_version"] == "0.1.0-7"
+                    and build.get("build_kind") == "final-version-unreleased"
+                ),
+                "package_record_invalid",
+            )
         version = query(
             [
                 "/usr/bin/dpkg-query",

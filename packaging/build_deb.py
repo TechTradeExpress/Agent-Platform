@@ -165,22 +165,36 @@ def validate(source, revision=4):
         )
     if re.findall(
         rb"^agent-platform \(([^)]+)\)", checked_file(source / "debian/changelog"), re.M
-    ) != [b"0.1.0-6", b"0.1.0-5", b"0.1.0-4", b"0.1.0-3", b"0.1.0-2", b"0.1.0-1"]:
+    ) != [
+        b"0.1.0-7",
+        b"0.1.0-6",
+        b"0.1.0-5",
+        b"0.1.0-4",
+        b"0.1.0-3",
+        b"0.1.0-2",
+        b"0.1.0-1",
+    ]:
         raise ValueError("review_changelog_version_mapping")
     return controls
 
 
-def build(source, output, revision, commit, epoch):
+def build(
+    source, output, revision, commit, epoch, *, source_tree=None, candidate=False
+):
     """Low-level staging API; fabricated commit pins are permitted only in tests.
 
     Public CLI exports an exact clean committed tree before calling this API.
     """
-    if revision not in (3, 4, 5, 6) or not re.fullmatch("[0-9a-f]{40}", commit):
+    if revision not in (3, 4, 5, 6, 7) or not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("unsupported_candidate_identity")
     if type(epoch) is not int or not 0 <= epoch <= 2**31 - 1:
         raise ValueError("unsupported_build_epoch")
+    if revision == 7 and not re.fullmatch("[0-9a-f]{40}", source_tree or ""):
+        raise ValueError("source_tree_required")
+    if candidate and revision != 7:
+        raise ValueError("unsupported_candidate_revision")
     controls = validate(source, revision)
-    version = f"0.1.0-{revision}"
+    version = f"0.1.0-{revision}" + ("~git" + commit if candidate else "")
     output.mkdir(parents=True, exist_ok=False)
     artifacts = {}
     for role in DEPENDENCIES:
@@ -297,7 +311,7 @@ Display command help.
                     gzip.compress(manual.encode(), mtime=0),
                 )
             put(stage, metadata + "entry_points.txt", entries.encode())
-            if revision in (4, 5, 6):
+            if revision in (4, 5, 6, 7):
                 copy(
                     "packaging/debian/migrate_example.py",
                     private + "migrate-example",
@@ -314,11 +328,18 @@ Display command help.
             )
             copy("debian/copyright", doc + "copyright")
             changelog = checked_file(source / "debian/changelog")
-            start = changelog.index(f"agent-platform ({version})".encode())
+            start = changelog.index(f"agent-platform (0.1.0-{revision})".encode())
             put(
                 stage,
                 doc + "changelog.Debian.gz",
-                gzip.compress(changelog[start:], mtime=0),
+                gzip.compress(
+                    changelog[start:].replace(
+                        f"agent-platform (0.1.0-{revision})".encode(),
+                        f"agent-platform ({version})".encode(),
+                        1,
+                    ),
+                    mtime=0,
+                ),
             )
             put(
                 stage,
@@ -360,6 +381,7 @@ Display command help.
                     copy("packaging/worker-publisher/" + name, doc + "examples/" + name)
                 for document in (
                     "worker-doctor.md",
+                    "worker-pkg09-upgrade.md",
                     "publisher-isolation-readiness.md",
                     "worker-doctor.schema.json",
                     "worker-pilot-checklist.md",
@@ -484,6 +506,15 @@ Display command help.
                 "inputs": inputs,
                 "synthetic_baseline": revision == 3,
             }
+            provenance["build_kind"] = (
+                "candidate"
+                if candidate
+                else "final-version-unreleased"
+                if revision == 7
+                else "synthetic-fixture"
+            )
+            if source_tree is not None:
+                provenance["source_tree"] = source_tree
             if p1:
                 provenance["publisher_modules"] = sorted(PUBLISHER_MODULES)
                 provenance["operator_tools"] = [
@@ -598,37 +629,74 @@ Display command help.
     return artifacts
 
 
+def source_git(*args):
+    """Offline immutable object reads; no replace refs or lazy credential fetch."""
+    return subprocess.check_output(
+        [
+            "git",
+            "--no-replace-objects",
+            "-c",
+            "credential.helper=",
+            "-c",
+            "core.fsmonitor=false",
+            *args,
+        ],
+        cwd=ROOT,
+        timeout=30,
+        stderr=subprocess.DEVNULL,
+        env={
+            "PATH": os.defpath,
+            "LC_ALL": "C",
+            "GIT_NO_LAZY_FETCH": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+        },
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--revision", type=int, choices=(3, 4, 5, 6), default=6)
+    parser.add_argument("--revision", type=int, choices=(3, 4, 5, 6, 7), default=7)
     parser.add_argument(
-        "--source-commit", default="HEAD", help="Exact committed source (default HEAD)"
+        "--source-commit", required=True, help="Exact full 40-hex source commit"
+    )
+    parser.add_argument(
+        "--synthetic-fixture",
+        action="store_true",
+        help="Allow historical profile numbers for offline tests only",
+    )
+    parser.add_argument(
+        "--final-version",
+        action="store_true",
+        help="Use 0.1.0-7 after separate post-merge review; not release authority",
     )
     args = parser.parse_args()
-    commit = subprocess.check_output(
-        [
-            "git",
+    if not re.fullmatch("[0-9a-f]{40}", args.source_commit):
+        parser.error("full immutable source commit required")
+    if args.revision < 7 and not args.synthetic_fixture:
+        parser.error("historical revisions are synthetic fixtures only")
+    if args.final_version and (args.revision != 7 or args.synthetic_fixture):
+        parser.error("final version is only available for revision 7")
+    if args.revision == 7 and args.synthetic_fixture:
+        parser.error("revision 7 is not a historical fixture")
+    commit = (
+        source_git(
             "rev-parse",
             "--verify",
             "--end-of-options",
             args.source_commit + "^{commit}",
-        ],
-        cwd=ROOT,
-        text=True,
-        timeout=10,
-    ).strip()
-    if subprocess.check_output(
-        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=ROOT, timeout=10
-    ):
-        parser.error("build inputs must be committed; no dirty source attestation")
-    epoch = int(
-        subprocess.check_output(
-            ["git", "show", "-s", "--format=%ct", commit], cwd=ROOT, timeout=10
         )
+        .decode()
+        .strip()
     )
+    if source_git("status", "--porcelain", "--untracked-files=all"):
+        parser.error("build inputs must be committed; no dirty source attestation")
+    epoch = int(source_git("show", "-s", "--format=%ct", commit))
+    tree = source_git("rev-parse", commit + "^{tree}").decode().strip()
     # Export, rather than attest mutable worktree bytes with an arbitrary SHA.
-    data = subprocess.check_output(["git", "archive", commit], cwd=ROOT, timeout=30)
+    data = source_git("archive", commit)
     with tempfile.TemporaryDirectory(prefix="ap-source-") as temp:
         with tarfile.open(fileobj=io.BytesIO(data)) as archive:
             archive.extractall(temp, filter="data")
@@ -637,7 +705,15 @@ def main():
             != Path(__file__).read_bytes()
         ):
             parser.error("selected commit has a different build recipe")
-        build(Path(temp), args.output, args.revision, commit, epoch)
+        build(
+            Path(temp),
+            args.output,
+            args.revision,
+            commit,
+            epoch,
+            source_tree=tree,
+            candidate=args.revision == 7 and not args.final_version,
+        )
 
 
 if __name__ == "__main__":

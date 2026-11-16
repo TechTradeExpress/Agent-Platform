@@ -19,9 +19,15 @@ for role in control worker; do
 done
 lintian --allow-root --fail-on error /packages/n/*.deb /packages/next/*.deb > /evidence/lintian.txt 2>&1
 lintian --allow-root --fail-on error /packages/p1/*.deb /packages/p1-next/*.deb > /evidence/p1-lintian.txt 2>&1
+lintian --allow-root --fail-on error /packages/pkg09-candidate/*.deb /packages/pkg09-upgrade-test/*.deb > /evidence/pkg09-lintian.txt 2>&1
 apt-get --no-install-recommends -y install /packages/next/*.deb
 autopkgtest --no-built-binaries -o /evidence/autopkgtest /packages/next/agent-platform-control_0.1.0-4_amd64.deb /packages/next/agent-platform-worker_0.1.0-4_amd64.deb /source -- null
 test -s /evidence/autopkgtest/summary
 grep -Eq 'smoke[[:space:]]+PASS' /evidence/autopkgtest/summary
 dpkg-query -W > /evidence/quality-toolchain.txt
+
+# Exercise the exact -7 compatibility test artifacts separately from P0 smoke.
+apt-get --no-install-recommends -y install /packages/pkg09-upgrade-test/*.deb
+autopkgtest --no-built-binaries -o /evidence/pkg09-autopkgtest /packages/pkg09-upgrade-test/agent-platform-control_0.1.0-7_amd64.deb /packages/pkg09-upgrade-test/agent-platform-worker_0.1.0-7_amd64.deb /source -- null
+grep -Eq 'smoke[[:space:]]+PASS' /evidence/pkg09-autopkgtest/summary
 chmod -R a+rX /evidence

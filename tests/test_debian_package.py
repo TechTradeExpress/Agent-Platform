@@ -422,10 +422,15 @@ def test_role_import_cannot_pull_source_only_cp08(tmp_path, role, module):
         builder.validate(source)
 
 
-@pytest.mark.parametrize("revision", [3, 4, 5, 6])
+@pytest.mark.parametrize("revision", [3, 4, 5, 6, 7])
 def test_cp08_excluded_from_every_role_phase_archive(tmp_path, revision):
     artifacts = builder.build(
-        ROOT, tmp_path / "packages", revision, "a" * 40, 1700000000
+        ROOT,
+        tmp_path / "packages",
+        revision,
+        "a" * 40,
+        1700000000,
+        source_tree="b" * 40 if revision == 7 else None,
     )
     name = "control_plane_local_runner"
     assert name in builder.SOURCE_ONLY

@@ -474,3 +474,14 @@ PKG-05 implementation: [read-only Worker doctor](worker-doctor.md) reports local
 installation/configuration independently; live evidence remains NOT_RUN and
 overall readiness BLOCKED. `doctor --issue` remains quarantined. This adds no
 Control module, CP-08 dependency or Publisher execution interface.
+
+## PKG-09 revision safety (#138)
+
+The P0/P1 payload split and two-role authority boundaries do not change. New
+revision -7 has source-qualified PR candidates and an explicitly selected
+post-merge final-version build; neither conveys release/install authority.
+Old -3/-4/-5/-6 are regression profiles, not source-independent identities.
+The actual worker01 -6 baseline must be reconstructed using the immutable old
+source/recipe and match the installed manifest. See
+[versioning and upgrade contract](worker-pkg09-upgrade.md). No Codex/Claude
+package, state migration, account reassignment or automatic activation is added.

@@ -16,8 +16,11 @@ ENTRYPOINT ["/bin/sh", "/opt/ap-tests/lifecycle.sh"]
 
 # Quality tools are confined to a different disposable image/container.
 FROM base AS quality
-RUN apt-get update && apt-get --no-install-recommends -y install \
-    python3 python3-cryptography git gh lintian autopkgtest ca-certificates
+RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbin/policy-rc.d && \
+    apt-get update && apt-get --no-install-recommends -y install \
+    python3 python3-cryptography git gh lintian autopkgtest ca-certificates \
+    systemd apparmor apparmor-utils acl passwd && \
+    test "$(LC_ALL=C stat -c '%u:%g:%a:%F' /usr/share/man/man1)" = "0:0:755:directory"
 
 COPY quality.sh /opt/ap-tests/
 
@@ -43,6 +46,18 @@ RUN apt-get update && apt-get --no-install-recommends -y install \
     python3 python3-pytest ca-certificates
 COPY codex_pkg05_lifecycle.py /usr/share/ap-tests/
 ENTRYPOINT ["/usr/bin/python3", "-IB", "/usr/share/ap-tests/codex_pkg05_lifecycle.py"]
+
+# PKG-09: exact operator-reported numeric identities, reserved before dependencies.
+# Disposable test image only; never an installer or host provisioning recipe.
+FROM base AS worker-upgrade
+RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbin/policy-rc.d && \
+    apt-get update && apt-get --no-install-recommends -y install passwd && \
+    groupadd --gid 989 ap-publisher && useradd --system --uid 999 --gid ap-publisher --no-create-home --home-dir /var/lib/ap-publisher --shell /usr/sbin/nologin ap-publisher && \
+    groupadd --gid 987 ap-publisher-signer && useradd --system --uid 995 --gid ap-publisher-signer --no-create-home --home-dir /var/lib/ap-publisher-signer --shell /usr/sbin/nologin ap-publisher-signer && \
+    apt-get --no-install-recommends -y install python3 python3-cryptography git gh ca-certificates systemd apparmor apparmor-utils acl && \
+    test "$(LC_ALL=C stat -c '%u:%g:%a:%F' /usr/share/man/man1)" = "0:0:755:directory"
+COPY worker_upgrade_lifecycle.py /opt/ap-tests/
+ENTRYPOINT ["/usr/bin/python3", "-IB", "/opt/ap-tests/worker_upgrade_lifecycle.py"]
 
 # Retain the actual prior 0775 image as an independent negative regression.
 FROM debian:trixie-slim@sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d AS manpage-negative
