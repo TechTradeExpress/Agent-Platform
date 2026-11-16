@@ -293,6 +293,12 @@ SOURCE_ONLY and grants no reservation, launch, resume or publication authority.
 for Claude Code 2.1.295, with separate session/continuation types and redacted
 lifecycle projections. It invokes no CLI and does not change the active harness.
 
+[ADR 009 / HAR-05](docs/harness-auth-terms-isolation.md) records the provider
+authentication-terms matrix, three independent decisions (vendor permission,
+isolation, operator approval), trust boundaries and a negative-test plan. It is
+design-only: it adds no login, launcher, credential handling or API fallback, and
+automated Codex/Claude use stays BLOCKED or NOT_PROVEN.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
