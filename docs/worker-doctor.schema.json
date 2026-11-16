@@ -46,12 +46,15 @@
             "coding_environment_scope_unverified",
             "coding_identity_invalid",
             "config_acl_invalid",
+            "credential_handoff_evidence_missing",
             "dependencies_missing",
             "diagnostic_timeout",
             "identity_invalid",
             "independent_continuity_evidence_missing",
             "installed_payload_changed",
             "invalid_record",
+            "job_access_invalid",
+            "job_namespace_evidence_missing",
             "managed_selection_changed",
             "network_approval_expired",
             "network_approval_invalid",
@@ -82,6 +85,7 @@
             "verified_dependencies",
             "verified_effective_unit_settings",
             "verified_enforced_profiles",
+            "verified_job_access_metadata",
             "verified_local_identities",
             "verified_local_package",
             "verified_managed_codex",
@@ -278,6 +282,9 @@
         "continuity": {
           "$ref": "#/$defs/check"
         },
+        "credential_handoff": {
+          "$ref": "#/$defs/check"
+        },
         "dependencies": {
           "$ref": "#/$defs/check"
         },
@@ -285,6 +292,12 @@
           "$ref": "#/$defs/execution_binding_check"
         },
         "identities": {
+          "$ref": "#/$defs/check"
+        },
+        "job_access": {
+          "$ref": "#/$defs/check"
+        },
+        "job_namespace": {
           "$ref": "#/$defs/check"
         },
         "managed_executable": {
@@ -330,7 +343,10 @@
         "operator_authorization",
         "caller_path",
         "managed_executable",
-        "execution_binding"
+        "execution_binding",
+        "job_access",
+        "job_namespace",
+        "credential_handoff"
       ],
       "type": "object"
     },

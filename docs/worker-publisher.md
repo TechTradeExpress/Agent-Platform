@@ -1,3 +1,7 @@
+Current isolation/readiness audit and STOP conditions: see
+[PKG-08](publisher-isolation-readiness.md). Source tests do not authorize host
+activation; root credential transfer and running cgroup BPF remain NOT_RUN.
+
 # PUB-02 operator-triggered worker publisher — AP-WP/1
 
 **Current integration status:** SOURCE_IMPLEMENTED / OFFLINE_TESTED;
@@ -269,8 +273,11 @@ worker and publisher. Source read access and credential write access never join.
    job.gates value to SHA-256 of its receipt's canonical AP-WP/1 JSON bytes. Pin
    the current journal states in independently retained operator custody. Do not
    derive proof/authority from Issue/model output, a receipt digest or the example.
-4. Install job.json and receipts.json as root-owned singly linked 0440 files in
-   the protected config directory, readable only by the two service principals.
+4. Root stages job.json and receipts.json as singly linked root:root 0440 files
+   with explicit named read-only ACLs for both service UIDs; candidate.json has
+   only the Publisher named reader. Directory traversal ACLs alone are insufficient.
+   Exact ACL/mask and namespace checks are mandatory; see
+   [PKG-08 access and handoff contract](publisher-isolation-readiness.md).
    Root checks the intended action without network or keys:
 
    ```sh

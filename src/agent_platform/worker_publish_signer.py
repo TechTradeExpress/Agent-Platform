@@ -3,13 +3,12 @@
 import base64
 import os
 import time
-from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from . import worker_publish_artifact as art
-from .worker_publish_io import Journal, read_file
+from .worker_publish_io import Journal, credential_path, read_file
 from .worker_publisher import confinement, receipts, validate_job
 
 
@@ -40,13 +39,15 @@ def main():
         )
         confinement(job, "signer")
         receipts(job)
+        source = credential_path("signer")
+        # Retained output is evidence, never an overwrite/restart opportunity.
+        art.need(not os.path.lexists("/run/ap-publisher-signer/app-jwt"))
         journal = Journal(
             "/var/lib/ap-publisher-signer/journal", job["signer_journal_sha256"]
         )
         journal.claim(job, signer=True)
         journal.append({"phase": "UNKNOWN", "job": job["id"], "operation": "sign"})
         # Only this unit's credential mount is allowed by the separate AppArmor profile.
-        source = Path(os.environ.get("CREDENTIALS_DIRECTORY", "")) / "app-key"
         raw = read_file(
             str(source), os.getuid(), 16384, writable_parent=True, private=True
         )

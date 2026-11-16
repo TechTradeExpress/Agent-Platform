@@ -1,6 +1,6 @@
 [Unit]
 Description=Operator-triggered single publication (no autonomous runtime)
-After=network-online.target
+After=network-online.target ap-worker-publisher-signer.service
 ConditionPathExists=/etc/ap-publisher/job.json
 
 [Service]

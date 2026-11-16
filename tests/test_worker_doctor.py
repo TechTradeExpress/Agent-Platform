@@ -925,3 +925,205 @@ def test_scoped_report_is_deterministic_redacted_and_schema_constrained(
         assert (
             "verified_managed_codex" not in definition["properties"]["reason"]["enum"]
         )
+
+
+@pytest.mark.parametrize(
+    "defect",
+    [
+        None,
+        "mode",
+        "symlink",
+        "hardlink",
+        "missing",
+        "foreign_owner",
+        "extra_reader",
+        "missing_reader",
+        "signer_candidate",
+        "directory_acl",
+        "duplicate_file",
+        "duplicate_directory",
+        "descriptor_metadata",
+        "file_metadata",
+        "directory_metadata",
+        "parent_metadata",
+        "root_metadata",
+        "directory_identity",
+        "parent_identity",
+        "file_identity",
+        "earlier_job",
+        "earlier_receipts",
+    ],
+)
+def test_staged_job_access_is_metadata_only_and_exact(
+    doctor, tmp_path, monkeypatch, defect
+):
+    # Explicit symbolic root metadata, never real root/DAC evidence.
+    (tmp_path / "etc").mkdir()
+    base = tmp_path / "etc/ap-publisher"
+    base.mkdir(mode=0o750)
+    base.chmod(0o750)
+    for name in ["job", "receipts", "candidate"]:
+        p = base / (name + ".json")
+        p.write_bytes(b"MUST_NOT_READ")
+        p.chmod(0o440)
+    if defect == "mode":
+        (base / "job.json").chmod(0o444)
+    if defect == "symlink":
+        (base / "job.json").unlink()
+        (base / "job.json").symlink_to(base / "candidate.json")
+    if defect == "hardlink":
+        os.link(base / "job.json", tmp_path / "alias")
+    if defect == "missing":
+        (base / "job.json").unlink()
+    acl_queried = set()
+    job_inode = (
+        (base / "job.json").stat().st_ino if defect == "descriptor_metadata" else None
+    )
+    real_meta = doctor.meta
+
+    def metadata(fd, uid=0, gid=0, **kw):
+        assert uid == gid == 0
+        wanted = os.getuid()
+        if defect == "foreign_owner" and stat.S_ISREG(os.fstat(fd).st_mode):
+            wanted += 1
+        m = real_meta(fd, wanted, os.getgid(), **kw)
+        values = {
+            k: getattr(m, k)
+            for k in [
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_size",
+                "st_mtime_ns",
+                "st_ctime_ns",
+            ]
+        }
+        if (
+            defect == "descriptor_metadata"
+            and m.st_ino == job_inode
+            and "/etc/ap-publisher/job.json" in acl_queried
+        ):
+            values["st_mtime_ns"] += 1
+        return SimpleNamespace(**values, st_uid=0, st_gid=0)
+
+    real_open = os.open
+
+    def opened(path, *args, **kwargs):
+        # Only the root descriptor is mapped; production traverses every child.
+        return real_open(tmp_path if path == "/" else path, *args, **kwargs)
+
+    def query(argv):
+        assert argv[:4] == [
+            "/usr/bin/getfacl",
+            "--absolute-names",
+            "--numeric",
+            "--omit-header",
+        ]
+        path = argv[-1]
+        readers = [999] if path.endswith("candidate.json") else [999, 998]
+        perm = "r-x" if path == "/etc/ap-publisher" else "r--"
+        rows = {
+            "user::rwx" if perm == "r-x" else "user::r--",
+            "group::" + perm,
+            "mask::" + perm,
+            "other::---",
+        }
+        rows |= {f"user:{u}:{perm}" for u in readers}
+        if defect in ("extra_reader", "directory_acl") and (
+            defect != "directory_acl" or perm == "r-x"
+        ):
+            rows.add("user:2000:" + perm)
+        if defect == "missing_reader" and path.endswith("job.json"):
+            rows.remove("user:999:r--")
+        if defect == "signer_candidate" and path.endswith("candidate.json"):
+            rows.add("user:998:r--")
+        acl_queried.add(path)
+        if defect in ("duplicate_file", "duplicate_directory") and (
+            path.endswith("job.json") if defect == "duplicate_file" else perm == "r-x"
+        ):
+            return "\n".join(sorted(rows) + [sorted(rows)[0]])
+        if defect in (
+            "file_metadata",
+            "directory_metadata",
+            "parent_metadata",
+            "root_metadata",
+        ) and path.endswith("job.json"):
+            target = {
+                "file_metadata": base / "job.json",
+                "directory_metadata": base,
+                "parent_metadata": base.parent,
+                "root_metadata": tmp_path,
+            }[defect]
+            observed = target.stat()
+            os.utime(
+                target, ns=(observed.st_atime_ns, observed.st_mtime_ns + 1000000000)
+            )
+        if defect in ("directory_identity", "parent_identity") and perm == "r-x":
+            target = base if defect == "directory_identity" else base.parent
+            target.rename(tmp_path / "retained")
+            base.mkdir(parents=True)
+            base.chmod(0o750)
+            for name in ("job", "receipts", "candidate"):
+                replacement = base / (name + ".json")
+                replacement.write_bytes(b"MUST_NOT_READ")
+                replacement.chmod(0o440)
+        if defect in ("earlier_job", "earlier_receipts") and path.endswith(
+            "candidate.json"
+        ):
+            target = base / ("job.json" if defect == "earlier_job" else "receipts.json")
+            observed = target.stat()
+            os.utime(
+                target, ns=(observed.st_atime_ns, observed.st_mtime_ns + 1000000000)
+            )
+        if defect == "file_identity" and path.endswith("job.json"):
+            target = base / "job.json"
+            target.rename(tmp_path / "retained-job")
+            target.write_bytes(b"MUST_NOT_READ")
+            target.chmod(0o440)
+        return "\n".join(sorted(rows))
+
+    # Stable path recheck must use the same explicitly modeled owner.
+    real_stat = os.stat
+
+    def metadata_stat(path, *args, **kwargs):
+        m = real_stat(path, *args, **kwargs)
+        if kwargs.get("dir_fd") is None:
+            return m
+        values = {
+            k: getattr(m, k)
+            for k in [
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_size",
+                "st_mtime_ns",
+                "st_ctime_ns",
+            ]
+        }
+        return SimpleNamespace(**values, st_uid=0, st_gid=0)
+
+    monkeypatch.setattr(os, "open", opened)
+    monkeypatch.setattr(doctor, "meta", metadata)
+    monkeypatch.setattr(doctor, "query", query)
+    monkeypatch.setattr(os, "stat", metadata_stat)
+    monkeypatch.setattr(os, "read", lambda *a: pytest.fail("private content read"))
+    monkeypatch.setattr(os, "pread", lambda *a: pytest.fail("private content read"))
+    observer = doctor.Observer()
+    observer.accounts = {
+        "ap-publisher": {"uid": 999, "gid": 989},
+        "ap-publisher-signer": {"uid": 998, "gid": 988},
+    }
+    if defect is None:
+        assert observer.job_access() == ("CONFIGURED", "verified_job_access_metadata")
+    else:
+        with pytest.raises((doctor.Blocked, OSError)):
+            observer.job_access()
+
+
+def test_job_namespace_and_handoff_are_always_deferred(doctor):
+    report = doctor.report(GoodObservations())
+    for name in ["job_namespace", "credential_handoff"]:
+        assert report["checks"][name]["state"] == "NOT_RUN"
+    assert report["status"] == "BLOCKED" and report["launch_allowed"] is False

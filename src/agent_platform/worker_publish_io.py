@@ -14,6 +14,15 @@ from pathlib import Path
 from .worker_publish_artifact import Blocked, decode, digest, encoded, need
 
 
+def credential_path(role):
+    """Only systemd's exact per-unit credential namespace, never caller paths."""
+    need(role in ("publisher", "signer"))
+    unit = "ap-worker-publisher" + ("-signer" if role == "signer" else "")
+    directory = "/run/credentials/" + unit + ".service"
+    need(os.environ.get("CREDENTIALS_DIRECTORY") == directory)
+    return directory + ("/app-key" if role == "signer" else "/app-jwt")
+
+
 def read_file(
     path, owner, limit, *, writable_parent=False, allow_empty=False, private=False
 ):

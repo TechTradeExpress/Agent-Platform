@@ -426,3 +426,12 @@ remain BLOCKED/NOT_RUN. worker01 evidence/approval never transfers to worker02.
 All new store/owner/PATH observations in tests are explicitly synthetic, including
 the regression of worker01's committed 0.166.0 pin and preserved personal-name
 condition. No actual worker path or official Codex binary was accessed/executed.
+
+## PKG-08 isolation gaps
+
+`job_access` checks staged-file root ownership/modes/link count and exact named
+ACLs using metadata only, without reading job/candidate/receipt contents. Missing
+files/ACLs block; success is CONFIGURED metadata, not namespace access proof.
+`job_namespace` and `credential_handoff` remain unconditional NOT_RUN until a
+separately reviewed live-evidence mechanism exists. This does not relax PKG-06's
+network drop-in or cgroup-BPF gate. See [the audit and inert-test procedure](publisher-isolation-readiness.md).
