@@ -1,0 +1,9 @@
+{
+  "schema": "AP-PKG-WORKER-BASELINE/1",
+  "source_commit": "938c5543757c4184635e08330115527f0108064a",
+  "source_tree": "8aa3800cea7ba6a2ccdfc09852f487c42796ce22",
+  "source_date_epoch": 1794775064,
+  "recipe_sha256": "d2274f7221406cdc933ce031443ca798624d575f98bd640258d93e20ca180d06",
+  "version": "0.1.0-6",
+  "worker_manifest_sha256": "80519eb56b98c4a5cd1ff222676dea2639c691f08fc318254d68b891d35152fa"
+}

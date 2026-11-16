@@ -431,4 +431,12 @@ if __name__ == "__main__":
         lifecycle()
     else:
         assert sys.argv[1:] == []
-        smoke()
+        report = json.loads(
+            Path("/usr/share/doc/agent-platform-worker/build.json").read_text()
+        )
+        if report["phase"] == "P1_INSTALL_INERT":
+            from worker_upgrade_lifecycle import installed_smoke
+
+            installed_smoke()
+        else:
+            smoke()

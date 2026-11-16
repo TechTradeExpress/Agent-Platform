@@ -100,7 +100,7 @@ def test_ci_has_read_only_guards_and_independent_prior_image_case():
         "test \"$(LC_ALL=C stat -c '%u:%g:%a:%F' /usr/share/man/man1)\" "
         '= "0:0:755:directory"'
     )
-    assert dockerfile.count(guard) == 2  # Before and after dependency setup.
+    assert dockerfile.count(guard) == 4  # Base, quality and both P1 images.
     negative = dockerfile.split("AS manpage-negative", 1)[1]
     assert "chmod" not in negative and "chown" not in negative
     assert "Prior slim manpage 0775 remains BLOCKED" in workflow
