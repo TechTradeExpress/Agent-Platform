@@ -435,3 +435,15 @@ files/ACLs block; success is CONFIGURED metadata, not namespace access proof.
 `job_namespace` and `credential_handoff` remain unconditional NOT_RUN until a
 separately reviewed live-evidence mechanism exists. This does not relax PKG-06's
 network drop-in or cgroup-BPF gate. See [the audit and inert-test procedure](publisher-isolation-readiness.md).
+
+## HAR-04: harness selection and managed Claude toolchain (Issue #134)
+
+The closed AP-WORKER-DOCTOR/1 report gains `harness_selection`, `claude` and `claude_path`
+checks and a closed `harness` block (see [the contract](claude-toolchain.md) and the
+updated schema). They are read-only, never execute a candidate and read no home, login or
+session data. The operator-written `/etc/agent-platform-worker/harness.json`
+(`AP-HARNESS-LOCAL/1`) is a diagnostic record, not an AP-HSEL/1 selection or authority.
+Only the recorded `harness_id` is selected; the other toolchain is reported as ignored, an
+absent selected toolchain is never replaced, and installation never changes
+`configuration`, `execution_binding` or `launch_allowed`. Consumers of the schema must
+reject unknown or missing checks, as with the PKG-07 revision.

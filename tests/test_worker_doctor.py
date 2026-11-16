@@ -49,6 +49,15 @@ class GoodObservations:
     def managed_executable(self):
         return "NOT_RUN", "codex_verification_required"
 
+    def harness_selection(self):
+        return "NOT_RUN", "harness_selection_missing"
+
+    def claude(self):
+        return "NOT_RUN", "claude_not_installed"
+
+    def claude_path(self):
+        return "BLOCKED", "claude_verification_required"
+
     def __getattr__(self, name):
         return lambda: (
             "INSTALLED"
@@ -67,6 +76,7 @@ def test_report_has_closed_redacted_deterministic_shape_and_never_ready(doctor):
         "schema",
         "status",
         "checks",
+        "harness",
         "artifacts",
         "launch_allowed",
         "installation",

@@ -498,3 +498,7 @@ bridge: **NOT_DEPLOYED / LIVE_BLOCKED**. Existing runtime gates are unchanged.
 designs publisher01 as Control Plane and two interchangeable, isolated workers.
 It records role/identity, network, review, recovery and staged provisioning gates:
 **DESIGN_ONLY / NO_HOST_CHANGE**, with native execution still blocked at exit 13.
+
+Claude Code toolchain verification (HAR-04, source-only, inert): see
+[docs/claude-toolchain.md](docs/claude-toolchain.md). No Claude binary is downloaded,
+installed or executed by this repository, and no harness is selected automatically.
