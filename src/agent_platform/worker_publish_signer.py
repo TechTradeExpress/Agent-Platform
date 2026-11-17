@@ -48,9 +48,7 @@ def main():
         journal.claim(job, signer=True)
         journal.append({"phase": "UNKNOWN", "job": job["id"], "operation": "sign"})
         # Only this unit's credential mount is allowed by the separate AppArmor profile.
-        raw = read_file(
-            str(source), os.getuid(), 16384, writable_parent=True, private=True
-        )
+        raw = read_file(str(source), os.getuid(), 16384, credential=True)
         key = serialization.load_pem_private_key(raw, password=None)
         art.need(read_file("/etc/ap-publisher/job.json", 0, 16384) == original)
         value = jwt_for(key, job["app_id"], job["expires"], int(time.time()))

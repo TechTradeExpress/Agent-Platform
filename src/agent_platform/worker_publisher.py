@@ -37,6 +37,16 @@ INVENTORY = (
 )
 
 
+def head_pulls(job):
+    """Bounded all-state listing of PRs whose head is exactly this feature branch.
+
+    The former whole-repository listing grew with every PR (75 PRs were
+    1,859,724 bytes on 2026-11-17, close to the 2 MiB response cap) and blocked
+    at 100. Closing-Issue claims are checked by the native INVENTORY query.
+    """
+    return ROOT + f"/pulls?state=all&head=TechTradeExpress:{job['ref'][11:]}&per_page=2"
+
+
 def database_id(value):
     art.need(type(value) in (int, str))
     if type(value) is str:
@@ -317,7 +327,7 @@ class Client:
             ROOT + "/branches/main/protection",
             ROOT + "/git/ref/heads/main",
             ROOT + "/git/ref/" + j["ref"][5:],
-            ROOT + "/pulls?state=all&per_page=100",
+            head_pulls(j),
             "/users/" + quote(j["bot_login"], safe=""),
         }
         if j["pr"] is not None:
@@ -577,20 +587,13 @@ class Client:
             and feature["object"]["type"] == "commit"
             and feature["object"]["sha"] == tip
         )
-        prs = self._call("GET", ROOT + "/pulls?state=all&per_page=100")
-        art.need(type(prs) is list and len(prs) < 100)
-        relevant = [
-            p
-            for p in prs
-            if p["head"]["ref"] == j["ref"][11:]
-            or re.search(
-                rf"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#{j['issue']}\b",
-                p["body"] or "",
-            )
-        ]
-        art.need(len(relevant) == (0 if j["pr"] is None else 1))
+        # At most one PR may ever have used this head (any state, any author).
+        prs = self._call("GET", head_pulls(j))
+        art.need(type(prs) is list and len(prs) <= 1)
+        art.need(all(p["head"]["ref"] == j["ref"][11:] for p in prs))
+        art.need(len(prs) == (0 if j["pr"] is None else 1))
         if j["pr"] is not None:
-            art.need(relevant[0]["number"] == j["pr"])
+            art.need(prs[0]["number"] == j["pr"])
             self.pr(tip, native=self.token is not None)
         if self.token is not None:
             refs = self._call(
@@ -785,7 +788,10 @@ def publish(job, data, jwt, journal, client, authorize):
         )
         return value
 
-    journal.claim(job)
+    # Replay/stuck-store refusal happens before any network use. The CLAIM itself
+    # is appended only after read-only admission, immediately before the first
+    # effect: a failed read leaves the journal byte-identical (BLOCKED, not UNKNOWN).
+    journal.admissible(job)
     client.jwt = jwt
     pr = job["pr"]
     try:
@@ -794,6 +800,7 @@ def publish(job, data, jwt, journal, client, authorize):
         # Public reads establish source/main facts before token issuance.
         client.observe(None if job["old"] == "ABSENT" else job["old"])
         client.workflows(inventory)
+        journal.claim(job)
         effect(
             "mint",
             art.encoded({"repository_ids": [REPO_ID], "permissions": PERMISSIONS}),
@@ -806,8 +813,12 @@ def publish(job, data, jwt, journal, client, authorize):
             client.app()
             client.observe(None if job["old"] == "ABSENT" else job["old"])
             effect("object", bytes.fromhex(s), lambda s=s: client.upload(s))
+        # Objects listed in the exact base commit's untruncated recursive tree are
+        # attested by their content-addressed IDs there and were never uploaded.
+        # Every uploaded object is read back after upload and again here.
         for s in order:
-            client.verify(s)
+            if s not in client.known_objects:
+                client.verify(s)
         node = client.observe(None if job["old"] == "ABSENT" else job["old"])
 
         def change():
@@ -872,7 +883,7 @@ def main(argv=None):
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args(argv)
     journal = None
-    attempted = False
+    start = None
     try:
         original = read_file(args.job, 0, 16384)
         job = validate_job(art.decode(original), int(time.time()))
@@ -908,14 +919,12 @@ def main(argv=None):
         journal = Journal("/var/lib/ap-publisher/journal", job["journal_sha256"])
         credential = credential_path("publisher")
         bundle = art.decode(
-            read_file(
-                str(credential), os.getuid(), 16384, writable_parent=True, private=True
-            )
+            read_file(str(credential), os.getuid(), 16384, credential=True)
         )
         art.need(type(bundle) is dict and set(bundle) == {"job_sha256", "jwt"})
         art.need(bundle["job_sha256"] == art.digest(original))
         jwt = bundle["jwt"]
-        attempted = True
+        start = len(journal.events)
         result = publish(
             job,
             data,
@@ -927,6 +936,11 @@ def main(argv=None):
         print(art.encoded(result).decode())
         return 0
     except Exception:
+        # Only a run that appended (or failed to append) a journal record has a
+        # store needing reconciliation; read-only failures leave it untouched.
+        attempted = start is not None and (
+            journal.poisoned or len(journal.events) != start
+        )
         print(
             art.encoded(
                 {
