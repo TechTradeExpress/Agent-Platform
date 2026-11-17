@@ -1,0 +1,1691 @@
+{
+  "_comment": "Fabricated, non-authorizing fixtures. Digests are placeholders; no real worker, account or approval.",
+  "valid": {
+    "claude_unclarified": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "codex_unclarified": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "codex",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "all_attested_still_not_go": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "attested_leap_day": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2028-02-29"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2028-02-29"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2028-02-29"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    }
+  },
+  "invalid": {
+    "production_go_true": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": true
+    },
+    "launch_allowed_true": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": true,
+      "production_go": false
+    },
+    "overall_go": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "GO",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "overall_supported": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "SUPPORTED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "extra_token_field": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false,
+      "token": "x"
+    },
+    "extra_nested_field": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE",
+          "account_email": "a@b"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "unknown_reason": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "freeform text"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "unknown_harness_alias": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "Claude",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "auto_harness": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "auto",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "epoch_zero": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 0,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "epoch_bool": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": true,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_digest": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "ABC"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "home_path_worker_ref": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "/home/someone",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "missing_decision": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "status_go": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "GO",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "too_many_digests": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009",
+            "000000000000000000000000000000000000000000000000000000000000000a",
+            "000000000000000000000000000000000000000000000000000000000000000b",
+            "000000000000000000000000000000000000000000000000000000000000000c",
+            "000000000000000000000000000000000000000000000000000000000000000d",
+            "000000000000000000000000000000000000000000000000000000000000000e",
+            "000000000000000000000000000000000000000000000000000000000000000f",
+            "0000000000000000000000000000000000000000000000000000000000000010"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "attested_empty_evidence": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "attested_none_date": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "attested_empty_everything": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "attested_with_blocking_reason": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "not_run_with_evidence": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "not_run_without_reason": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "blocked_without_reason": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "evidence_without_date": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "NONE"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "date_without_evidence": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "subscription_isolation_blocked",
+            "gate_73_blocked",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "duplicate_digests": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "duplicate_reasons": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "NOT_PROVEN",
+          "reasons": [
+            "vendor_terms_unclarified",
+            "vendor_clarification_not_requested"
+          ],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "isolation": {
+          "status": "BLOCKED",
+          "reasons": [
+            "host_not_run",
+            "host_not_run"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        },
+        "operator_approval": {
+          "status": "NOT_RUN",
+          "reasons": [
+            "operator_approval_missing"
+          ],
+          "evidence_sha256": [],
+          "observed_date": "NONE"
+        }
+      },
+      "overall": "BLOCKED",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_feb30": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-02-30"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_month13": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-13-01"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_month00": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-00-10"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_apr31": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-04-31"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_non_leap_feb29": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2027-02-29"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_century_non_leap": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2100-02-29"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_day00": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-00"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_year_1999": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "1999-12-31"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    },
+    "bad_date_datetime": {
+      "schema": "AP-HAUTH-EVIDENCE/1",
+      "harness_id": "claude_code",
+      "worker_ref": "worker-example",
+      "selection_epoch": 1,
+      "decisions": {
+        "vendor_permission": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003"
+          ],
+          "observed_date": "2026-11-16T10:00:00Z"
+        },
+        "isolation": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000000000000000000000000000004",
+            "0000000000000000000000000000000000000000000000000000000000000005",
+            "0000000000000000000000000000000000000000000000000000000000000006",
+            "0000000000000000000000000000000000000000000000000000000000000007",
+            "0000000000000000000000000000000000000000000000000000000000000008",
+            "0000000000000000000000000000000000000000000000000000000000000009"
+          ],
+          "observed_date": "2026-11-16"
+        },
+        "operator_approval": {
+          "status": "ATTESTED_UNAUTHENTICATED",
+          "reasons": [],
+          "evidence_sha256": [
+            "0000000000000000000000000000000000000000000000000000000000000001"
+          ],
+          "observed_date": "2026-11-16"
+        }
+      },
+      "overall": "NOT_PROVEN",
+      "launch_allowed": false,
+      "production_go": false
+    }
+  }
+}

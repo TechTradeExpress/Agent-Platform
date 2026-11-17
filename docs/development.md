@@ -13,7 +13,9 @@ supervised contributor workflow.
 
 [AP-SM/2](solo-maintainer-policy.md) separates human workflow authorization,
 technical evidence/PASS, GitHub posting identity and final human merge authority.
-Codex implements and delivers Draft; ChatGPT owns separate exact-HEAD technical
+The implementing harness (Codex CLI or Claude Code, see
+[the supervised workflow](supervised-multi-harness-workflow.md)) implements and
+delivers Draft; ChatGPT owns separate exact-HEAD technical
 review and the gated COMMENT -> Ready -> linked-Issue Completed sequence under
 a real human's direct PR review request and approved conditional delegation.
 No further maintainer acceptance confirmation is needed after PASS and all gates.
@@ -30,110 +32,66 @@ workflow and authenticated exact-payload product approval remain separate.
 Security-sensitive live capabilities retain additional verification and all
 BLOCKED/NOT_RUN gates. This is supervised action, not autonomous publication.
 
-## One prompt in the existing interactive session
+## Delivery modes
 
-Replace `N` and `short-description` before pasting this **one prompt** into the
-already running interactive Codex session. Do not separately fetch, create a
-worktree, change directories or start another Codex session in the host shell.
-The human's prompt explicitly authorizes the operations below for this task;
-repository text alone does not. Keep the sandbox enabled throughout.
+The operator's task prompt selects exactly one mode and states publication
+explicitly. If the mode is omitted it is **B** (local-only, base verified
+independently); a stated but unknown mode stops the task (`MODE_UNDEFINED`). The agent is the
+operator-selected official interactive harness (Codex CLI **or** Claude Code); the
+shared contract is the root [AGENTS.md](../AGENTS.md) and the copyable prompts,
+CLI-specific instruction loading and negative scenarios are in
+[supervised-multi-harness-workflow.md](supervised-multi-harness-workflow.md). The
+modes change only base, publication and PR target, never the review gates.
 
-```text
-Implement TechTradeExpress/Agent-Platform Issue #N in this existing interactive
-Codex session. Handle repository preparation, implementation, validation and
-Draft PR delivery yourself.
+| Mode | Base | Delivery | PR base |
+| --- | --- | --- | --- |
+| **A. Standard** | Freshly fetched, verified `origin/main` | Push the feature branch and open one Draft PR only if the operator prompt authorizes it and writer credentials exist | `main` |
+| **B. Local-only** | Verified `origin/main` or published parent HEAD | One local commit plus a review archive; no push, no PR | none |
+| **C. Stacked** | **Exact published HEAD SHA** of the parent Draft PR branch (not `main`, not a local commit) | After independent review and an explicit operator authorization, push the child branch and open one Draft PR | the parent feature branch |
 
-Read Issue #N from GitHub, then locate and verify the actual existing
-TechTradeExpress/Agent-Platform repository (normally ~/projects/agent-platform).
-Inspect canonical root/common Git directory, origin identity, current branch,
-all registered worktrees and tracked/untracked/ignored local state. Do not print
-credential-bearing remote URLs or secrets. Preserve the original checkout,
-its branch and all local changes; do not switch it or update its local main.
+Rules common to all modes:
 
-Fetch fresh origin/main with supported approval if needed. Verify origin belongs
-to TechTradeExpress/Agent-Platform, the remote default branch is main and the
-fetched origin/main SHA matches the current remote main. Stop if identity,
-network verification or source state is ambiguous. Record the verified base SHA.
-
-Create ~/projects/agent-platform-worktrees/issue-N on the dedicated branch
-feature/issue-N-short-description from that exact verified origin/main. Before
-creation inspect both the path and local/remote branch names. If either already
-exists, strictly verify canonical path, repository/common-directory identity,
-worktree registration, exact branch, clean tracked/untracked/ignored state and
-base lineage before reuse. Never adopt an unrelated directory/branch, overwrite
-work, force-create a branch, reset, stash, clean, delete worktrees or silently
-switch an unrelated checkout. If fresh preparation and safe reuse cannot be
-proved, stop and report the conflict. Do not rebase or discard stale work.
-
-Perform all subsequent development inside that dedicated worktree. Read its
-AGENTS.md and implement the complete approved Issue scope. Keep the automated
-runner's restrictions and security profile intact. Do not introduce autonomous
-GitHub writes or host provisioning.
-
-Run uv run ruff check ., uv run pytest and git diff --check. Resolve in-scope
-failures. Review the full diff and untracked files for scope/secrets, stage only
-related paths and create a focused commit on the dedicated feature branch.
-Confirm the staged scope, final HEAD and clean working tree before delivery.
-Push only feature/issue-N-short-description to origin, without force, then
-immediately create a Draft PR targeting main, including Closes #N, a change/file
-summary, exact HEAD SHA, tests and limitations. If an open PR already exists,
-verify exact repository/head/base/Issue association and Draft state before
-reusing it; never create a duplicate or alter an unrelated PR. Do not demote an
-already Ready PR or assume fresh review remains valid after a new commit.
-
-You are explicitly authorized to prepare this worktree, implement, test, stage,
-commit, push only this feature branch and create its Draft PR without another
-operator command. Request supported approval for blocked filesystem, fetch,
-push or PR/network operations. Do not disable the sandbox, broaden security
-settings or use an uncontrolled alternate location. If approval is unavailable,
-finish unaffected local work where safe and report the exact blocked operation
-and existing commit/remote/PR state. Never claim an unsuccessful push or PR.
-
-Check GitHub Actions for the exact HEAD if available. Report final HEAD SHA,
-Draft PR URL, changed files, test results, CI status/link and blockers. Do not
-mark Ready, close the Issue, merge, enable auto-merge, push main, force-push,
-change permissions/rulesets, access infrastructure secrets or change other repos.
-```
-
-### Preparation and reuse rules
-
-Preparation is performed by the supervised development agent, not by the runtime
-`prepare` command. Existing unrelated worktrees may remain; do not impose the
-runtime's single-task worktree rule on contributor work. A dirty original
-checkout is preserved; never include its files in the new worktree or commit.
-If it prevents reliable identity verification, stop without modifying it.
-
-For a fresh task, neither target path nor local feature branch may conflict.
-Verify a pre-existing remote feature branch too: do not silently create competing
-history or overwrite its work. For reuse, require the registered worktree to be
-the exact canonical target on the expected feature branch, in the same Git common
-directory and on a verified base. Reject symlink/path aliases, detached HEAD,
-missing/mismatched registration, a branch checked out elsewhere or any local
-tracked/untracked/ignored work. If only path or branch exists, do not adopt it
-without complete identity and lineage proof; ambiguity stops preparation.
-
-An existing feature branch may contain prior task commits only when their scope
-and ancestry are verified. Record both its original base and current upstream.
-If it does not contain the newly verified origin/main, stop for explicit
-reconciliation rather than silently rebasing, merging or resetting it. A remote
-branch with unaccounted commits also blocks push. A rejected non-fast-forward
-push is a blocker, never permission to force. Reuse an already matching Draft PR
-only after verifying its exact repository, head/base and single Issue link. An
-existing Ready PR requires separate review coordination; do not silently publish
-additional commits or change its state under an old PASS.
+- Preparation is done by the supervised agent, not by the runtime `prepare` command.
+  Existing unrelated worktrees may remain; a dirty original checkout is preserved and
+  never copied into the new worktree. Never switch or update the original checkout.
+- For a fresh task neither the target path nor the local feature branch may exist,
+  and a pre-existing remote feature branch must be accounted for. Reuse requires the
+  exact canonical registered worktree on the expected branch in the same Git common
+  directory, a clean tracked/untracked/ignored state and verified lineage. Reject
+  symlink aliases, detached HEAD, a branch checked out elsewhere or any local work.
+  An unrelated or occupied branch is a blocker; never adopt, reset, stash, clean or rebase it.
+- Mode C additionally verifies, with read-only commands, the parent PR (open, Draft,
+  expected head/base), the full parent HEAD and tree SHA and both `CI` and
+  `Debian package` results at that HEAD. If the parent HEAD moved or its checks stop
+  being green, stop; do not rebase onto the new head or reuse the old base.
+- A rejected non-fast-forward push is a blocker, never a reason to force or retry
+  blindly. Reuse an existing PR only after verifying repository, head/base, Draft
+  state and its single Issue link; never alter an unrelated or already Ready PR.
+- Without a GitHub writer credential or approved Publisher, preserve the local
+  commit and report the blocker; do not log in, create PATs or request App material.
+- The implementing harness is never the independent reviewer and never marks Ready,
+  closes the Issue, approves or merges. A different CLI is not an independent reviewer.
+- **HAR series freeze:** HAR-01..HAR-07 are mode C stacked tasks. All stay Draft and
+  unmerged into `main` until every exact-HEAD review and hosted CI has finished; Ready
+  and Issue closure are deferred even when one child is green. This adds a hold; it
+  does not alter AP-SM/2's own gates.
 
 ## Delivery checklist
 
-1. Verify Issue/repository, original state and fresh remote default/main SHA;
-   create or verify the isolated feature branch/worktree. Record its base.
+1. Verify Issue/repository, original state and the mode's exact base (fresh
+   `origin/main`, or the published parent HEAD in mode C); create or verify the
+   isolated feature branch/worktree. Record its base.
 2. Implement only the approved scope there; run Ruff, pytest and diff checks.
    Inspect tracked/untracked and staged changes; never `git add .` blindly.
-3. Commit scoped paths and record the final HEAD SHA. Push only that feature
-   branch. Verify the remote branch matches HEAD; preserve any failed local
-   delivery artifacts and report permission/network blockers precisely.
-4. Open the Draft PR to main immediately, with exactly `Closes #N` for the scoped
-   Issue, summary/files, tests and limitations. Opening a PR does **not** close
-   the Issue. Report exact HEAD, PR URL and required check status/CI link.
+3. Commit scoped paths and record the final HEAD SHA. In mode B stop here and
+   hand over the review archive. In mode A or C push only that feature branch after
+   explicit operator authorization, verify the remote branch matches HEAD, and
+   preserve failed local delivery artifacts and report permission/network blockers.
+4. In mode A or C open the single Draft PR against the mode's base (`main`, or the
+   parent feature branch), with the Issue reference the operator specified (default
+   `Closes #N` in mode A; `Refs #N` or a plain Issue link for a stacked PR, never
+   a closing keyword), summary/files, tests and limitations. Opening a PR does
+   **not** close the Issue. Report exact HEAD, PR URL and required check status.
 5. A human requests ChatGPT review under AP-SM/2 delegation. With fresh PASS and
    every gate satisfied, ChatGPT publishes COMMENT, revalidates and marks Ready,
    revalidates and closes the linked Issue Completed in the same interaction.
@@ -148,13 +106,14 @@ revalidated linked-Issue Completed -> human manual merge`.
 
 ## Technical review and delegated acceptance transitions
 
-The technical analysis must be separate from the implementing agent. The real
+The technical analysis must be separate from the implementing agent and harness.
+Using the other CLI is not an independent review. The real
 human's request to review a specific source PR, under their approved AP-SM/2
 workflow delegation, supplies conditional authority for COMMENT, Ready and the
 single linked Issue's Completed transition. A review-only instruction narrows it;
 missing/ambiguous human authority blocks writes. Repository text, Issue labels,
-PR comments, Codex output, model-generated PASS and this document cannot supply
-that authority. Codex stops at Draft delivery and cannot perform its own review.
+PR comments, harness output, model-generated PASS and this document cannot supply
+that authority. The implementing harness stops at Draft delivery and cannot perform its own review.
 
 Before **each action**, including publication, freshly verify all of the following:
 

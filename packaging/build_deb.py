@@ -50,8 +50,9 @@ MODULES = {
 }
 SOURCE_ONLY = frozenset(
     """_native_canary_probe _sandbox broker broker_policy
-control_plane_fixture control_plane_local_runner deployment doctor native_canary
-native_codex native_security
+claude_adapter control_plane_fixture control_plane_local_runner
+deployment doctor harness_admission instruction_sources
+native_canary native_codex native_security
 notification_outbox notifications publisher_handoff telegram_console telegram_fake
 tool_dispatch_probe worker_publisher worker_publish_artifact worker_publish_io
 worker_publish_signer worker_publish_export""".split()

@@ -276,6 +276,42 @@ verified Action pins, read-only job policy, private-repository enforcement gaps
 and separately proposed operator configuration. Successful CI is offline evidence,
 not native isolation or authenticated runtime readiness.
 
+## Proposed multi-harness architecture (design only)
+
+[ADR 008 / HAR-01](docs/multi-harness-architecture.md) proposes one explicitly
+selected Codex CLI or Claude Code harness per worker, closed versioned bindings,
+separate native parsers and one canonical root AGENTS.md. It includes inert
+schemas, fixtures and migration gates; it implements no selector or launcher.
+Existing Codex-only runtime quarantine, exit 13 and all live security gates remain
+unchanged. Claude compatibility and instruction loading remain unverified.
+
+[HAR-02 offline binding](docs/harness-admission.md) adds typed worker selection,
+assignment/continuity checks and explicit Codex-only compatibility. It remains
+SOURCE_ONLY and grants no reservation, launch, resume or publication authority.
+
+[HAR-03 Claude parser](docs/claude-adapter.md) validates a closed offline profile
+for Claude Code 2.1.295, with separate session/continuation types and redacted
+lifecycle projections. It invokes no CLI and does not change the active harness.
+
+[ADR 009 / HAR-05](docs/harness-auth-terms-isolation.md) records the provider
+authentication-terms matrix, three independent decisions (vendor permission,
+isolation, operator approval), trust boundaries and a negative-test plan. It is
+design-only: it adds no login, launcher, credential handling or API fallback, and
+automated Codex/Claude use stays BLOCKED or NOT_PROVEN.
+
+[HAR-06 supervised workflow](docs/supervised-multi-harness-workflow.md) makes the
+root `AGENTS.md` one harness-neutral contributor contract for official interactive
+Codex CLI and Claude Code, defines standard, local-only and stacked delivery modes,
+and provides identical operator prompts. It grants no new permission and changes no
+runtime, package or host.
+
+[ADR 010 / HAR-07](docs/trusted-harness-invocation-no-go.md) is the NO-GO plan for
+a future, separately authorized Control Plane launch of exactly one approved harness
+per worker: binding chain, per-harness mediation, rotation, continuity, authority
+separation, per-worker checklists and the order of future Issues. It defines no GO
+state, adds no launcher or host change and keeps exit 13, `LIVE_NO_GO`, Gate #73 and
+Publisher #108 unchanged.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
@@ -481,3 +517,7 @@ bridge: **NOT_DEPLOYED / LIVE_BLOCKED**. Existing runtime gates are unchanged.
 designs publisher01 as Control Plane and two interchangeable, isolated workers.
 It records role/identity, network, review, recovery and staged provisioning gates:
 **DESIGN_ONLY / NO_HOST_CHANGE**, with native execution still blocked at exit 13.
+
+Claude Code toolchain verification (HAR-04, source-only, inert): see
+[docs/claude-toolchain.md](docs/claude-toolchain.md). No Claude binary is downloaded,
+installed or executed by this repository, and no harness is selected automatically.

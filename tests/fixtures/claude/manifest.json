@@ -1,0 +1,157 @@
+{
+  "schema": "AP-CLAUDE-FIXTURES/1",
+  "cli_version": "2.1.295",
+  "provenance": "SYNTHETIC_NOT_CAPTURED",
+  "cases": {
+    "complete": {
+      "file": "complete.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EFFECTS_UNVERIFIED"
+      }
+    },
+    "auth_error": {
+      "file": "auth_error.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "AUTH_ERROR"
+      }
+    },
+    "rate_limit": {
+      "file": "rate_limit.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "RATE_LIMIT"
+      }
+    },
+    "tool_complete": {
+      "file": "tool_complete.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EFFECTS_UNVERIFIED"
+      }
+    },
+    "tool_denied": {
+      "file": "tool_denied.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "TOOL_DENIED"
+      }
+    },
+    "unresolved_tool": {
+      "file": "unresolved_tool.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "FAIL",
+        "outcome": "UNKNOWN",
+        "diagnostic": "UNRESOLVED_TOOL"
+      }
+    },
+    "cancelled": {
+      "file": "cancelled.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "CANCELLED"
+      }
+    },
+    "interrupted": {
+      "file": "interrupted.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "FAIL",
+        "outcome": "UNKNOWN",
+        "diagnostic": "INCOMPLETE_STREAM"
+      }
+    },
+    "injection": {
+      "file": "injection.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EFFECTS_UNVERIFIED"
+      }
+    },
+    "background": {
+      "file": "background.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "BACKGROUND_UNVERIFIED"
+      }
+    },
+    "partial_text": {
+      "file": "partial_text.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EFFECTS_UNVERIFIED"
+      }
+    },
+    "replay": {
+      "file": "replay.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "FAIL",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EVENT_REPLAY"
+      }
+    },
+    "wrong_session": {
+      "file": "wrong_session.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "FAIL",
+        "outcome": "UNKNOWN",
+        "diagnostic": "PROTOCOL_INVALID"
+      }
+    },
+    "out_of_order": {
+      "file": "out_of_order.jsonl",
+      "format": "stream-json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "FAIL",
+        "outcome": "UNKNOWN",
+        "diagnostic": "PROTOCOL_INVALID"
+      }
+    },
+    "json_complete": {
+      "file": "complete.json",
+      "format": "json",
+      "source": "VENDOR_DOCUMENTED_SHAPE_SYNTHETIC_VALUES",
+      "expected_without_process": {
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "EFFECTS_UNVERIFIED"
+      }
+    }
+  }
+}

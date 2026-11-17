@@ -41,6 +41,10 @@
             "bpf_egress_policy_missing",
             "bpf_interface_missing",
             "caller_path_only",
+            "claude_not_installed",
+            "claude_path_collision",
+            "claude_verification_failed",
+            "claude_verification_required",
             "codex_verification_failed",
             "codex_verification_required",
             "coding_environment_scope_unverified",
@@ -49,6 +53,10 @@
             "credential_handoff_evidence_missing",
             "dependencies_missing",
             "diagnostic_timeout",
+            "foreign_claude_command",
+            "harness_selection_changed",
+            "harness_selection_invalid",
+            "harness_selection_missing",
             "identity_invalid",
             "independent_continuity_evidence_missing",
             "installed_payload_changed",
@@ -71,6 +79,7 @@
             "package_version_mismatch",
             "path_invalid",
             "path_shadowing",
+            "personal_claude_requires_exec_binding",
             "personal_codex_requires_exec_binding",
             "process_isolation_evidence_missing",
             "profile_attachment_evidence_missing",
@@ -85,9 +94,11 @@
             "verified_dependencies",
             "verified_effective_unit_settings",
             "verified_enforced_profiles",
+            "verified_harness_selection_record",
             "verified_job_access_metadata",
             "verified_local_identities",
             "verified_local_package",
+            "verified_managed_claude",
             "verified_managed_codex",
             "verified_state_metadata"
           ]
@@ -99,6 +110,39 @@
             "INSTALLED",
             "NOT_RUN",
             "READY_FOR_SUPERVISED_PUBLISHING"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "claude_path_check": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": [
+            "claude_path_collision",
+            "claude_verification_required",
+            "coding_environment_scope_unverified",
+            "coding_identity_invalid",
+            "invalid_record",
+            "object_changed",
+            "object_missing",
+            "observation_denied",
+            "observation_failed",
+            "path_invalid",
+            "personal_claude_requires_exec_binding",
+            "unsafe_attributes",
+            "unsafe_metadata"
+          ]
+        },
+        "state": {
+          "enum": [
+            "BLOCKED",
+            "NOT_RUN"
           ]
         }
       },
@@ -208,6 +252,26 @@
               "pattern": "^[0-9a-f]{64}$",
               "type": "string"
             },
+            "claude_binary_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "claude_effective_path": {
+              "pattern": "^/opt/agent-platform-claude/versions/[0-9]+\\.[0-9]+\\.[0-9]+-[0-9a-f]{64}/claude$",
+              "type": "string"
+            },
+            "claude_manifest_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "claude_release_pin_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "claude_version": {
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
             "codex_release_tag": {
               "pattern": "^rust-v[0-9]+\\.[0-9]+\\.[0-9]+$",
               "type": "string"
@@ -276,6 +340,12 @@
         "caller_path": {
           "$ref": "#/$defs/caller_path_check"
         },
+        "claude": {
+          "$ref": "#/$defs/check"
+        },
+        "claude_path": {
+          "$ref": "#/$defs/claude_path_check"
+        },
         "codex": {
           "$ref": "#/$defs/check"
         },
@@ -290,6 +360,9 @@
         },
         "execution_binding": {
           "$ref": "#/$defs/execution_binding_check"
+        },
+        "harness_selection": {
+          "$ref": "#/$defs/check"
         },
         "identities": {
           "$ref": "#/$defs/check"
@@ -346,7 +419,10 @@
         "execution_binding",
         "job_access",
         "job_namespace",
-        "credential_handoff"
+        "credential_handoff",
+        "harness_selection",
+        "claude",
+        "claude_path"
       ],
       "type": "object"
     },
@@ -355,6 +431,127 @@
     },
     "gate_73": {
       "const": "BLOCKED"
+    },
+    "harness": {
+      "additionalProperties": false,
+      "properties": {
+        "alternate_toolchain_ignored": {
+          "type": "boolean"
+        },
+        "auto_selection": {
+          "const": "NEVER"
+        },
+        "configured": {
+          "enum": [
+            "codex",
+            "claude_code",
+            null
+          ]
+        },
+        "harnesses": {
+          "additionalProperties": false,
+          "properties": {
+            "claude_code": {
+              "additionalProperties": false,
+              "properties": {
+                "reason": {
+                  "$ref": "#/$defs/check/properties/reason"
+                },
+                "selected": {
+                  "type": "boolean"
+                },
+                "state": {
+                  "enum": [
+                    "BLOCKED",
+                    "INSTALLED",
+                    "NOT_RUN"
+                  ]
+                }
+              },
+              "required": [
+                "state",
+                "reason",
+                "selected"
+              ],
+              "type": "object"
+            },
+            "codex": {
+              "additionalProperties": false,
+              "properties": {
+                "reason": {
+                  "$ref": "#/$defs/check/properties/reason"
+                },
+                "selected": {
+                  "type": "boolean"
+                },
+                "state": {
+                  "enum": [
+                    "BLOCKED",
+                    "INSTALLED",
+                    "NOT_RUN"
+                  ]
+                }
+              },
+              "required": [
+                "state",
+                "reason",
+                "selected"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "codex",
+            "claude_code"
+          ],
+          "type": "object"
+        },
+        "launch_allowed": {
+          "const": false
+        },
+        "selected_toolchain": {
+          "enum": [
+            "BLOCKED",
+            "INSTALLED",
+            "NOT_RUN",
+            null
+          ]
+        },
+        "selection_epoch": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ]
+        },
+        "selection_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "configured",
+        "selection_epoch",
+        "selection_sha256",
+        "harnesses",
+        "selected_toolchain",
+        "alternate_toolchain_ignored",
+        "auto_selection",
+        "launch_allowed"
+      ],
+      "type": "object"
     },
     "host_evidence": {
       "const": "HOST_NOT_RUN"
@@ -395,6 +592,7 @@
     "installation",
     "configuration",
     "checks",
+    "harness",
     "artifacts"
   ],
   "title": "AP-WORKER-DOCTOR/1",
