@@ -30,7 +30,7 @@ None of these is host, App-authentication or live-publication evidence.
 | Worker exporter (`ap-worker-publisher-export`) | SOURCE_PASS | OFFLINE_SIM: 342 objects, 5,727,091-byte artifact, `EXPORTED`; worker hosts HOST_NOT_RUN |
 | AP-WP/1 artifact, job and receipt validation | SOURCE_PASS | Existing and new negative tests |
 | Signer/Publisher credential intake | SOURCE_PASS after F-01 | Was deterministic BLOCKED on systemd 257 |
-| AppArmor coverage of the code's own file walk | **BLOCKED** (F-02) | Scope dependency on packaging, see section 3 |
+| AppArmor coverage of the code's own file walk | SOURCE_PASS after PKG-14 / HOST_NOT_RUN | Exact profile rules reviewed; effective on-host enforcement remains unverified |
 | PR enumeration | SOURCE_PASS after F-03 | Was within ~10 PRs of a hard block |
 | Object readback within the 300 s budget | SOURCE_PASS after F-04 | Was ~165 s of 300 s for a 5-object pilot |
 | Journal after a read-only admission failure | SOURCE_PASS after F-05 | Was a permanently stuck store |
@@ -64,16 +64,16 @@ fallback owned by the unit user with no ACL and no group/other bits. No write bi
 set-ID/sticky bit, other access, named group, third user, symlink or hard link is
 accepted. The ACL is read from the open descriptor.
 
-**F-02, AppArmor ancestor mediation (BLOCKED, not changed here).** `read_file()`
+**F-02, AppArmor ancestor mediation (SOURCE_FIXED in PKG-14; HOST_NOT_RUN).** `read_file()`
 opens every ancestor with `O_RDONLY|O_DIRECTORY` and `fstat`s it. Linux 6.12
 `apparmor_file_open()` mediates directory opens with `MAY_READ` and
 `apparmor_inode_getattr()` mediates `fstat`; `r` on the directory path grants
-both. (`O_PATH` skips only the open hook, not getattr.) Both profiles grant only
+both. (`O_PATH` skips only the open hook, not getattr.) The historical pre-PKG-14 profiles granted only
 leaf files, and Debian 13 `abstractions/base` and `abstractions/python` grant no
 `/`, `/etc/`, `/run/`, `/var/` or `/usr/` directory. Under the enforcing profile
-that `confinement()` itself requires, the first `os.open("/")` is denied, so
-neither role can read `job.json`. This was never exercised: earlier probes opened
-paths directly. The minimal fix is these exact directory rules (machine-checked
+that `confinement()` itself requires, the first `os.open("/")` was denied, so
+neither role could read `job.json` under those old profiles. This was never exercised: earlier probes opened
+paths directly. PKG-14 #159 implements these exact directory rules (machine-checked
 against the code's read paths by `tests/test_worker_publisher.py`):
 
 ```text
@@ -107,15 +107,7 @@ AP-PUB02-F02 ap-worker-publisher-signer
 /var/lib/ap-publisher-signer/ r,
 ```
 
-F-02 status: BLOCKED_SCOPE_DEPENDENCY. The profiles are dpkg conffiles of the
-Worker P1 package. `packaging/debian/worker_upgrade_lifecycle.py` asserts that
-both profile digests are unchanged after the historical `-7` to new-package
-upgrade, so this edit also requires a reviewed lifecycle-test change, and it
-changes future `0.1.0-8` content governed by PKG-13 (#157). It is left to a
-coordinated decision. A local host edit is not a workaround: an edited conffile
-blocks provisioning hash validation. `r` on these directories also permits
-listing them; the directories are world-listable by DAC already, except the
-role's own state directory.
+F-02 status: SOURCE_FIXED_HOST_NOT_RUN. PKG-14 #159 adds the exact role-specific ancestor-directory read permissions to the packaged AppArmor profiles and explicit opposite-role denies. Its reviewed Debian lifecycle allows only that documented profile transition, preserving immutable historical `0.1.0-7` bytes and detecting unexpected conffile changes. Source and disposable CI evidence does not demonstrate that the correct profile is installed and enforcing on either worker. Real on-host AppArmor/BPF attachment, credential/UID denial probes, reboot continuity, independently approved package generation and per-host installation remain BLOCKED/NOT_RUN. The existing worker01 `0.1.0-7` package does not contain these fixes. A local host conffile edit is not an acceptable workaround. Directory `r` also permits listing where DAC allows, but not leaf secret access.
 
 **F-03, PR enumeration (fixed).** The Publisher listed every PR in the
 repository on each observation and blocked at 100 items, any `Link` header or a
