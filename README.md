@@ -236,14 +236,12 @@ See [current quarantine and historical execution contract](docs/execution.md).
 
 Human-authorized supervised development delivery:
 
-In an already running interactive Codex session, use the **single copy-paste
-prompt** in [the contributor workflow](docs/development.md). The directly
-authorized coding agent verifies the repository, fetches current `origin/main`,
-creates or safely verifies its dedicated development worktree, implements, tests,
-commits, pushes only its feature branch and immediately opens a Draft PR to
-`main` with `Closes #N`. No separate host-shell setup or PR command is required.
-The original checkout and existing work remain untouched. Sandbox or connection
-blocks require supported approval, never weaker protections.
+The operator selects the official interactive Codex CLI or Claude Code and a
+mode in [the contributor workflow](docs/development.md). Mode B (the default)
+ends at one local commit and review archive, without push or PR. Mode A/C
+publication requires explicit operator authorization. The agent verifies the
+repository and exact base and works in a dedicated worktree, preserving the
+original checkout and all existing work. Sandbox blocks require supported approval.
 
 Independent review pins the exact HEAD SHA. Only PASS plus green required checks
 for that unchanged SHA permits the independently authorized reviewer to publish
@@ -276,7 +274,14 @@ verified Action pins, read-only job policy, private-repository enforcement gaps
 and separately proposed operator configuration. Successful CI is offline evidence,
 not native isolation or authenticated runtime readiness.
 
-## Proposed multi-harness architecture (design only)
+## Multi-harness source integration (offline only)
+
+HAR-01..07 source was integrated by squash PR #150 at
+`6560eec712139c20c9ede7ceab4feb8d3c63eff0` (tree
+`119daa294e399b90317ca82d73000e9a6a4f40ed`). Original stacked PRs
+#139/#140/#142/#144/#145/#146/#147 were closed unmerged; #149 is completed.
+This is source integration, not native execution or Publisher approval:
+`SUBSCRIPTION_ISOLATION_BLOCKED` / exit 13, `LIVE_NO_GO` and `HOST_NOT_RUN` remain.
 
 [ADR 008 / HAR-01](docs/multi-harness-architecture.md) proposes one explicitly
 selected Codex CLI or Claude Code harness per worker, closed versioned bindings,
@@ -476,13 +481,15 @@ The [ChatGPT review handoff](docs/chatgpt-handoff.md) adds Stage 1 typed offline
 proposals, separate operator approval and durable synthetic UNKNOWN journaling.
 Live integration remains INTEGRATION_BLOCKED / NO-GO; no publisher is deployed.
 
-The [Debian 13 candidate package](docs/debian-package.md) provides the existing
-CLI tools with no services or automatic state migrations. Its separate disposable
-CI verifies real package lifecycle operations while execution remains blocked.
-The proposed [Debian role-package ADR](docs/debian-role-package-architecture.md)
-defines Control, Worker and the separately pinned Codex toolchain dependency,
-with explicit legacy retirement and gated provisioning; it implements no package
-split or host changes.
+The implemented [Debian role packages](docs/debian-package.md) are exactly
+`agent-platform-control` and `agent-platform-worker`; the old experimental
+single package is historical. [PKG-09](docs/worker-pkg09-upgrade.md) defines
+current build/version rules. Codex/Claude toolchains are separate, explicitly
+provisioned upstream artifacts, not a third role package. HAR changes do not
+permit rebuilding/reinstalling final `0.1.0-7` with different Worker contents;
+future PKG-11 `0.1.0-8` work and Publisher #108 remain separate and blocked.
+The [rollout roadmap](docs/worker-packaging-rollout.md) distinguishes source
+implementation from host activation; no host work is authorized here.
 
 The [offline Codex assignment contract](docs/codex-assignment.md) binds one trusted
 logical-agent assignment to existing admission/queue checks and a separate coding

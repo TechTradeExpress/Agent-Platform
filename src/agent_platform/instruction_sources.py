@@ -16,6 +16,7 @@ disabled) read CLAUDE.md only, so this contract requires >= 2.1.281.
 
 import hashlib
 import os
+import pwd
 import re
 import stat
 
@@ -31,7 +32,7 @@ REASONS = frozenset(
 claude_md_in_ancestor claude_local_md_in_ancestor
 agents_md_missing agents_md_not_regular agents_md_unreadable
 agents_md_in_ancestor agents_md_nested claude_md_nested
-claude_dir_agents_md scan_limit root_invalid""".split()
+claude_dir_agents_md scan_limit root_invalid identity_unavailable""".split()
 )
 RESULTS = frozenset(
     "CONSISTENT_UNVERIFIED CONFLICT AGENTS_MD_MISSING VERSION_BLOCKED NOT_RUN".split()
@@ -61,9 +62,26 @@ def _lstat(path):
         return None
 
 
-def _names(directory):
+def _account_home():
+    """OS account metadata only; no caller overrides or private file reads."""
+    home = pwd.getpwuid(os.getuid()).pw_dir
+    if not home or not os.path.isabs(home) or os.path.normpath(home) != home:
+        raise ValueError("identity_unavailable")
+    return home
+
+
+def _names(directory, *, personal=False):
     found = {}
     for name in CLAUDE_NAMES + AGENTS_NAMES:
+        if personal and name == ".claude/CLAUDE.md":
+            continue  # Do not even probe the personal memory file.
+        if name.startswith(".claude/"):
+            parent = _lstat(os.path.join(directory, ".claude"))
+            if parent is None:
+                continue
+            if not stat.S_ISDIR(parent.st_mode):
+                # A symlink/invalid directory is ambiguous; never traverse it.
+                raise OSError
         info = _lstat(os.path.join(directory, name))
         if info is not None:
             found[name] = info
@@ -71,12 +89,34 @@ def _names(directory):
 
 
 def scan(root):
+    """Closed, path-free report; uncertain identity/metadata is NOT_RUN."""
+    try:
+        return _scan(root)
+    except (KeyError, ValueError):
+        return _report("NOT_RUN", {"identity_unavailable"}, "MISSING", None)
+    except OSError:
+        return _report("NOT_RUN", {"agents_md_unreadable"}, "MISSING", None)
+
+
+def _scan(root):
     """Closed, path-free report for a worktree root (absolute directory)."""
     reasons = set()
     root = os.fspath(root)
-    info = _lstat(root) if os.path.isabs(root) else None
-    if info is None or not stat.S_ISDIR(info.st_mode):
+    if not os.path.isabs(root):
         return _report("NOT_RUN", {"root_invalid"}, "MISSING", None)
+    # Reject lexical aliases and symlink components before any nested probes.
+    if os.path.normpath(root) != root:
+        return _report("NOT_RUN", {"root_invalid"}, "MISSING", None)
+    components = root.split("/")[1:]
+    if len(components) > MAX_ANCESTORS + 1:
+        return _report("NOT_RUN", {"scan_limit"}, "MISSING", None)
+    component = "/"
+    for name in components:
+        component = os.path.join(component, name)
+        info = _lstat(component)
+        if info is None or not stat.S_ISDIR(info.st_mode):
+            return _report("NOT_RUN", {"root_invalid"}, "MISSING", None)
+    home = _account_home()
     # Names in the worktree and every ancestor (Claude loads upward from cwd).
     here = _names(root)
     for name in ("CLAUDE.md", ".claude/CLAUDE.md"):
@@ -91,7 +131,10 @@ def scan(root):
         steps += 1
         if steps > MAX_ANCESTORS:
             return _report("NOT_RUN", {"scan_limit"}, "MISSING", None)
-        up = _names(ancestor)
+        # Only this exact ancestor can contain the account personal memory.
+        # Worktree files and every other recognized ancestor name stay checked.
+        personal = ancestor == home
+        up = _names(ancestor, personal=personal)
         if "CLAUDE.md" in up or ".claude/CLAUDE.md" in up:
             reasons.add("claude_md_in_ancestor")
         if "CLAUDE.local.md" in up:

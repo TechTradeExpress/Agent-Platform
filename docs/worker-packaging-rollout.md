@@ -1,3 +1,14 @@
+> **Current source status after HAR integration (#150):** exactly two role
+> packages, `agent-platform-control` and `agent-platform-worker`, are implemented.
+> The experimental single-package baseline and third-toolchain-package proposals
+> below are historical planning. Use [current packaging](debian-package.md) and
+> [PKG-09 version rules](worker-pkg09-upgrade.md). HAR-01..07 was integrated by
+> #150 at `6560eec712139c20c9ede7ceab4feb8d3c63eff0`, not seven stack merges;
+> #139/#140/#142/#144/#145/#146/#147 closed unmerged, #149 completed.
+> Native execution and Publisher #108 remain blocked: SOURCE_ONLY / OFFLINE_ONLY /
+> HOST_NOT_RUN / LIVE_NO_GO / SUBSCRIPTION_ISOLATION_BLOCKED, public exit 13.
+> Future PKG-11 `0.1.0-8` work is separate; never replace final `0.1.0-7` contents.
+
 > **Current 2026-11-14 maintainer amendment:** Codex CLI is fetched and verified directly from the **official upstream** during an explicit worker provisioning command, **not** redistributed in `agent-platform-codex.deb`. Exactly two Agent Platform role packages remain. [Current decision](codex-upstream-provisioning-decision.md) amends [ADR 007](debian-role-package-architecture.md). Historic Codex third-package milestones below are retained as old planning, **not current implementation instructions**. Replace #110 with [#116](https://github.com/TechTradeExpress/Agent-Platform/issues/116), and implement #102 independently of any Codex APT dependency. #110 and PR #115 were closed unmerged, without host changes. `LIVE_NO_GO` / exit 13 remains unchanged.
 
 Current PKG-02 implements the two inert P0 artifacts described in
@@ -15,9 +26,9 @@ profile attachment and both Publisher pilots are NOT_RUN.
 
 **Status:** MAINTAINER DECISION / PLANNED. **Date:** 2026-11-14. **Scope:** Debian 13 trixie amd64, `control01`, `worker01`, `worker02`. This is a tracked plan and reviewable source document, **not installation, live authentication, service activation, or a GitHub write permission grant**. [Canonical tracker #35](https://github.com/TechTradeExpress/Agent-Platform/issues/35).
 
-## Why change the rollout?
+## Historical rollout rationale (2026-11-14)
 
-The initial Debian candidate is one unreleased `agent-platform` package (v0.1.0, synthetic revisions -1/-2): `debian/control`, `packaging/build_deb.py` and `docs/debian-package.md` define its payload and offline, adversarial apt/dpkg lifecycle. It deliberately has no `postinst`, installed services, Codex CLI, users, credentials or live execution authority. Preserve all those test guarantees; do not pretend it is a released, running host installer.
+The initial Debian candidate was one unreleased `agent-platform` package (v0.1.0, synthetic revisions -1/-2): `debian/control`, `packaging/build_deb.py` and `docs/debian-package.md` define its payload and offline, adversarial apt/dpkg lifecycle. It deliberately has no `postinst`, installed services, Codex CLI, users, credentials or live execution authority. Preserve all those test guarantees; do not pretend it is a released, running host installer.
 
 The PUB-02 one-shot worker Publisher source is in [Draft PR #109](https://github.com/TechTradeExpress/Agent-Platform/pull/109), exact published HEAD `38f1ea30c4eea6bba132d199909db1d11fa3e163`, awaiting source gate / controlled rollout. Issue [#108](https://github.com/TechTradeExpress/Agent-Platform/issues/108) remains open until **both** separately authorized real worker Apps publish test Draft PRs. We will no longer manually copy services, create signer users or install AppArmor on the real VMs before the tested installer exists.
 

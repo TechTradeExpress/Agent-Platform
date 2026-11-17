@@ -71,10 +71,11 @@ Rules common to all modes:
   commit and report the blocker; do not log in, create PATs or request App material.
 - The implementing harness is never the independent reviewer and never marks Ready,
   closes the Issue, approves or merges. A different CLI is not an independent reviewer.
-- **HAR series freeze:** HAR-01..HAR-07 are mode C stacked tasks. All stay Draft and
-  unmerged into `main` until every exact-HEAD review and hosted CI has finished; Ready
-  and Issue closure are deferred even when one child is green. This adds a hold; it
-  does not alter AP-SM/2's own gates.
+- **Historical HAR series freeze:** HAR-01..HAR-07 were mode C stacked tasks,
+  held Draft and unmerged into `main` pending review/CI. Their cumulative source
+  was instead integrated by #150 at `6560eec712139c20c9ede7ceab4feb8d3c63eff0`;
+  #139/#140/#142/#144/#145/#146/#147 were closed unmerged, and #149 is completed.
+  This source integration does not authorize runtime, Publisher, release or host work.
 
 ## Delivery checklist
 

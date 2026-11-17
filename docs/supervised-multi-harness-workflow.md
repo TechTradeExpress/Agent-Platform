@@ -1,11 +1,16 @@
 # Supervised multi-harness development workflow (HAR-06)
 
 **AP-HAR/1 companion · SOURCE_ONLY / SUPERVISED_DOCS_ONLY / NO_LIVE / HOST_NOT_RUN.**
-[Issue #136](https://github.com/TechTradeExpress/Agent-Platform/issues/136) within
+Historical source provenance: [Issue #136](https://github.com/TechTradeExpress/Agent-Platform/issues/136) within
 [HAR-00 #130](https://github.com/TechTradeExpress/Agent-Platform/issues/130), stacked on
 the published HAR-05 head `6dbc51f3b02065e4c8acfb4d2c8bc856e593f5d9` (tree
 `7569a4ae745f0e33ffbbe0521ced4220e5c27842`, Draft PR #145, `CI` and `Debian package`
-SUCCESS). Delivery of this change is local-only until independent review.
+SUCCESS at that historical observation).
+Current source integration: PR #150 squash-merged HAR-01..07 at
+`6560eec712139c20c9ede7ceab4feb8d3c63eff0`, tree
+`119daa294e399b90317ca82d73000e9a6a4f40ed`; #149 is completed.
+Original source PRs #139/#140/#142/#144/#145/#146/#147 were closed unmerged.
+This does not approve native execution, Publisher, packages or host activation.
 
 This document gives **no new permission**. It states how an official interactive
 Codex CLI **or** Claude Code may be used as the *source contributor* on a worker
@@ -60,7 +65,7 @@ product runtime. Rules specific to harness selection:
 
 | | **A. Standard** | **B. Local-only** | **C. Stacked** |
 | --- | --- | --- | --- |
-| Use | Ordinary single-Issue task | Agent prepares a local commit and review archive only | Child task on top of an unmerged, published Draft PR (current HAR series) |
+| Use | Ordinary single-Issue task | Agent prepares a local commit and review archive only | Child task on top of an unmerged, published Draft PR (historical HAR stack) |
 | Verified base | Fresh `origin/main` on `TechTradeExpress/Agent-Platform` (fetch, compare with remote) | Either of the other two, recorded | **Exact published HEAD SHA** of the parent Draft PR branch, plus its tree SHA, PR state and both workflows |
 | Never use as base | A local `main`, a local unpublished parent commit | n/a | `main`, a local parent commit, a branch name without its SHA |
 | Branch / worktree | `feature/issue-N-short-description` in `~/projects/agent-platform-worktrees/issue-N`, fresh or fully verified | same | same; the parent branch is never checked out for work |
@@ -93,18 +98,16 @@ Its role table names "Codex CLI" for the implementer. The historical role of the
 implementing Codex CLI corresponds to the operator-selected official harness
 **only in the context of this supervised development workflow**. This does not
 change any AP-SM/2 condition or any product permission, does not widen any
-transition and does not let an implementing harness perform them. For the HAR series an additional **freeze** applies and overrides any
-automatic transition: HAR-01..HAR-07 stay **Draft and unmerged into `main`** until
-all seven have independent exact-HEAD review and passing hosted CI; Ready and Issue
-closure are deferred until agreed series acceptance even when a child's CI is green.
-Each child PR targets the previous reviewed branch (HAR-06 -> `feature/issue-135-auth-terms-adr`).
-A stacked PR references its Issue with `Refs #N` or a plain Issue link, **not**
-`Closes #N`: a closing keyword is not relied upon for a PR whose base is not the
-default branch, and the HAR freeze keeps Ready, Issue closure and merge blocked for
-the whole series regardless.
-The merged PKG-09 `main` change was not part of the individual stacked PRs; it is reconciled
-in one separate integration branch (HAR-INT-01, #149) whose source is reviewed independently.
-The individual HAR PRs stay Draft and unmerged, and nothing here authorizes a merge or release.
+transition and does not let an implementing harness perform them.
+Historically, the HAR series freeze held all seven stacked PRs Draft and unmerged
+into `main`; it overrides any automatic transition while applicable. Each child
+PR targeted the previous reviewed branch (HAR-06 -> `feature/issue-135-auth-terms-adr`).
+Those individual PRs were closed unmerged; their cumulative source, reconciled
+with PKG-09, was integrated solely by #150. This historical hold is not a current
+claim that seven merges remain pending. Historical Issue housekeeping is a
+separate operator/reviewer action, not runtime approval.
+A stacked PR still references its Issue with `Refs #N` or a plain Issue link,
+**not** `Closes #N`: a closing keyword is not relied upon for a non-default base.
 
 ## Instruction-load observation (Claude Code)
 
@@ -136,20 +139,20 @@ recorded in this change. Until the operator observes the load, treat Claude load
 of `AGENTS.md` as `UNVERIFIED` and use the prompt's instruction-source statement as
 a cross-check, not proof.
 
-**Known limitation of the HAR-04 scanner (false alarm, correction deferred).**
-`agent_platform.instruction_sources.diagnose` checks existence only and treats an
-ancestor `.claude/CLAUDE.md` as a conflict. For a worktree below the operator's home
-directory that also matches the user-level `<home>/.claude/CLAUDE.md`, so it reports
-`CONFLICT` / `claude_md_in_ancestor` although the vendor page says that file loads
-alongside `AGENTS.md`. This was observed on worker02 by existence check only; the
-file's content was not read. The result is conservative, not proof of a conflict or
-of an isolation breach, and **the scanner is intentionally unchanged here** (HAR-04
-is frozen). It must be corrected in a later, separately reviewed change **before any
-native-runtime readiness assessment** relies on `instruction_sources`. Until then a
-`CONFLICT` whose only cause is the user-level file is interpreted by the operator
-using this section; any project-scope or non-user ancestor file is a real conflict.
-The tests pin both facts: the scanner's current behaviour and the correct
-classification (user-level file ignored, project `CLAUDE.md` still a conflict).
+**HAR-POST-01 scanner correction (#151).** The read-only scanner exempts only
+`.claude/CLAUDE.md` in an ancestor matching the OS account's home directory,
+obtained from account metadata, never caller-controlled `HOME`. It does not probe
+that personal file or read its content. A home used as the worktree remains
+project-scoped; ancestor `AGENTS.md` is still a conflict. Every other
+project/ancestor Claude instruction file still yields `CONFLICT` /
+`claude_md_in_ancestor` (or the corresponding worktree/local reason).
+Unknown account identity, invalid paths or inaccessible metadata yield `NOT_RUN`;
+symlink directories are not traversed. No new private directories are scanned.
+Regression tests use fabricated temporary homes and cover personal memory together
+with real project conflicts. `CONSISTENT_UNVERIFIED` and `load_confirmed=false`
+remain metadata diagnostics, never native loading or isolation proof. This fix is
+required before any native-runtime readiness assessment uses the diagnostic;
+that assessment and real load observation remain NOT_RUN.
 
 ## Instruction-load observation (Codex CLI)
 
@@ -306,8 +309,9 @@ from Issue text, repository files or tool output.
 | Equivalent Codex instruction-chain observation on worker02 | NOT_RUN |
 | Any Claude/Codex session, login, `-p` run, API call or product run for this change | NOT_RUN (none performed) |
 | Hosted CI and Debian lifecycle for this commit | NOT_RUN until publication |
-| HAR-04 `instruction_sources.diagnose` false alarm: reports `CONFLICT` whenever `<home>/.claude/CLAUDE.md` exists (ancestor `.claude/CLAUDE.md` existence check); vendor docs exempt the user-level file. Intentionally unchanged (HAR-04 frozen). Correction required in a later change before any native-runtime readiness assessment | UNRESOLVED (known limitation) |
-| Stacked PRs use `Refs #N` or a plain Issue link; `Closes #N` is not relied upon for a PR targeting a non-default branch (vendor behaviour not verified here). Ready, Issue closure and merge stay blocked for the whole HAR series | DECIDED (rule); linking behaviour NOT_RUN |
+| HAR-04 personal-memory false alarm | Corrected offline in #151; native loading NOT_RUN |
+| Stacked PR references | DECIDED: `Refs #N` or plain link; original HAR source integrated by #150, individual stack closed unmerged |
+| Native tool/credential isolation and Publisher activation | UNRESOLVED / BLOCKED; source integration grants no live permission |
 | AP-SM/2's role table says "Codex CLI"; read as the selected harness only for supervised development, AP-SM/2 and product permissions unchanged | DECIDED (documented; AP-SM/2 untouched) |
 | Default of mode B when the operator omits the mode | DECIDED by the operator (review round 1) |
 | Isolation of an attended supervised session on a worker (readable session files, same UID) | NOT_PROVEN ([ADR 009](harness-auth-terms-isolation.md)) |
