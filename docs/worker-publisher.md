@@ -1,6 +1,9 @@
 Current isolation/readiness audit and STOP conditions: see
 [PKG-08](publisher-isolation-readiness.md). Source tests do not authorize host
 activation; root credential transfer and running cgroup BPF remain NOT_RUN.
+Pilot readiness matrix, open blockers (including AppArmor F-02) and the current
+worker01-then-worker02 runbook: [PUB-02 pilot readiness](pub02-pilot-readiness.md).
+It supersedes the manual recipes below where they differ.
 
 # PUB-02 operator-triggered worker publisher — AP-WP/1
 
@@ -43,7 +46,9 @@ human authorization. This document supplies that future administrator recipe.
   private /run bundle containing the JWT and exact job-file digest. No Internet,
   installation token, publisher journal or artifact parsing belongs in that unit.
 - Root's systemd manager transfers that job-bound JWT into the ap-publisher unit's
-  credential mount. Publisher has no PEM or signer-file access. LoadCredential
+  credential mount. Publisher has no PEM or signer-file access. Both roles accept
+  only systemd 257's read-only credential layouts (root-owned with an exact
+  unit-user ACL, or the ramfs fallback owned by the unit user). LoadCredential
   alone is not isolation: different UIDs, enforced profiles, immutable reviewed
   code and independent negative controls are mandatory. Same-unit/UID key sharing
   is explicitly not used. No daemon/socket/timer or worker-writable trigger exists.
@@ -102,7 +107,8 @@ operator must reconcile; process exit does not prove revocation or zeroization.
 
 Canonical blobs/trees/commit wire bodies preserve supplied identities/message and
 must return the exact approved Git SHA. Existing base objects are reused, not
-blindly reuploaded. All referenced objects are independently read back before
+blindly reuploaded: the exact base commit's untruncated recursive tree attests
+their IDs. Every uploaded object is read back after upload and again before the
 ref change. Any server serialization mismatch stops with retained effects; no
 replacement SHA or reconstructed "equivalent" commit is adopted. Readback of
 commit message permits API trailing-LF presentation only while requiring the
@@ -120,8 +126,9 @@ Operator admission must serialize the approved Issue/ref across workers; no
 distributed scheduler/claim service is implemented. Ref CAS is atomic, but PR
 creation is not atomic with Issue enumeration; post-create native inventory drift
 returns UNKNOWN, never a duplicate-success assertion or automatic rollback.
-Complete all-state PR enumeration is bounded to <100 items without pagination;
-a larger/truncated listing blocks, not silently ignores older conflicting PRs.
+PR enumeration is bounded to the exact head branch in every state
+(`head=TechTradeExpress:<branch>`, at most one PR); a second or foreign-head
+entry blocks. It no longer grows with the repository's total PR count.
 Public Issue facts use unauthenticated GET (no Issues grant is added). Native
 Issue/PR inventory uses fixed read-only GraphQL, including closed and manually
 linked PRs, not only body regexes. Full database IDs use the BigInt field, avoiding
@@ -164,7 +171,10 @@ Do not probe main/merge on the source repository to manufacture this evidence.
 Each pre-provisioned journal is owner-only, append-only in application behavior,
 held with a nonblocking flock for its full lifetime, bounded to 4 MiB. Root's
 independently retained prior byte digest prevents silent replacement/rollback
-relative to that approval. Every effect has fsync/readback-confirmed UNKNOWN
+relative to that approval. Replay and continuity are checked before any network
+use; the CLAIM is appended after read-only admission and immediately before the
+first effect, so a read-only failure leaves the journal unchanged (BLOCKED).
+Every effect has fsync/readback-confirmed UNKNOWN
 before I/O, then an exact-result confirmation. Claim/history, nonce and stable
 repo/ref/Issue continuity survive App rotation; incomplete attempts block the
 whole store. Signer has a separate single-use journal. No create-on-missing,

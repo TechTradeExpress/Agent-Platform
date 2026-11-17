@@ -1,5 +1,6 @@
 """PUB-02 private file intake, append-only journal and fixed-peer HTTPS primitive."""
 
+import errno
 import fcntl
 import http.client
 import ipaddress
@@ -23,12 +24,87 @@ def credential_path(role):
     return directory + ("/app-key" if role == "signer" else "/app-jwt")
 
 
+ACL_XATTR = "system.posix_acl_access"
+# Linux posix_acl_xattr tags (include/uapi/linux/posix_acl.h); perms r=4 w=2 x=1.
+ACL_USER_OBJ, ACL_USER, ACL_GROUP_OBJ, ACL_GROUP, ACL_MASK, ACL_OTHER = (
+    0x01,
+    0x02,
+    0x04,
+    0x08,
+    0x10,
+    0x20,
+)
+
+
+def acl_entries(raw):
+    """Decode one little-endian POSIX ACL xattr (version 2); no other format."""
+    need(type(raw) is bytes and 4 <= len(raw) <= 4 + 8 * 32)
+    need((len(raw) - 4) % 8 == 0 and int.from_bytes(raw[:4], "little") == 2)
+    tags = {ACL_USER_OBJ, ACL_USER, ACL_GROUP_OBJ, ACL_GROUP, ACL_MASK, ACL_OTHER}
+    entries = []
+    for offset in range(4, len(raw), 8):
+        tag = int.from_bytes(raw[offset : offset + 2], "little")
+        perm = int.from_bytes(raw[offset + 2 : offset + 4], "little")
+        ident = int.from_bytes(raw[offset + 4 : offset + 8], "little")
+        need(tag in tags and perm <= 7)
+        entries.append((tag, perm, ident))
+    return entries
+
+
+def systemd_credential(fd, m, owner, *, directory):
+    """Accept only systemd's two read-only per-unit credential layouts.
+
+    systemd 257 (exec-credential.c) first grants the unit user an ACL on a
+    root-owned 0400 file / 0500 directory; only where ACLs are unsupported
+    (ramfs) does it chown them to that user instead. Either way nobody may
+    write and no third principal may read. Anything else blocks.
+    """
+    need(stat.S_ISDIR(m.st_mode) if directory else stat.S_ISREG(m.st_mode))
+    need(not stat.S_IMODE(m.st_mode) & 0o7222 and not m.st_mode & 0o007)
+    try:
+        raw = os.getxattr(fd, ACL_XATTR)
+    except OSError as exc:
+        need(exc.errno in (errno.ENODATA, errno.EOPNOTSUPP))
+        raw = None
+    if raw is None:
+        need(m.st_uid == owner and not m.st_mode & 0o070)
+        return
+    granted = 0o5 if directory else 0o4
+    need(m.st_uid == 0 and owner != 0 and (m.st_mode >> 3) & 0o7 == granted)
+    entries = acl_entries(raw)
+    tags = [tag for tag, _, _ in entries]
+    need(sorted(tags) == [ACL_USER_OBJ, ACL_USER, ACL_GROUP_OBJ, ACL_MASK, ACL_OTHER])
+    for tag, perm, ident in entries:
+        if tag == ACL_USER:
+            need(ident == owner and perm == granted)
+        elif tag == ACL_MASK:
+            need(perm == granted)
+        elif tag == ACL_USER_OBJ:
+            need(not perm & 0o2)
+        else:  # GROUP_OBJ and OTHER: no access for root's group or anyone else
+            need(perm == 0)
+
+
 def read_file(
-    path, owner, limit, *, writable_parent=False, allow_empty=False, private=False
+    path,
+    owner,
+    limit,
+    *,
+    writable_parent=False,
+    allow_empty=False,
+    private=False,
+    credential=False,
 ):
-    """Descriptor-walk every component; no symlinks/hardlinks/writable ancestors."""
+    """Descriptor-walk every component; no symlinks/hardlinks/writable ancestors.
+
+    credential=True is only for systemd's per-unit credential mount: its last
+    directory and the leaf must match systemd_credential(), all other ancestors
+    remain root-owned and not group/other writable.
+    """
+    need(not credential or not (writable_parent or allow_empty or private))
     p = Path(path)
     need(p.is_absolute() and ".." not in p.parts)
+    need(not credential or len(p.parts) >= 3)
     fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         for i, part in enumerate(p.parts[1:-1]):
@@ -36,6 +112,9 @@ def read_file(
             os.close(fd)
             fd = nxt
             m = os.fstat(fd)
+            if credential and i == len(p.parts[1:-1]) - 1:
+                systemd_credential(fd, m, owner, directory=True)
+                continue
             need(m.st_uid == 0 or writable_parent and m.st_uid == owner)
             need(not m.st_mode & 0o022)
             if private and i == len(p.parts[1:-1]) - 1:
@@ -44,7 +123,10 @@ def read_file(
         try:
             before = os.fstat(leaf)
             need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1)
-            need(before.st_uid == owner and not before.st_mode & 0o6022)
+            if credential:
+                systemd_credential(leaf, before, owner, directory=False)
+            else:
+                need(before.st_uid == owner and not before.st_mode & 0o6022)
             if private:
                 need(not before.st_mode & 0o077)
             need((0 if allow_empty else 1) <= before.st_size <= limit)
@@ -142,6 +224,19 @@ class Journal:
         self.poisoned = False
 
     def claim(self, job, *, signer=False):
+        self.admissible(job, signer=signer)
+        self.append(
+            {
+                "phase": "CLAIM",
+                "job": job["id"],
+                "ref": job["ref"],
+                "issue": job["issue"],
+                "head": job["head"],
+            }
+        )
+
+    def admissible(self, job, *, signer=False):
+        """Pure replay/continuity check under the held flock; appends nothing."""
         records = [e["record"] for e in self.events]
         # An unfinished attempt blocks the entire store across App/job rotation.
         if records:
@@ -157,15 +252,6 @@ class Journal:
             need(job["operation"] == "update" and last.get("phase") == "COMPLETE")
             need(last.get("head") == job["old"] and last.get("pr") == job["pr"])
             need(last.get("ref") == job["ref"] and last.get("issue") == job["issue"])
-        self.append(
-            {
-                "phase": "CLAIM",
-                "job": job["id"],
-                "ref": job["ref"],
-                "issue": job["issue"],
-                "head": job["head"],
-            }
-        )
 
     def close(self):
         os.close(self.fd)
