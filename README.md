@@ -489,6 +489,11 @@ provisioned upstream artifacts, not a third role package. HAR changes do not
 permit rebuilding/reinstalling final `0.1.0-7` with different Worker contents;
 PKG-11 adds `0.1.0-8~git<FULL_SHA>` source candidates and CI_ONLY exact -8
 fixtures. Final -8 release, deployment and Publisher #108 remain separately blocked.
+[PKG-12 release preparation](docs/pkg12-release-readiness.md) adds an inert
+consistency contract and [per-host backup/upgrade/STOP runbook](docs/pkg12-host-upgrade-runbook.md).
+It does not enable final builds, promote CI fixtures, freeze/publish artifacts or
+install anything. Actual final source must be pinned after a separate human merge
+and release decision; normal `--final-version` remains blocked.
 The [rollout roadmap](docs/worker-packaging-rollout.md) distinguishes source
 implementation from host activation; no host work is authorized here.
 
