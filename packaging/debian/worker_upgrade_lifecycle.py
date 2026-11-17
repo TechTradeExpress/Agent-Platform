@@ -16,6 +16,90 @@ DOC = Path("/usr/share/doc/agent-platform-worker")
 RECEIPT = Path("/var/lib/agent-platform-worker-provisioning/receipt.json")
 
 
+# Immutable -7 profile digests, not the current source profile digests.
+HISTORICAL_PROFILES = {
+    "ap-worker-publisher": (
+        "7f96b5449f992d3877dab4bc4304ca35831e12fb816b4fca040924de3f0ebad0"
+    ),
+    "ap-worker-publisher-signer": (
+        "bf77deda8d838ae6bdda687a1a514db802b955022f4a56f993b605e0eca9ec6a"
+    ),
+}
+# Exact reviewed F-02 delta, not a general policy parser or release authority.
+PROFILE_ADDITIONS = {
+    "ap-worker-publisher": """  # PKG-14: descriptor walks; r permits listing.
+  / r,
+  /etc/ r,
+  /etc/ap-publisher/ r,
+  /run/ r,
+  /run/credentials/ r,
+  /run/credentials/ap-worker-publisher.service/ r,
+  /usr/ r,
+  /usr/lib/ r,
+  /usr/lib/ap-worker-publisher/ r,
+  /usr/lib/ap-worker-publisher/agent_platform/ r,
+  /var/ r,
+  /var/lib/ r,
+  /var/lib/ap-publisher/ r,
+  deny /etc/ap-publisher-keys/ rwklmx,
+  deny /var/lib/ap-publisher-signer/ rwklmx,
+  deny /var/lib/ap-publisher-signer/** rwklmx,
+  deny /run/ap-publisher-signer/ rwklmx,
+  deny /run/ap-publisher-signer/** rwklmx,
+  deny /run/credentials/ap-worker-publisher-signer.service/ rwklmx,
+""",
+    "ap-worker-publisher-signer": """  # PKG-14: descriptor walks; r permits listing.
+  / r,
+  /etc/ r,
+  /etc/ap-publisher/ r,
+  /run/ r,
+  /run/credentials/ r,
+  /run/credentials/ap-worker-publisher-signer.service/ r,
+  /usr/ r,
+  /usr/lib/ r,
+  /usr/lib/ap-worker-publisher/ r,
+  /usr/lib/ap-worker-publisher/agent_platform/ r,
+  /var/ r,
+  /var/lib/ r,
+  /var/lib/ap-publisher-signer/ r,
+  deny /etc/ap-publisher/candidate.json rwklmx,
+  deny /etc/ap-publisher-keys/ rwklmx,
+  deny /etc/ap-publisher-keys/** rwklmx,
+  deny /var/lib/ap-publisher/ rwklmx,
+  deny /run/credentials/ap-worker-publisher.service/ rwklmx,
+  deny /run/credentials/ap-worker-publisher.service/** rwklmx,
+""",
+}
+
+
+def validate_profile_transition(old, new, series):
+    assert series in ("pkg09", "pkg11")
+    assert set(old) == set(new) == set(HISTORICAL_PROFILES)
+    anchor = b"  #include <abstractions/python>\n"
+    for name, historical_hash in HISTORICAL_PROFILES.items():
+        assert hashlib.sha256(old[name]).hexdigest() == historical_hash
+        if series == "pkg09":
+            assert new[name] == old[name]  # Historical -6 -> -7 stays immutable.
+        else:
+            assert old[name].count(anchor) == 1
+            assert new[name] == old[name].replace(
+                anchor, anchor + PROFILE_ADDITIONS[name].encode(), 1
+            ), "unapproved_profile_delta"
+
+
+def archive_profiles(path):
+    raw = subprocess.check_output(["dpkg-deb", "--fsys-tarfile", str(path)], timeout=30)
+    result = {}
+    with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
+        for name in HISTORICAL_PROFILES:
+            members = [
+                m for m in archive.getmembers() if m.name == "./etc/apparmor.d/" + name
+            ]
+            assert len(members) == 1 and members[0].isreg()
+            result[name] = archive.extractfile(members[0]).read()
+    return result
+
+
 FIXTURE_ENV = {
     "PATH": "/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "LC_ALL": "C",
@@ -257,6 +341,8 @@ def main():
             "#!/bin/sh\nprintf forbidden >> /tmp/pkg09-activation-forbidden\nexit 99\n"
         )
         stub.chmod(0o755)
+    old_profiles, new_profiles = archive_profiles(old), archive_profiles(newer)
+    validate_profile_transition(old_profiles, new_profiles, series)
     call(local_install_argv(old_control, old), stage="historical_install")
     assert digest(DOC / "manifest.json") == base_manifest
     assert json.loads((DOC / "build.json").read_text())["source_commit"] == base_commit
@@ -271,10 +357,14 @@ def main():
                 "UNKNOWN synthetic retained state\n"
             )
     before = snapshot()
-    profiles = {
-        name: digest(Path("/etc/apparmor.d/" + name))
-        for name in ["ap-worker-publisher", "ap-worker-publisher-signer"]
-    }
+    for name, content in old_profiles.items():
+        assert Path("/etc/apparmor.d/" + name).read_bytes() == content
+    # Test real dpkg old->new conffile conflict, not only reinstall after upgrade.
+    edited_name = "ap-worker-publisher" + ("-signer" if case == "unknown" else "")
+    edited_path = Path("/etc/apparmor.d/" + edited_name)
+    edited_bytes = old_profiles[edited_name] + b"\n# synthetic pre-upgrade admin edit\n"
+    if series == "pkg11":
+        edited_path.write_bytes(edited_bytes)
     conffile = Path("/etc/agent-platform-worker/package.conf")
     if series == "pkg11":
         edited_conf = conffile.read_bytes() + b"# synthetic administrator setting\n"
@@ -292,6 +382,8 @@ def main():
         ["dpkg-query", "-W", "-f=${Status}", "agent-platform-worker"]
     )
     assert snapshot() == before  # Interrupted configure preserves all protected state.
+    if series == "pkg11":
+        assert edited_path.read_bytes() == edited_bytes
     # Unconfigured package is never INSTALLED/ready; doctor does not repair it.
     assert (
         json.loads(call(["agent-platform-worker", "doctor"], 13))["installation"]
@@ -312,6 +404,7 @@ def main():
         ]
     )
     if series == "pkg11":
+        assert edited_path.read_bytes() == edited_bytes
         assert conffile.read_bytes() == edited_conf
         assert (
             json.loads(call(["agent-platform-worker", "doctor"], 13))["installation"]
@@ -319,6 +412,8 @@ def main():
         )
         # Reset only our synthetic edit to the exact new default so subsequent
         # probes can independently assess configured state and manifest integrity.
+        # Only this fixture's known synthetic edit is reset, never host edits.
+        edited_path.write_bytes(new_profiles[edited_name])
         raw = subprocess.check_output(
             ["dpkg-deb", "--fsys-tarfile", str(newer)], timeout=30
         )
@@ -343,8 +438,8 @@ def main():
     assert snapshot() == before
     call(["agent-platform-worker", "provision", "--approve"])
     assert snapshot() == before
-    for name, profile_hash in profiles.items():
-        assert digest(Path("/etc/apparmor.d/" + name)) == profile_hash
+    for name, content in new_profiles.items():
+        assert Path("/etc/apparmor.d/" + name).read_bytes() == content
     # Ordinary APT must refuse a downgrade; never force one to test recovery.
     result = subprocess.run(
         local_install_argv(old),
@@ -396,6 +491,11 @@ def main():
                 "installed_host_verified": False,
                 "interruption": "mixed_roles_then_unpacked_then_explicit_configure",
                 "conffile_retained_then_fixture_reset": series == "pkg11",
+                "profile_transition": "exact_pkg14_delta"
+                if series == "pkg11"
+                else "historical_identical",
+                "profile_admin_edit_retained": series == "pkg11",
+                "profile_kernel_enforcement": "NOT_RUN",
                 "baseline_source": base_commit,
                 "baseline_manifest": base_manifest,
                 "old_archive_sha256": digest(old),

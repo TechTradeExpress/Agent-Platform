@@ -1,3 +1,5 @@
+F-02 source/profile correction and later conffile handoff: [PKG-14](pkg14-publisher-apparmor.md). HOST_NOT_RUN; no activation authority.
+
 Current isolation/readiness audit and STOP conditions: see
 [PKG-08](publisher-isolation-readiness.md). Source tests do not authorize host
 activation; root credential transfer and running cgroup BPF remain NOT_RUN.
