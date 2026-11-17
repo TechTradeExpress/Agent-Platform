@@ -222,6 +222,76 @@ def build(
         raise ValueError("exact_current_version_requires_ci_fixture")
     controls = validate(source, revision)
     version = f"0.1.0-{revision}" + ("~git" + commit if candidate else "")
+    kind = (
+        "candidate"
+        if candidate
+        else "ci-final-fixture"
+        if ci_final_fixture
+        else "synthetic-fixture"
+    )
+    return _stage_archives(
+        source,
+        output,
+        revision,
+        commit,
+        epoch,
+        source_tree=source_tree,
+        version=version,
+        kind=kind,
+        ci_only=ci_final_fixture,
+        controls=controls,
+        archive_writer=_write_deb,
+    )
+
+
+def _write_deb(stage, artifact, epoch):
+    subprocess.run(
+        [
+            "dpkg-deb",
+            "--root-owner-group",
+            "-Zxz",
+            "-z6",
+            "--uniform-compression",
+            "--build",
+            str(stage),
+            str(artifact),
+        ],
+        check=True,
+        timeout=60,
+        env={"PATH": os.defpath, "LC_ALL": "C", "SOURCE_DATE_EPOCH": str(epoch)},
+    )
+
+
+def _stage_archives(
+    source,
+    output,
+    revision,
+    commit,
+    epoch,
+    *,
+    source_tree,
+    version,
+    kind,
+    ci_only,
+    controls,
+    archive_writer,
+    rehearsal=None,
+    toolchain=None,
+):
+    """Shared staging primitive; no authorization or public final-build route.
+
+    Final-profile staging only supports an explicitly non-Debian rehearsal
+    encoder. No real final archive writer is implemented/admitted here.
+    """
+    final = kind == "final-unreleased"
+    if final and (
+        archive_writer is _write_deb
+        or rehearsal is None
+        or version != "0.1.0-8"
+        or revision != 8
+        or ci_only is not False
+    ):
+        raise ValueError("final_generation_unavailable")
     output.mkdir(parents=True, exist_ok=False)
     artifacts = {}
     for role in DEPENDENCIES:
@@ -239,6 +309,8 @@ def build(
                     put(stage, destination, data, mode)
                 return data
 
+            if final:
+                copy("packaging/final_recipe.py")
             for path in (
                 "pyproject.toml",
                 "uv.lock",
@@ -524,7 +596,8 @@ Display command help.
                 "schema": 2,
                 "package": package,
                 "phase": "P1_INSTALL_INERT" if p1 else "P0",
-                "status": ("CI_ONLY / " if ci_final_fixture else "")
+                "status": ("SYNTHETIC_ONLY_NONINSTALLABLE / " if final else "")
+                + ("CI_ONLY / " if ci_only else "")
                 + "CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY",
                 "application_version": "0.1.0",
                 "debian_version": version,
@@ -535,16 +608,12 @@ Display command help.
                 "inputs": inputs,
                 "synthetic_baseline": revision == 3,
             }
-            provenance["build_kind"] = (
-                "candidate"
-                if candidate
-                else "ci-final-fixture"
-                if ci_final_fixture
-                else "synthetic-fixture"
-            )
+            provenance["build_kind"] = kind
             if revision == CURRENT_REVISION:
-                provenance["ci_only"] = ci_final_fixture
+                provenance["ci_only"] = ci_only
                 provenance["release_authorized"] = False
+            if final:
+                provenance["rehearsal"] = rehearsal
             if source_tree is not None:
                 provenance["source_tree"] = source_tree
             if p1:
@@ -612,26 +681,13 @@ Display command help.
                 if path.is_dir():
                     path.chmod(0o755)
                 os.utime(path, (epoch, epoch))
-            artifact = output / f"{package}_{version}_amd64.deb"
-            subprocess.run(
-                [
-                    "dpkg-deb",
-                    "--root-owner-group",
-                    "-Zxz",
-                    "-z6",
-                    "--uniform-compression",
-                    "--build",
-                    str(stage),
-                    str(artifact),
-                ],
-                check=True,
-                timeout=60,
-                env={
-                    "PATH": os.defpath,
-                    "LC_ALL": "C",
-                    "SOURCE_DATE_EPOCH": str(epoch),
-                },
-            )
+            suffix = "pkg13-fixture" if final else "deb"
+            artifact = output / f"{package}_{version}_amd64.{suffix}"
+            archive_writer(stage, artifact, epoch)
+            if final and not artifact.read_bytes().startswith(
+                b"AP-PKG13-SYNTHETIC-NOT-DEB/1\n"
+            ):
+                raise ValueError("noninstallable_encoder_required")
         artifacts[role] = artifact
         digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
         (output / (package + ".provenance.json")).write_bytes(
@@ -642,11 +698,15 @@ Display command help.
                     "sha256": digest,
                     "size": artifact.stat().st_size,
                     "manifest_sha256": manifest_hash,
-                    "dpkg_deb": subprocess.check_output(
+                    "dpkg_deb": toolchain["dpkg_deb"]
+                    if toolchain
+                    else subprocess.check_output(
                         ["dpkg-deb", "--version"], text=True, timeout=10
                     ).splitlines()[0],
-                    "python": sys.version,
-                    "xz": subprocess.check_output(
+                    "python": toolchain["python"] if toolchain else sys.version,
+                    "xz": toolchain["xz"]
+                    if toolchain
+                    else subprocess.check_output(
                         ["xz", "--version"], text=True, timeout=10
                     ).splitlines()[0],
                 }

@@ -12,13 +12,22 @@ three distinct gates. No final package generation is implemented here.
 historical -7 reconstruction. The [host runbook](pkg12-host-upgrade-runbook.md)
 is a future operator procedure; none of its host steps is executed in this task.
 
+## PKG-13 source implementation follow-up
+
+[PKG-13](pkg13-final-build-preparation.md) supplies a separate final-profile staging
+recipe and synthetic non-Debian evidence rehearsal. It does not supply real final
+encoding, authenticated generation admission, durable freeze or publication.
+The real entrypoint remains unconditionally BLOCKED. The future implementation
+requirements below must be read with that source-only progress and its limits;
+no PKG-12 plan or SYNTHETIC_PASS authorizes generation.
+
 ## Three artifact classes, with no promotion path
 
 | Class | Version and provenance | Status / permitted use |
 | --- | --- | --- |
 | Source candidate | `0.1.0-8~git<FULL_SHA>`; `build_kind=candidate`, `ci_only=false`, `release_authorized=false` | Review/rebuild and disposable compatibility tests only; not final |
 | Exact CI fixture | `0.1.0-8`; `build_kind=ci-final-fixture`, `ci_only=true`, `release_authorized=false` | CI_ONLY / NOT_RELEASED; no relabelling, promotion, distribution or host installation |
-| Future final archive | Exact `0.1.0-8`, rebuilt by a separately admitted final recipe from separately approved merged source; proposed `build_kind=final-unreleased`, `ci_only=false`, `release_authorized=false` | NOT IMPLEMENTED / NOT_RUN; requires new post-merge generation decision, actual-bit review, external human authorization and immutable freeze before distribution |
+| Future final archive | Exact `0.1.0-8`, rebuilt by a separately admitted final recipe from separately approved merged source; proposed `build_kind=final-unreleased`, `ci_only=false`, `release_authorized=false` | UNADMITTED / real generation NOT_RUN; requires new post-merge generation decision, actual-bit review, external human authorization and immutable freeze before distribution |
 
 The proposed final embedded fields are a **future contract**, not a change to the
 normal builder. That builder's `--final-version` refusal is unchanged. There is

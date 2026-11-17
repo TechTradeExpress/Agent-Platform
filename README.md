@@ -494,6 +494,10 @@ consistency contract and [per-host backup/upgrade/STOP runbook](docs/pkg12-host-
 It does not enable final builds, promote CI fixtures, freeze/publish artifacts or
 install anything. Actual final source must be pinned after a separate human merge
 and release decision; normal `--final-version` remains blocked.
+[PKG-13](docs/pkg13-final-build-preparation.md) adds the separate final-profile
+staging adapter and non-installable synthetic rehearsal. Real generation remains
+unconditionally BLOCKED pending an independently trusted human-decision procedure;
+no final archive, freeze, publication or host operation is enabled.
 The [rollout roadmap](docs/worker-packaging-rollout.md) distinguishes source
 implementation from host activation; no host work is authorized here.
 

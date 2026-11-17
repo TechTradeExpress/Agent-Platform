@@ -5,6 +5,8 @@ blocked. Historical -7 is reconstructed only from its pinned original source
 and recipe; older synthetic profiles are not historical installed artifacts.
 Release engineering preparation and host runbook: [PKG-12](pkg12-release-readiness.md).
 This is an offline contract, not final generation or distribution authority.
+Separate final-profile source implementation and non-installable rehearsal:
+[PKG-13](pkg13-final-build-preparation.md); real generation remains BLOCKED.
 
 # Inert Debian role candidates (PKG-02)
 
