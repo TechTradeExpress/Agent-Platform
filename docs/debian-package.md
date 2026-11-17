@@ -3,6 +3,8 @@ Default candidates are `0.1.0-8~git<FULL_SHA>`. Exact -8 fixtures require
 `--ci-final-fixture` and remain CI_ONLY / NOT_RELEASED. `--final-version` is
 blocked. Historical -7 is reconstructed only from its pinned original source
 and recipe; older synthetic profiles are not historical installed artifacts.
+Release engineering preparation and host runbook: [PKG-12](pkg12-release-readiness.md).
+This is an offline contract, not final generation or distribution authority.
 
 # Inert Debian role candidates (PKG-02)
 

@@ -123,6 +123,16 @@ Effective systemd/AppArmor/BPF, namespace/auth/tool isolation, hosted execution 
 this local task and real worker deployment remain NOT_RUN. Missing disposable
 runtimes/tools mean NOT_RUN, never host installation or privileged fallback.
 
+## PKG-12 preparation successor
+
+[PKG-12](pkg12-release-readiness.md) specifies future source/environment/recipe,
+immutable final-bundle evidence and human decision gates, with an inert consistency
+checker. Its [per-host runbook](pkg12-host-upgrade-runbook.md) expands backups,
+continuity, interruption and STOP requirements. It does not replace these PKG-11
+builder/CI contracts or enable --final-version, promote CI_ONLY files, publish,
+install or activate anything. Actual final source and hashes remain to be pinned
+after a separately reviewed human merge and explicit post-merge release decision.
+
 ## Later operator migration / backup / rollback / STOP plan — no authority here
 
 A separate post-merge release task must pin the actual final -8 source/tree,
