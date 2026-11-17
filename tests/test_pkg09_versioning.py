@@ -36,10 +36,18 @@ def candidates(tmp_path_factory):
     b = load("pkg09_builder", "packaging/build_deb.py")
     root = tmp_path_factory.mktemp("pkg09")
     params = dict(source_tree="b" * 40, candidate=True)
-    one = b.build(ROOT, root / "one", 7, "a" * 40, 1700000000, **params)
-    again = b.build(ROOT, root / "again", 7, "a" * 40, 1700000000, **params)
-    other = b.build(ROOT, root / "other", 7, "c" * 40, 1700000000, **params)
-    final = b.build(ROOT, root / "final", 7, "a" * 40, 1700000000, source_tree="b" * 40)
+    one = b.build(ROOT, root / "one", 8, "a" * 40, 1700000000, **params)
+    again = b.build(ROOT, root / "again", 8, "a" * 40, 1700000000, **params)
+    other = b.build(ROOT, root / "other", 8, "c" * 40, 1700000000, **params)
+    final = b.build(
+        ROOT,
+        root / "final",
+        8,
+        "a" * 40,
+        1700000000,
+        source_tree="b" * 40,
+        ci_final_fixture=True,
+    )
     return one, again, other, final
 
 
@@ -49,7 +57,7 @@ def test_unique_candidate_identity_ordering_repeatability_and_two_roles(candidat
     for role in one:
         assert one[role].read_bytes() == again[role].read_bytes()
         assert one[role].name != other[role].name
-        version = "0.1.0-7~git" + "a" * 40
+        version = "0.1.0-8~git" + "a" * 40
         assert (
             subprocess.check_output(
                 ["dpkg-deb", "-f", str(one[role]), "Version"], text=True
@@ -60,9 +68,9 @@ def test_unique_candidate_identity_ordering_repeatability_and_two_roles(candidat
             subprocess.check_output(
                 ["dpkg-deb", "-f", str(final[role]), "Version"], text=True
             ).strip()
-            == "0.1.0-7"
+            == "0.1.0-8"
         )
-        for low, high in [("0.1.0-6", version), (version, "0.1.0-7")]:
+        for low, high in [("0.1.0-7", version), (version, "0.1.0-8")]:
             assert (
                 subprocess.run(
                     ["dpkg", "--compare-versions", low, "lt", high]
@@ -118,7 +126,7 @@ def test_public_cli_refuses_ambiguous_or_colliding_inputs_before_writes(tmp_path
 def test_new_revision_requires_tree_before_writes(tmp_path):
     b = load("pkg09_missing_tree", "packaging/build_deb.py")
     with pytest.raises(ValueError, match="source_tree_required"):
-        b.build(ROOT, tmp_path / "out", 7, "a" * 40, 1700000000)
+        b.build(ROOT, tmp_path / "out", 8, "a" * 40, 1700000000)
     assert not (tmp_path / "out").exists()
 
 

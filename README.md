@@ -483,11 +483,12 @@ Live integration remains INTEGRATION_BLOCKED / NO-GO; no publisher is deployed.
 
 The implemented [Debian role packages](docs/debian-package.md) are exactly
 `agent-platform-control` and `agent-platform-worker`; the old experimental
-single package is historical. [PKG-09](docs/worker-pkg09-upgrade.md) defines
+single package is historical. [PKG-11](docs/worker-pkg11-upgrade.md) defines
 current build/version rules. Codex/Claude toolchains are separate, explicitly
 provisioned upstream artifacts, not a third role package. HAR changes do not
 permit rebuilding/reinstalling final `0.1.0-7` with different Worker contents;
-future PKG-11 `0.1.0-8` work and Publisher #108 remain separate and blocked.
+PKG-11 adds `0.1.0-8~git<FULL_SHA>` source candidates and CI_ONLY exact -8
+fixtures. Final -8 release, deployment and Publisher #108 remain separately blocked.
 The [rollout roadmap](docs/worker-packaging-rollout.md) distinguishes source
 implementation from host activation; no host work is authorized here.
 

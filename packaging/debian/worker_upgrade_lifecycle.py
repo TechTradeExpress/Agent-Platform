@@ -1,11 +1,13 @@
-"""PKG-09 real dpkg upgrade; disposable Debian13 only, no real credentials."""
+"""PKG-09/11 real dpkg upgrade; disposable Debian13 only, no real credentials."""
 
 import hashlib
+import io
 import json
 import os
 import pwd
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 BASE_COMMIT = "938c5543757c4184635e08330115527f0108064a"
@@ -149,6 +151,7 @@ def installed_smoke():
         assert "Restart=no" in unit and "\n[Install]" not in unit
         assert not Path("/etc/systemd/system/" + name + ".service").exists()
     assert not Path("/usr/bin/codex").exists()
+    assert not Path("/usr/bin/claude").exists()
     return data
 
 
@@ -181,16 +184,53 @@ def main():
     guard()
     case = sys.argv[1]
     assert case in ("empty", "unknown")
-    baseline = Path("/packages/worker01-baseline")
+    series = sys.argv[2] if len(sys.argv) == 3 else "pkg09"
+    assert series in ("pkg09", "pkg11") and len(sys.argv) in (2, 3)
+    baseline = Path(
+        "/packages/worker01-baseline" if series == "pkg09" else "/packages/historical-7"
+    )
     verification = json.loads((baseline / "baseline-verification.json").read_text())
-    assert verification["schema"] == "AP-PKG-BASELINE-VERIFIED/1"
-    assert verification["source_commit"] == BASE_COMMIT
-    assert verification["worker_manifest_sha256"] == BASE_MANIFEST
-    old = baseline / "agent-platform-worker_0.1.0-6_amd64.deb"
-    old_control = baseline / "agent-platform-control_0.1.0-6_amd64.deb"
-    newer = Path("/packages/pkg09-upgrade-test/agent-platform-worker_0.1.0-7_amd64.deb")
-    new_control = newer.with_name("agent-platform-control_0.1.0-7_amd64.deb")
-    assert digest(old) == verification["rebuilt_archive_sha256"]
+    if series == "pkg09":
+        base_commit, base_manifest = BASE_COMMIT, BASE_MANIFEST
+        old_version, new_version = "0.1.0-6", "0.1.0-7"
+        next_dir = Path("/packages/historical-7")
+        assert verification["schema"] == "AP-PKG-BASELINE-VERIFIED/1"
+        assert verification["worker_manifest_sha256"] == base_manifest
+        old_hash = verification["rebuilt_archive_sha256"]
+    else:
+        base_commit = "0fbc940ae94144f8cc29c9a0fd98afc704f58168"
+        base_manifest = (
+            "9174f8ee35499b76d9b9f781d64826029c22cd802e3223015a32e53040afcfa9"
+        )
+        old_version, new_version = "0.1.0-7", "0.1.0-8"
+        next_dir = Path("/packages/pkg11-upgrade-test")
+        assert verification["schema"] == "AP-PKG11-BASELINE-VERIFIED/1"
+        assert verification["result"] == "RECONSTRUCTED_MATCHES_REPORTED_HASHES"
+        assert verification["installed_artifact_verified"] is False
+        assert verification["roles"]["worker"]["manifest_sha256"] == base_manifest
+        old_hash = verification["roles"]["worker"]["archive_sha256"]
+    assert verification["source_commit"] == base_commit
+    old = baseline / ("agent-platform-worker_" + old_version + "_amd64.deb")
+    old_control = baseline / ("agent-platform-control_" + old_version + "_amd64.deb")
+    newer = next_dir / ("agent-platform-worker_" + new_version + "_amd64.deb")
+    new_control = next_dir / ("agent-platform-control_" + new_version + "_amd64.deb")
+    assert digest(old) == old_hash
+    if series == "pkg11":
+        assert digest(old_control) == verification["roles"]["control"]["archive_sha256"]
+    expected = json.loads(
+        (next_dir / "agent-platform-worker.provenance.json").read_text()
+    )
+    assert digest(newer) == expected["sha256"]
+    assert expected["debian_version"] == new_version
+    control_expected = json.loads(
+        (next_dir / "agent-platform-control.provenance.json").read_text()
+    )
+    assert digest(new_control) == control_expected["sha256"]
+    for key in ("source_commit", "source_tree", "debian_version", "build_kind"):
+        assert control_expected[key] == expected[key]
+    if series == "pkg11":
+        assert expected["build_kind"] == "ci-final-fixture"
+        assert expected["ci_only"] is True and expected["release_authorized"] is False
     assert (
         pwd.getpwnam("ap-publisher").pw_uid,
         pwd.getpwnam("ap-publisher").pw_gid,
@@ -209,6 +249,7 @@ def main():
         "systemd-sysusers",
         "systemd-tmpfiles",
         "codex",
+        "claude",
     ]:
         stub = Path("/usr/local/bin") / name
         assert not stub.exists()
@@ -217,8 +258,8 @@ def main():
         )
         stub.chmod(0o755)
     call(local_install_argv(old_control, old), stage="historical_install")
-    assert digest(DOC / "manifest.json") == BASE_MANIFEST
-    assert json.loads((DOC / "build.json").read_text())["source_commit"] == BASE_COMMIT
+    assert digest(DOC / "manifest.json") == base_manifest
+    assert json.loads((DOC / "build.json").read_text())["source_commit"] == base_commit
     assert (
         json.loads(call(["agent-platform-worker", "doctor"], 13))["installation"]
         == "INSTALLED"
@@ -234,16 +275,19 @@ def main():
         name: digest(Path("/etc/apparmor.d/" + name))
         for name in ["ap-worker-publisher", "ap-worker-publisher-signer"]
     }
-    call(
-        [
-            "dpkg",
-            "--force-confdef",
-            "--force-confold",
-            "--unpack",
-            str(new_control),
-            str(newer),
-        ]
+    conffile = Path("/etc/agent-platform-worker/package.conf")
+    if series == "pkg11":
+        edited_conf = conffile.read_bytes() + b"# synthetic administrator setting\n"
+        conffile.write_bytes(edited_conf)
+    # Controlled interruption boundaries, not a simulated successful transaction:
+    # first only Control N+1 is unpacked while Worker is still N.
+    call(["dpkg", "--force-confdef", "--force-confold", "--unpack", str(new_control)])
+    assert (
+        call(["dpkg-query", "-W", "-f=${Version}", "agent-platform-worker"])
+        == old_version
     )
+    assert snapshot() == before
+    call(["dpkg", "--force-confdef", "--force-confold", "--unpack", str(newer)])
     assert "unpacked" in call(
         ["dpkg-query", "-W", "-f=${Status}", "agent-platform-worker"]
     )
@@ -253,14 +297,54 @@ def main():
         json.loads(call(["agent-platform-worker", "doctor"], 13))["installation"]
         == "BLOCKED"
     )
-    call(["dpkg", "--configure", "agent-platform-control", "agent-platform-worker"])
+    call(["dpkg", "--configure", "agent-platform-control"])
+    assert "unpacked" in call(
+        ["dpkg-query", "-W", "-f=${Status}", "agent-platform-worker"]
+    )
+    assert snapshot() == before
+    call(
+        [
+            "dpkg",
+            "--force-confdef",
+            "--force-confold",
+            "--configure",
+            "agent-platform-worker",
+        ]
+    )
+    if series == "pkg11":
+        assert conffile.read_bytes() == edited_conf
+        assert (
+            json.loads(call(["agent-platform-worker", "doctor"], 13))["installation"]
+            == "BLOCKED"
+        )
+        # Reset only our synthetic edit to the exact new default so subsequent
+        # probes can independently assess configured state and manifest integrity.
+        raw = subprocess.check_output(
+            ["dpkg-deb", "--fsys-tarfile", str(newer)], timeout=30
+        )
+        with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
+            conffile.write_bytes(
+                archive.extractfile("./etc/agent-platform-worker/package.conf").read()
+            )
     post = installed_smoke()
     assert post["checks"]["state"]["state"] == "CONFIGURED"
+    assert digest(DOC / "manifest.json") == expected["manifest_sha256"]
+    installed = json.loads((DOC / "build.json").read_text())
+    for key in ("source_commit", "source_tree", "debian_version", "build_kind"):
+        assert installed[key] == expected[key]
+    assert (
+        digest(Path("/usr/share/doc/agent-platform-control/manifest.json"))
+        == control_expected["manifest_sha256"]
+    )
+    assert (
+        call(["dpkg", "--verify", "agent-platform-control", "agent-platform-worker"])
+        == ""
+    )
     assert snapshot() == before
     call(["agent-platform-worker", "provision", "--approve"])
     assert snapshot() == before
-    for name, expected in profiles.items():
-        assert digest(Path("/etc/apparmor.d/" + name)) == expected
+    for name, profile_hash in profiles.items():
+        assert digest(Path("/etc/apparmor.d/" + name)) == profile_hash
     # Ordinary APT must refuse a downgrade; never force one to test recovery.
     result = subprocess.run(
         local_install_argv(old),
@@ -278,7 +362,7 @@ def main():
         raise AssertionError("expected_explicit_APT_downgrade_refusal")
     assert (
         call(["dpkg-query", "-W", "-f=${Version}", "agent-platform-worker"])
-        == "0.1.0-7"
+        == new_version
     )
     # Administrator-edited conffile is retained, but integrity/readiness blocks.
     profile = Path("/etc/apparmor.d/ap-worker-publisher")
@@ -300,13 +384,20 @@ def main():
     call(["agent-platform-worker", "provision", "--approve"], 13)
     assert digest(RECEIPT) == damaged
     assert installed_smoke()["checks"]["state"]["state"] == "BLOCKED"
-    Path("/evidence/pkg09-upgrade-" + case + ".json").write_text(
+    Path("/evidence/" + series + "-upgrade-" + case + ".json").write_text(
         json.dumps(
             {
                 "status": "PASS",
                 "case": case,
-                "baseline_source": BASE_COMMIT,
-                "baseline_manifest": BASE_MANIFEST,
+                "series": series,
+                "old_version": old_version,
+                "new_version": new_version,
+                "baseline_kind": "historical_reconstruction_not_installed_artifact",
+                "installed_host_verified": False,
+                "interruption": "mixed_roles_then_unpacked_then_explicit_configure",
+                "conffile_retained_then_fixture_reset": series == "pkg11",
+                "baseline_source": base_commit,
+                "baseline_manifest": base_manifest,
                 "old_archive_sha256": digest(old),
                 "new_archive_sha256": digest(newer),
                 "new_source": post["artifacts"]["source_commit"],

@@ -47,7 +47,7 @@ RUN apt-get update && apt-get --no-install-recommends -y install \
 COPY codex_pkg05_lifecycle.py /usr/share/ap-tests/
 ENTRYPOINT ["/usr/bin/python3", "-IB", "/usr/share/ap-tests/codex_pkg05_lifecycle.py"]
 
-# PKG-09: exact operator-reported numeric identities, reserved before dependencies.
+# PKG-09/11: exact operator-reported numeric identities, reserved before dependencies.
 # Disposable test image only; never an installer or host provisioning recipe.
 FROM base AS worker-upgrade
 RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod 755 /usr/sbin/policy-rc.d && \

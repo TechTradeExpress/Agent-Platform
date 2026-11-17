@@ -437,7 +437,7 @@ def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, na
         builder.validate(source)
 
 
-@pytest.mark.parametrize("revision", [3, 4, 5, 6, 7])
+@pytest.mark.parametrize("revision", [3, 4, 5, 6, 8])
 @pytest.mark.parametrize(
     "name",
     [
@@ -456,7 +456,8 @@ def test_source_only_contract_excluded_from_every_role_phase_archive(
         revision,
         "a" * 40,
         1700000000,
-        source_tree="b" * 40 if revision == 7 else None,
+        source_tree="b" * 40 if revision == 8 else None,
+        candidate=revision == 8,
     )
     assert name in builder.SOURCE_ONLY
     assert name not in builder.PUBLISHER_MODULES
@@ -471,8 +472,8 @@ def test_source_only_contract_excluded_from_every_role_phase_archive(
         assert provenance["modules"] == sorted(builder.MODULES[role])
         if role == "worker" and revision >= 5:
             assert provenance["publisher_modules"] == sorted(builder.PUBLISHER_MODULES)
-        # PKG-09: revision 7 records the exact source tree; older profiles never do
-        if revision == 7:
+        # Current revision records the exact source tree; old profiles never do
+        if revision == 8:
             assert provenance["source_tree"] == "b" * 40
         else:
             assert "source_tree" not in provenance
