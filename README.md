@@ -305,6 +305,13 @@ Codex CLI and Claude Code, defines standard, local-only and stacked delivery mod
 and provides identical operator prompts. It grants no new permission and changes no
 runtime, package or host.
 
+[ADR 010 / HAR-07](docs/trusted-harness-invocation-no-go.md) is the NO-GO plan for
+a future, separately authorized Control Plane launch of exactly one approved harness
+per worker: binding chain, per-harness mediation, rotation, continuity, authority
+separation, per-worker checklists and the order of future Issues. It defines no GO
+state, adds no launcher or host change and keeps exit 13, `LIVE_NO_GO`, Gate #73 and
+Publisher #108 unchanged.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
