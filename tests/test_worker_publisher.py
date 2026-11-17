@@ -1,12 +1,16 @@
 """PUB-02 actual exporter/validator/journal/CLI with offline GitHub wire mocks."""
 
 import base64
+import errno
 import json
 import os
+import re
+import stat
 import subprocess
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from cryptography.hazmat.primitives import hashes
@@ -197,7 +201,8 @@ class Wire:
                 status = 404
             else:
                 value = {"ref": j["ref"], "object": {"type": "commit", "sha": self.tip}}
-        elif path == p.ROOT + "/pulls?state=all&per_page=100":
+        elif path == p.head_pulls(j):
+            # GitHub's head filter: only PRs whose head is this exact branch.
             value = [] if self.pr_number is None else [self.pr()]
         elif path == p.ROOT + f"/pulls/{self.pr_number}":
             value = self.pr()
@@ -1208,3 +1213,587 @@ def test_missing_signer_credential_retains_unknown_and_blocks_restart(
     assert signer.main() == 1
     assert seen == ["/run/credentials/ap-worker-publisher-signer.service/app-key"]
     assert "signer_stopped" in capsys.readouterr().out
+
+
+# --- PUB-02 pilot-readiness regressions (#108, F-01/F-03/F-04/F-05) -----------
+
+UNDEFINED_ID = 0xFFFFFFFF
+
+
+def acl(*entries):
+    """Linux posix_acl_xattr: le32 version 2, then (le16 tag, le16 perm, le32 id)."""
+    return (2).to_bytes(4, "little") + b"".join(
+        t.to_bytes(2, "little") + perm.to_bytes(2, "little") + i.to_bytes(4, "little")
+        for t, perm, i in entries
+    )
+
+
+def systemd_acl(uid, granted):
+    # Shape written by systemd 257 fd_add_uid_acl_permission() + calc mask.
+    return acl(
+        (io.ACL_USER_OBJ, granted, UNDEFINED_ID),
+        (io.ACL_USER, granted, uid),
+        (io.ACL_GROUP_OBJ, 0, UNDEFINED_ID),
+        (io.ACL_MASK, granted, UNDEFINED_ID),
+        (io.ACL_OTHER, 0, UNDEFINED_ID),
+    )
+
+
+def credential_layout(tmp_path, monkeypatch, case="systemd_acl"):
+    """Real descriptor walk/read; only ownership, modes and the ACL are synthetic.
+
+    An unprivileged test cannot create root-owned files or tmpfs ACLs, so fstat
+    metadata and getxattr are injected per inode; open/O_NOFOLLOW/read are real.
+    """
+    uid = os.getuid()
+    assert uid != 0
+    unit = tmp_path / "ap-worker-publisher.service"
+    unit.mkdir()
+    leaf = unit / "app-jwt"
+    leaf.write_bytes(b'{"fixture":"FAKE_PRIVATE_JWT"}')
+    unit_ino = unit.stat().st_ino
+    # Default: systemd 257 on tmpfs (noswap) with POSIX ACL support.
+    d = {"uid": 0, "mode": 0o550, "acl": systemd_acl(uid, 0o5)}
+    f = {"uid": 0, "mode": 0o440, "acl": systemd_acl(uid, 0o4)}
+    no_acl = OSError(errno.ENODATA, "no ACL")
+    if case == "ownership_fallback":  # ramfs: chown to the unit user, no ACL
+        d, f = (
+            {"uid": uid, "mode": 0o500, "acl": no_acl},
+            {
+                "uid": uid,
+                "mode": 0o400,
+                "acl": OSError(errno.EOPNOTSUPP, "unsupported"),
+            },
+        )
+    elif case == "root_no_acl":
+        f = {"uid": 0, "mode": 0o440, "acl": no_acl}
+    elif case == "extra_named_user":
+        f["acl"] = f["acl"] + acl((io.ACL_USER, 4, uid + 1))[4:]
+    elif case == "named_group":
+        f["acl"] = f["acl"] + acl((io.ACL_GROUP, 4, 4242))[4:]
+    elif case == "named_group_without_access":  # not systemd's exact structure
+        f["acl"] = f["acl"] + acl((io.ACL_GROUP, 0, 4242))[4:]
+    elif case == "acl_without_mask":
+        f["acl"] = acl(
+            (io.ACL_USER_OBJ, 4, UNDEFINED_ID),
+            (io.ACL_USER, 4, uid),
+            (io.ACL_GROUP_OBJ, 0, UNDEFINED_ID),
+            (io.ACL_OTHER, 0, UNDEFINED_ID),
+        )
+    elif case == "foreign_user":
+        f["acl"] = systemd_acl(uid + 1, 0o4)
+    elif case == "mask_write":
+        f["acl"] = f["acl"].replace(
+            (io.ACL_MASK).to_bytes(2, "little") + (4).to_bytes(2, "little"),
+            (io.ACL_MASK).to_bytes(2, "little") + (6).to_bytes(2, "little"),
+        )
+    elif case == "group_obj_read":
+        f["acl"] = f["acl"].replace(
+            (io.ACL_GROUP_OBJ).to_bytes(2, "little") + (0).to_bytes(2, "little"),
+            (io.ACL_GROUP_OBJ).to_bytes(2, "little") + (4).to_bytes(2, "little"),
+        )
+    elif case == "user_obj_write":
+        f["acl"] = f["acl"].replace(
+            (io.ACL_USER_OBJ).to_bytes(2, "little") + (4).to_bytes(2, "little"),
+            (io.ACL_USER_OBJ).to_bytes(2, "little") + (6).to_bytes(2, "little"),
+        )
+    elif case == "other_read":
+        f["mode"] = 0o444
+    elif case == "writable_leaf":
+        f["mode"] = 0o640
+    elif case == "self_owned_group_readable":
+        f = {"uid": uid, "mode": 0o440, "acl": no_acl}
+    elif case == "dir_writable":
+        d["mode"] = 0o750
+    elif case == "dir_setgid":
+        d["mode"] = 0o2550
+    elif case == "dir_foreign_owner":
+        d = {"uid": uid + 1, "mode": 0o500, "acl": no_acl}
+    elif case == "dir_other_access":
+        d["mode"] = 0o551
+    elif case == "acl_unreadable":
+        f["acl"] = OSError(errno.EACCES, "denied")
+    elif case == "acl_bad_version":
+        f["acl"] = (3).to_bytes(4, "little") + f["acl"][4:]
+    elif case == "acl_truncated":
+        f["acl"] = f["acl"][:-1]
+    elif case == "hardlink":
+        (tmp_path / "second-name").hardlink_to(leaf)
+    elif case == "symlink":
+        target = tmp_path / "elsewhere"
+        target.write_bytes(b"{}")
+        leaf.unlink()
+        leaf.symlink_to(target)
+    real_fstat = io.os.fstat
+
+    def meta(m, values, kind):
+        return SimpleNamespace(
+            st_dev=m.st_dev,
+            st_ino=m.st_ino,
+            st_uid=values["uid"],
+            st_gid=0,
+            st_mode=kind | values["mode"],
+            st_nlink=m.st_nlink,
+            st_size=m.st_size,
+            st_mtime_ns=m.st_mtime_ns,
+            st_ctime_ns=m.st_ctime_ns,
+        )
+
+    def fstat(fd):
+        m = real_fstat(fd)
+        if stat.S_ISDIR(m.st_mode):
+            if m.st_ino == unit_ino:
+                return meta(m, d, stat.S_IFDIR)
+            # Synthetic trusted ancestors (/, /run, /run/credentials analogues).
+            return SimpleNamespace(st_uid=0, st_mode=stat.S_IFDIR | 0o755)
+        return meta(m, f, stat.S_IFREG)
+
+    def getxattr(fd, name):
+        assert name == "system.posix_acl_access"
+        value = d["acl"] if stat.S_ISDIR(real_fstat(fd).st_mode) else f["acl"]
+        if isinstance(value, OSError):
+            raise value
+        return value
+
+    monkeypatch.setattr(io.os, "fstat", fstat)
+    monkeypatch.setattr(io.os, "getxattr", getxattr)
+    return str(leaf), uid
+
+
+@pytest.mark.parametrize("case", ["systemd_acl", "ownership_fallback"])
+def test_systemd_257_credential_layouts_are_read(tmp_path, monkeypatch, case):
+    path, uid = credential_layout(tmp_path, monkeypatch, case)
+    assert io.read_file(path, uid, 16384, credential=True) == (
+        b'{"fixture":"FAKE_PRIVATE_JWT"}'
+    )
+
+
+def test_legacy_private_owner_check_rejected_the_real_systemd_layout(
+    tmp_path, monkeypatch
+):
+    # F-01 evidence: the pre-fix call shape could never read a systemd 257
+    # tmpfs+ACL credential (root-owned 0440 leaf, 0550 directory).
+    path, uid = credential_layout(tmp_path, monkeypatch)
+    with pytest.raises(a.Blocked):
+        io.read_file(path, uid, 16384, writable_parent=True, private=True)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "root_no_acl",
+        "extra_named_user",
+        "named_group",
+        "named_group_without_access",
+        "acl_without_mask",
+        "foreign_user",
+        "mask_write",
+        "group_obj_read",
+        "user_obj_write",
+        "other_read",
+        "writable_leaf",
+        "self_owned_group_readable",
+        "dir_writable",
+        "dir_setgid",
+        "dir_foreign_owner",
+        "dir_other_access",
+        "acl_unreadable",
+        "acl_bad_version",
+        "acl_truncated",
+        "hardlink",
+        "symlink",
+    ],
+)
+def test_credential_layout_negative_cases(tmp_path, monkeypatch, case):
+    path, uid = credential_layout(tmp_path, monkeypatch, case)
+    with pytest.raises((a.Blocked, OSError)):
+        io.read_file(path, uid, 16384, credential=True)
+
+
+@pytest.mark.parametrize(
+    "relaxation",
+    [{"writable_parent": True}, {"private": True}, {"allow_empty": True}],
+)
+def test_credential_mode_cannot_be_combined_with_other_relaxations(
+    tmp_path, monkeypatch, relaxation
+):
+    path, uid = credential_layout(tmp_path, monkeypatch)
+    with pytest.raises(a.Blocked):
+        io.read_file(path, uid, 16384, credential=True, **relaxation)
+
+
+def test_both_roles_read_only_their_credential_through_systemd_policy(
+    store, tmp_path, monkeypatch, capsys
+):
+    journal, _ = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    original = a.encoded(j)
+    calls = []
+
+    class Session:
+        def __getattr__(self, name):
+            return getattr(journal, name)
+
+        def close(self):
+            pass
+
+    def read(path, *args, **kwargs):
+        calls.append((path, kwargs))
+        if path in ("job", "/etc/ap-publisher/job.json"):
+            return original
+        if path == "artifact":
+            return data
+        if path.endswith("/app-key"):
+            return b"FABRICATED_KEY_NOT_A_PEM"
+        return a.encoded({"job_sha256": a.digest(original), "jwt": "JWT_FAKE"})
+
+    for module in (p, signer):
+        monkeypatch.setattr(module, "read_file", read)
+        monkeypatch.setattr(module, "confinement", lambda *args: None)
+        monkeypatch.setattr(module, "receipts", lambda *args: None)
+        monkeypatch.setattr(module, "Journal", lambda *args: Session())
+    monkeypatch.setattr(p, "HTTPS", lambda *args: Wire(journal, j))
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher.service"
+    )
+    assert p.main(["--job", "job", "--artifact", "artifact", "--execute"]) == 0
+    assert [c for c in calls if c[0].endswith("/app-jwt")] == [
+        (
+            "/run/credentials/ap-worker-publisher.service/app-jwt",
+            {"credential": True},
+        )
+    ]
+    assert not any(c[0].endswith("/app-key") for c in calls)
+    signer_path = tmp_path / "signer-journal"
+    signer_path.write_bytes(b"")
+    signer_path.chmod(0o600)
+    signer_journal = io.Journal(str(signer_path), a.digest(b""))
+
+    class SignerSession:
+        def __getattr__(self, name):
+            return getattr(signer_journal, name)
+
+        def close(self):
+            signer_journal.close()
+
+    def no_output(*args, **kwargs):
+        raise OSError("FABRICATED stop before any JWT output")
+
+    monkeypatch.setattr(signer, "Journal", lambda *args: SignerSession())
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher-signer.service"
+    )
+    monkeypatch.setattr(signer.os.path, "lexists", lambda _: False)
+    monkeypatch.setattr(
+        signer.serialization, "load_pem_private_key", lambda *args, **kwargs: object()
+    )
+    monkeypatch.setattr(signer, "jwt_for", lambda *args: b"JWT_FAKE")
+    monkeypatch.setattr(signer.os, "open", no_output)
+    calls.clear()
+    assert signer.main() == 1  # output write is stubbed to fail after the key read
+    assert signer_journal.events[-1]["record"]["phase"] == "UNKNOWN"
+    assert (
+        "/run/credentials/ap-worker-publisher-signer.service/app-key",
+        {"credential": True},
+    ) in calls
+    assert "FAKE" not in capsys.readouterr().out.replace("signer_stopped", "")
+
+
+def test_pr_enumeration_is_bounded_to_the_exact_head_branch(store):
+    journal, _ = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    result, wire = invoke(j, data, journal)
+    assert result["status"] == "PUBLISHED"
+    listings = {path for _, path in wire.calls if "/pulls?" in path}
+    assert listings == {
+        p.ROOT
+        + "/pulls?state=all&head=TechTradeExpress:feature/issue-108-fixture&per_page=2"
+    }
+    assert not any("per_page=100" in path for _, path in wire.calls)
+
+
+@pytest.mark.parametrize("defect", ["prior_closed_pr", "foreign_head", "two_prs"])
+def test_head_listing_conflicts_block_before_any_token(store, defect):
+    journal, path = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    wire = Wire(journal, j)
+
+    def listing(route, value):
+        if route != p.head_pulls(j):
+            return value
+        prior = dict(wire.pr(), number=7, state="closed", draft=False)
+        if defect == "foreign_head":
+            prior["head"] = dict(prior["head"], ref="feature/issue-108-other")
+        return [prior, prior] if defect == "two_prs" else [prior]
+
+    wire.mutate = listing
+    with pytest.raises(a.Blocked):
+        invoke(j, data, journal, wire)
+    assert not any(route.endswith("/access_tokens") for _, route in wire.calls)
+    assert path.read_bytes() == b"" and not journal.events
+
+
+def large_base_artifact(count=300):
+    """Full-tree candidate: `count` unchanged base blobs plus one new file."""
+    values, docs = {}, []
+    for n in range(count):
+        text = f"unchanged base document {n}\n".encode()
+        s = a.oid("blob", text)
+        values[s] = ("blob", text)
+        docs.append((f"d{n:04d}.md", s))
+    docs_raw = b"".join(
+        b"100644 " + name.encode() + b"\0" + bytes.fromhex(s) for name, s in docs
+    )
+    docs_sha = a.oid("tree", docs_raw)
+    values[docs_sha] = ("tree", docs_raw)
+    pilot = b"supervised pilot change\n"
+    pilot_sha = a.oid("blob", pilot)
+    values[pilot_sha] = ("blob", pilot)
+    root_raw = (
+        b"40000 docs\0"
+        + bytes.fromhex(docs_sha)
+        + b"100644 pilot.md\0"
+        + bytes.fromhex(pilot_sha)
+    )
+    root = a.oid("tree", root_raw)
+    values[root] = ("tree", root_raw)
+    payload = (
+        f"tree {root}\nparent {'a' * 40}\n"
+        "author Fixture <a@example.test> 1 +0000\n"
+        "committer Fixture <a@example.test> 1 +0000\n\nPilot\n"
+    ).encode()
+    head = a.oid("commit", payload)
+    values[head] = ("commit", payload)
+    data = a.encoded(
+        {
+            "version": a.VERSION,
+            "head": head,
+            "objects": [
+                {"oid": s, "kind": k, "data": base64.b64encode(b).decode()}
+                for s, (k, b) in values.items()
+            ],
+        }
+    )
+    base_listing = [
+        {"path": "docs", "mode": "040000", "type": "tree", "sha": docs_sha}
+    ] + [
+        {"path": "docs/" + name, "mode": "100644", "type": "blob", "sha": s}
+        for name, s in docs
+    ]
+    return data, head, root, base_listing, {pilot_sha, root, head}
+
+
+def test_base_tree_objects_are_reused_without_bulk_readback(store, tmp_path):
+    # F-04: 340-object main tree => ~340 sequential TLS GETs (~0.3 s each,
+    # measured 2026-11-17) inside one 300 s budget. Only new objects are read.
+    journal, _ = store
+    totals = {}
+    for count in (5, 300):
+        if count == 300:  # fresh store: same ref/Issue cannot be created twice
+            fresh = tmp_path / "journal-300"
+            fresh.write_bytes(b"")
+            fresh.chmod(0o600)
+            journal = io.Journal(str(fresh), a.digest(b""))
+        data, head, root, listing, new = large_base_artifact(count)
+        j = job_for(data, head, root)
+        wire = Wire(journal, j)
+        wire.mutate = lambda route, value, listing=listing: (
+            dict(value, tree=listing) if route.endswith("?recursive=1") else value
+        )
+        result, wire = invoke(j, data, journal, wire)
+        assert result["status"] == "PUBLISHED" and set(wire.objects) == new
+        object_gets = [
+            route
+            for method, route in wire.calls
+            if method == "GET"
+            and re.search(r"/git/(blobs|trees|commits)/[0-9a-f]{40}$", route)
+            and not route.endswith("/git/commits/" + "a" * 40)
+        ]
+        # Each new object: one readback after upload, one before the ref CAS.
+        assert sorted(object_gets) == sorted(
+            p.ROOT + "/git/" + wire.objects[s][0] + "s/" + s
+            for s in new
+            for _ in (0, 1)
+        )
+        totals[count] = len(wire.calls)
+        if count == 300:
+            journal.close()
+    assert totals[5] == totals[300]  # independent of unchanged base objects
+
+
+def test_truncated_base_listing_cannot_be_used_to_skip_readback(store):
+    journal, _ = store
+    data, head, root, listing, _ = large_base_artifact(5)
+    j = job_for(data, head, root)
+    wire = Wire(journal, j)
+    wire.mutate = lambda route, value: (
+        dict(value, tree=listing, truncated=True)
+        if route.endswith("?recursive=1")
+        else value
+    )
+    with pytest.raises(a.Blocked):
+        invoke(j, data, journal, wire)
+    assert not any(route.endswith("/access_tokens") for _, route in wire.calls)
+
+
+def test_read_only_admission_failure_leaves_journal_untouched_then_new_job_runs(
+    store,
+):
+    # F-05: before the fix, any read-only mismatch after CLAIM stuck the store.
+    journal, path = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    wire = Wire(journal, j)
+    wire.mutate = lambda route, value: (
+        dict(value, events=["pull_request"]) if route == "/app" else value
+    )
+    with pytest.raises(a.Blocked):
+        invoke(j, data, journal, wire)
+    assert path.read_bytes() == b"" and not journal.events and not wire.token
+    retry = dict(j, id="c" * 32)
+    result, wire = invoke(retry, data, journal)
+    assert result["status"] == "PUBLISHED"
+    phases = [
+        (e["record"]["phase"], e["record"].get("operation")) for e in journal.events
+    ]
+    assert phases[:3] == [("CLAIM", None), ("UNKNOWN", "mint"), ("CONFIRMED", "mint")]
+    assert all(e["record"]["job"] == "c" * 32 for e in journal.events)
+
+
+def test_completed_job_replay_makes_no_network_call(store):
+    journal, _ = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    _, wire = invoke(j, data, journal)
+    before = list(wire.calls)
+    with pytest.raises(a.Blocked):
+        invoke(j, data, journal, wire)
+    assert wire.calls == before
+
+
+@pytest.mark.parametrize(
+    "fault, status",
+    [("pre_claim_read", "BLOCKED"), ("lost_mint_reply", "UNKNOWN_NEEDS_HUMAN")],
+)
+def test_cli_status_distinguishes_untouched_journal_from_needs_reconciliation(
+    store, monkeypatch, capsys, fault, status
+):
+    journal, path = store
+    data, head, tree, _ = artifact()
+    j = job_for(data, head, tree)
+    original = a.encoded(j)
+    wire = Wire(journal, j)
+    if fault == "pre_claim_read":
+        wire.mutate = lambda route, value: {} if route == p.ROOT else value
+    else:
+        wire.fail = f"/app/installations/{j['installation_id']}/access_tokens"
+
+    class Session:
+        def __getattr__(self, name):
+            return getattr(journal, name)
+
+        def close(self):
+            pass
+
+    def read(route, *args, **kwargs):
+        if route == "job":
+            return original
+        if route == "artifact":
+            return data
+        return a.encoded({"job_sha256": a.digest(original), "jwt": "JWT_FAKE"})
+
+    monkeypatch.setattr(p, "read_file", read)
+    monkeypatch.setattr(p, "confinement", lambda *args: None)
+    monkeypatch.setattr(p, "receipts", lambda *args: None)
+    monkeypatch.setattr(p, "Journal", lambda *args: Session())
+    monkeypatch.setattr(p, "HTTPS", lambda *args: wire)
+    monkeypatch.setenv(
+        "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher.service"
+    )
+    assert p.main(["--job", "job", "--artifact", "artifact", "--execute"]) == 1
+    out = capsys.readouterr().out
+    assert json.loads(out)["status"] == status and "FAKE" not in out
+    assert (path.read_bytes() == b"") is (status == "BLOCKED")
+
+
+REPO = Path(__file__).resolve().parents[1]
+
+
+def apparmor_file_rules(text):
+    return [
+        m.groups()
+        for m in (re.fullmatch(r"\s*(/\S*)\s+([a-z]+),", x) for x in text.splitlines())
+        if m
+    ]
+
+
+def apparmor_regex(pattern):
+    out, i = "", 0
+    while i < len(pattern):
+        if pattern.startswith("**", i):
+            out, i = out + ".*", i + 2
+        elif pattern[i] == "*":
+            out, i = out + "[^/]*", i + 1
+        elif pattern[i] in "{[":
+            j = pattern.index("}" if pattern[i] == "{" else "]", i)
+            body = pattern[i + 1 : j]
+            out += (
+                "(?:" + "|".join(map(re.escape, body.split(","))) + ")"
+                if pattern[i] == "{"
+                else "[" + body + "]"
+            )
+            i = j + 1
+        else:
+            out, i = out + re.escape(pattern[i]), i + 1
+    return re.compile(out)
+
+
+def role_read_paths(role, monkeypatch):
+    """Every path each role opens through read_file(), derived from shipped code."""
+    source = (REPO / "src/agent_platform/worker_publisher.py").read_text()
+    signer_source = (REPO / "src/agent_platform/worker_publish_signer.py").read_text()
+    wrapper = (REPO / "packaging/worker-publisher/ap-worker-publisher").read_text()
+    library = re.search(r"sys\.path\.insert\(0, '(/[^']+)'\)", wrapper)[1]
+    modules = re.findall(r'"(worker_publish\w*\.py)"', source)
+    assert len(modules) == 5
+    paths = {f"{library}/agent_platform/{name}" for name in modules}
+    paths |= set(re.findall(r'read_file\("(/etc/ap-publisher/\w+\.json)"', source))
+    unit = "ap-worker-publisher" + ("-signer" if role == "signer" else "")
+    monkeypatch.setenv("CREDENTIALS_DIRECTORY", f"/run/credentials/{unit}.service")
+    paths.add(io.credential_path(role))
+    if role == "publisher":
+        service = (
+            REPO / "packaging/worker-publisher" / (unit + ".service")
+        ).read_text()
+        paths |= set(re.search(r"--job (\S+) --artifact (\S+)", service).groups())
+        paths |= set(re.findall(r'Journal\("(/var/lib/ap-publisher/journal)"', source))
+    else:
+        paths |= set(re.findall(r'"(/etc/ap-publisher/job\.json)"', signer_source))
+        paths |= set(
+            re.findall(r'"(/var/lib/ap-publisher-signer/journal)"', signer_source)
+        )
+    return unit, paths
+
+
+@pytest.mark.parametrize("role", ["publisher", "signer"])
+def test_apparmor_ancestor_gap_matches_documented_f02_status(role, monkeypatch):
+    unit, paths = role_read_paths(role, monkeypatch)
+    profile = (REPO / "packaging/worker-publisher" / (unit + ".apparmor")).read_text()
+    rules = apparmor_file_rules(profile)
+    for path in paths:  # the leaves themselves are granted today
+        assert any(
+            "r" in perms and apparmor_regex(pattern).fullmatch(path)
+            for pattern, perms in rules
+        ), path
+    ancestors = {
+        str(parent).rstrip("/") + "/" for path in paths for parent in Path(path).parents
+    }
+    doc = (REPO / "docs/pub02-pilot-readiness.md").read_text()
+    block = doc.split("AP-PUB02-F02 " + unit + "\n", 1)[1].split("AP-PUB02-F02 ")[0]
+    proposed = {line[: -len(" r,")] for line in block.split("```")[0].splitlines()}
+    assert proposed == ancestors  # the documented fix covers every opened ancestor
+    missing = {d for d in ancestors if f"  {d} r," not in profile.splitlines()}
+    assert ("F-02 status: BLOCKED_SCOPE_DEPENDENCY" in doc) is bool(missing)
