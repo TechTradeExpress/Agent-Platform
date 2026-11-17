@@ -299,6 +299,12 @@ isolation, operator approval), trust boundaries and a negative-test plan. It is
 design-only: it adds no login, launcher, credential handling or API fallback, and
 automated Codex/Claude use stays BLOCKED or NOT_PROVEN.
 
+[HAR-06 supervised workflow](docs/supervised-multi-harness-workflow.md) makes the
+root `AGENTS.md` one harness-neutral contributor contract for official interactive
+Codex CLI and Claude Code, defines standard, local-only and stacked delivery modes,
+and provides identical operator prompts. It grants no new permission and changes no
+runtime, package or host.
+
 ## MVP.5 architecture and security contract
 
 [ADR 004: architecture and trust-boundary freeze](docs/architecture-trust-boundaries.md)
