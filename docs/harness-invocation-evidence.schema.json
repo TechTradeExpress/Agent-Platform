@@ -1,0 +1,705 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-platform:ap-hinv-evidence:1",
+  "title": "AP-HINV-EVIDENCE/1 (ADR 010): inert, secret-free, non-authorizing per-worker readiness record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "worker_ref",
+    "harness_id",
+    "selection_epoch",
+    "gates",
+    "checks",
+    "inherited_approval",
+    "overall",
+    "launch_allowed",
+    "production_go"
+  ],
+  "properties": {
+    "schema": {
+      "const": "AP-HINV-EVIDENCE/1"
+    },
+    "worker_ref": {
+      "enum": [
+        "worker01",
+        "worker02"
+      ]
+    },
+    "harness_id": {
+      "enum": [
+        "codex",
+        "claude_code"
+      ]
+    },
+    "selection_epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vendor_permission_a",
+        "isolation_b",
+        "operator_approval_c"
+      ],
+      "properties": {
+        "vendor_permission_a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "NOT_RUN",
+                "NOT_PROVEN",
+                "BLOCKED",
+                "RECORDED_UNAUTHENTICATED"
+              ]
+            }
+          }
+        },
+        "isolation_b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "NOT_RUN",
+                "NOT_PROVEN",
+                "BLOCKED",
+                "RECORDED_UNAUTHENTICATED"
+              ]
+            }
+          }
+        },
+        "operator_approval_c": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "NOT_RUN",
+                "NOT_PROVEN",
+                "BLOCKED",
+                "RECORDED_UNAUTHENTICATED"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check_id",
+          "status",
+          "origin",
+          "evidence_sha256",
+          "observed_date",
+          "verification_ref"
+        ],
+        "properties": {
+          "check_id": {
+            "enum": [
+              "HC-01",
+              "HC-02",
+              "HC-03",
+              "HC-04",
+              "HC-05",
+              "HC-06",
+              "HC-07",
+              "HC-08",
+              "HC-09",
+              "HC-10",
+              "HC-11",
+              "HC-12",
+              "HC-13",
+              "HC-14",
+              "HC-15",
+              "HC-16",
+              "HC-17",
+              "HC-18",
+              "HC-19",
+              "HC-20",
+              "HC-21",
+              "HC-22",
+              "HC-23",
+              "HC-24",
+              "HC-25"
+            ]
+          },
+          "status": {
+            "enum": [
+              "SOURCE_ONLY",
+              "DISPOSABLE_FIXTURE",
+              "HOST_NOT_RUN",
+              "NOT_PROVEN",
+              "BLOCKED",
+              "OPERATOR_ATTESTED_UNAUTHENTICATED",
+              "INDEPENDENTLY_VERIFIED"
+            ]
+          },
+          "origin": {
+            "enum": [
+              "NONE",
+              "SOURCE_REVIEW",
+              "SYNTHETIC_FIXTURE",
+              "DISPOSABLE_VM",
+              "OPERATOR_STATEMENT",
+              "INDEPENDENT_HOST_OBSERVATION"
+            ]
+          },
+          "evidence_sha256": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          "observed_date": {
+            "type": "string",
+            "pattern": "^(?:NONE|[0-9]{4}-[0-9]{2}-[0-9]{2})$"
+          },
+          "verification_ref": {
+            "type": "string",
+            "pattern": "^(?:NONE|[A-Za-z0-9._:-]{8,64})$"
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "HOST_NOT_RUN",
+                  "NOT_PROVEN",
+                  "BLOCKED"
+                ]
+              },
+              "origin": {
+                "const": "NONE"
+              },
+              "evidence_sha256": {
+                "maxItems": 0
+              },
+              "observed_date": {
+                "const": "NONE"
+              },
+              "verification_ref": {
+                "const": "NONE"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "NOT_PROVEN",
+                  "BLOCKED"
+                ]
+              },
+              "origin": {
+                "const": "SOURCE_REVIEW"
+              },
+              "evidence_sha256": {
+                "minItems": 1
+              },
+              "observed_date": {
+                "pattern": "^20[0-9]{2}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))$|^(?:20(?:0[48]|[2468][048]|[13579][26])|2000)-02-29$"
+              },
+              "verification_ref": {
+                "const": "NONE"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "SOURCE_ONLY"
+              },
+              "origin": {
+                "const": "SOURCE_REVIEW"
+              },
+              "evidence_sha256": {
+                "minItems": 1
+              },
+              "observed_date": {
+                "pattern": "^20[0-9]{2}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))$|^(?:20(?:0[48]|[2468][048]|[13579][26])|2000)-02-29$"
+              },
+              "verification_ref": {
+                "const": "NONE"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "DISPOSABLE_FIXTURE"
+              },
+              "origin": {
+                "enum": [
+                  "SYNTHETIC_FIXTURE",
+                  "DISPOSABLE_VM"
+                ]
+              },
+              "evidence_sha256": {
+                "minItems": 1
+              },
+              "observed_date": {
+                "pattern": "^20[0-9]{2}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))$|^(?:20(?:0[48]|[2468][048]|[13579][26])|2000)-02-29$"
+              },
+              "verification_ref": {
+                "const": "NONE"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "OPERATOR_ATTESTED_UNAUTHENTICATED"
+              },
+              "origin": {
+                "const": "OPERATOR_STATEMENT"
+              },
+              "evidence_sha256": {
+                "minItems": 1
+              },
+              "observed_date": {
+                "pattern": "^20[0-9]{2}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))$|^(?:20(?:0[48]|[2468][048]|[13579][26])|2000)-02-29$"
+              },
+              "verification_ref": {
+                "const": "NONE"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "INDEPENDENTLY_VERIFIED"
+              },
+              "origin": {
+                "const": "INDEPENDENT_HOST_OBSERVATION"
+              },
+              "evidence_sha256": {
+                "minItems": 1
+              },
+              "observed_date": {
+                "pattern": "^20[0-9]{2}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))$|^(?:20(?:0[48]|[2468][048]|[13579][26])|2000)-02-29$"
+              },
+              "verification_ref": {
+                "pattern": "^(?!NONE$)[A-Za-z0-9._:-]{8,64}$"
+              }
+            }
+          }
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-01"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-02"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-03"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-04"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-05"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-06"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-07"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-08"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-09"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-10"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-11"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-12"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-13"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-14"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-15"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-16"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-17"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-18"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-19"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-20"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-21"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-22"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-23"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-24"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "check_id"
+            ],
+            "properties": {
+              "check_id": {
+                "const": "HC-25"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "inherited_approval": {
+      "const": false
+    },
+    "overall": {
+      "const": "NO_GO"
+    },
+    "launch_allowed": {
+      "const": false
+    },
+    "production_go": {
+      "const": false
+    }
+  }
+}

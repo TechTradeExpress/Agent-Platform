@@ -395,8 +395,16 @@ def test_worker_rejects_unimplemented_or_invalid_commands(args):
     assert result.returncode == 2
 
 
-def test_cp08_is_source_only_in_closed_role_manifests():
-    name = "control_plane_local_runner"
+@pytest.mark.parametrize(
+    "name",
+    [
+        "control_plane_local_runner",
+        "harness_admission",
+        "claude_adapter",
+        "instruction_sources",
+    ],
+)
+def test_source_only_contracts_in_closed_role_manifests(name):
     assert name in builder.SOURCE_ONLY
     assert all(name not in modules for modules in builder.MODULES.values())
     builder.validate(ROOT)
@@ -405,25 +413,43 @@ def test_cp08_is_source_only_in_closed_role_manifests():
 @pytest.mark.parametrize(
     "role,module", [("control", "cli"), ("worker", "native_artifact")]
 )
-def test_role_import_cannot_pull_source_only_cp08(tmp_path, role, module):
+@pytest.mark.parametrize(
+    "name",
+    [
+        "control_plane_local_runner",
+        "harness_admission",
+        "claude_adapter",
+        "instruction_sources",
+    ],
+)
+def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, name):
     import shutil
 
     source = tmp_path / "source"
     shutil.copytree(ROOT / "src", source / "src")
-    for name in ("pyproject.toml", "debian/control", "debian/changelog"):
-        target = source / name
+    for relative_path in ("pyproject.toml", "debian/control", "debian/changelog"):
+        target = source / relative_path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((ROOT / name).read_bytes())
+        target.write_bytes((ROOT / relative_path).read_bytes())
     target = source / "src/agent_platform" / (module + ".py")
-    target.write_text(
-        target.read_text() + "\nfrom agent_platform import control_plane_local_runner\n"
-    )
+    target.write_text(target.read_text() + f"\nfrom agent_platform import {name}\n")
     with pytest.raises(ValueError, match="review_role_import_closure_" + role):
         builder.validate(source)
 
 
 @pytest.mark.parametrize("revision", [3, 4, 5, 6, 7])
-def test_cp08_excluded_from_every_role_phase_archive(tmp_path, revision):
+@pytest.mark.parametrize(
+    "name",
+    [
+        "control_plane_local_runner",
+        "harness_admission",
+        "claude_adapter",
+        "instruction_sources",
+    ],
+)
+def test_source_only_contract_excluded_from_every_role_phase_archive(
+    tmp_path, revision, name
+):
     artifacts = builder.build(
         ROOT,
         tmp_path / "packages",
@@ -432,7 +458,6 @@ def test_cp08_excluded_from_every_role_phase_archive(tmp_path, revision):
         1700000000,
         source_tree="b" * 40 if revision == 7 else None,
     )
-    name = "control_plane_local_runner"
     assert name in builder.SOURCE_ONLY
     assert name not in builder.PUBLISHER_MODULES
     for role, artifact in artifacts.items():
@@ -446,21 +471,33 @@ def test_cp08_excluded_from_every_role_phase_archive(tmp_path, revision):
         assert provenance["modules"] == sorted(builder.MODULES[role])
         if role == "worker" and revision >= 5:
             assert provenance["publisher_modules"] == sorted(builder.PUBLISHER_MODULES)
+        # PKG-09: revision 7 records the exact source tree; older profiles never do
+        if revision == 7:
+            assert provenance["source_tree"] == "b" * 40
+        else:
+            assert "source_tree" not in provenance
 
 
-def test_p1_publisher_import_cannot_pull_source_only_cp08(tmp_path):
+@pytest.mark.parametrize(
+    "name",
+    [
+        "control_plane_local_runner",
+        "harness_admission",
+        "claude_adapter",
+        "instruction_sources",
+    ],
+)
+def test_p1_publisher_import_cannot_pull_source_only_contract(tmp_path, name):
     import shutil
 
     source = tmp_path / "source"
     shutil.copytree(ROOT / "src", source / "src")
-    for name in ("pyproject.toml", "debian/control", "debian/changelog"):
-        target = source / name
+    for relative_path in ("pyproject.toml", "debian/control", "debian/changelog"):
+        target = source / relative_path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((ROOT / name).read_bytes())
+        target.write_bytes((ROOT / relative_path).read_bytes())
     target = source / "src/agent_platform/worker_publisher.py"
-    target.write_text(
-        target.read_text() + "\nfrom agent_platform import control_plane_local_runner\n"
-    )
+    target.write_text(target.read_text() + f"\nfrom agent_platform import {name}\n")
     with pytest.raises(ValueError, match="review_role_import_closure_publisher"):
         builder.validate(source, 5)
     with pytest.raises(ValueError, match="review_role_import_closure_publisher"):

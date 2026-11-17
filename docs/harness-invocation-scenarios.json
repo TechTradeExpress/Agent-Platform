@@ -1,0 +1,694 @@
+{
+ "schema": "AP-HINV-SCENARIOS/1",
+ "_comment": "Fabricated, offline, non-authorizing scenarios. Facts are booleans/enums, never paths, accounts or secrets. The reference evaluator lives in the test file; this fixture documents expected outcomes only and can never produce a GO.",
+ "defaults": {
+  "action": "request_launch",
+  "host": "worker02",
+  "harness_selected": "claude_code",
+  "assignment_harness": "claude_code",
+  "worker_match": true,
+  "epoch_match": true,
+  "selection_issuer_verified": true,
+  "config_digest_match": true,
+  "exe_source": "pinned_absolute",
+  "exec_binding": "fd_pinned",
+  "exe_hash_match": true,
+  "release_verified": true,
+  "elf_verified": true,
+  "project_instruction_conflict": false,
+  "user_level_claude_md": false,
+  "agents_load_observed": true,
+  "scanner_corrected": true,
+  "parser_wire_verified": true,
+  "decision_a": "recorded",
+  "decision_b": "independently_verified",
+  "decision_c": "this_worker_epoch",
+  "ambient_credential": false,
+  "api_fallback": false,
+  "oauth_relay": false,
+  "unsafe_flag": false,
+  "mediation_complete": true,
+  "hooks_plugins_mcp_denied": true,
+  "enforcement": "active_enforcing",
+  "doctor_fresh": true,
+  "active_attempts": 0,
+  "unknown_outcome_retained": false,
+  "replay": false,
+  "resume_cross": false,
+  "publisher_reachable": false,
+  "evidence_origin": "independent_host",
+  "rotation_reattested": true,
+  "rotation_approved": true,
+  "process_death_proven": true,
+  "effects_reconciled": true
+ },
+ "scenarios": [
+  {
+   "id": "S-01",
+   "title": "Every precondition hypothetically satisfied: still no launcher exists",
+   "facts": {},
+   "expected": {
+    "decision": "NO_GO",
+    "code": "LAUNCHER_NOT_IMPLEMENTED"
+   }
+  },
+  {
+   "id": "S-02",
+   "title": "Same hypothetical preconditions for worker01 with Codex",
+   "facts": {
+    "host": "worker01",
+    "harness_selected": "codex",
+    "assignment_harness": "codex",
+    "scanner_corrected": true
+   },
+   "expected": {
+    "decision": "NO_GO",
+    "code": "LAUNCHER_NOT_IMPLEMENTED"
+   }
+  },
+  {
+   "id": "S-03",
+   "title": "No harness selected for the worker",
+   "facts": {
+    "harness_selected": null
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "HARNESS_UNSELECTED"
+   }
+  },
+  {
+   "id": "S-04",
+   "title": "Two harnesses selected at once",
+   "facts": {
+    "harness_selected": "both"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "HARNESS_AMBIGUOUS"
+   }
+  },
+  {
+   "id": "S-05",
+   "title": "Assignment names a different harness than the worker selection",
+   "facts": {
+    "assignment_harness": "codex"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "ASSIGNMENT_HARNESS_MISMATCH"
+   }
+  },
+  {
+   "id": "S-06",
+   "title": "Assignment bound to another worker or enrollment",
+   "facts": {
+    "worker_match": false
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "WORKER_MISMATCH"
+   }
+  },
+  {
+   "id": "S-07",
+   "title": "Selection epoch differs from assignment (rollback or stale)",
+   "facts": {
+    "epoch_match": false
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EPOCH_MISMATCH"
+   }
+  },
+  {
+   "id": "S-08",
+   "title": "Selection record not issued by the trusted operator path",
+   "facts": {
+    "selection_issuer_verified": false
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "SELECTION_UNAUTHENTICATED"
+   }
+  },
+  {
+   "id": "S-09",
+   "title": "Effective configuration digest differs from the pinned digest",
+   "facts": {
+    "config_digest_match": false
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "CONFIG_DIGEST_MISMATCH"
+   }
+  },
+  {
+   "id": "S-10",
+   "title": "Executable found by PATH lookup",
+   "facts": {
+    "exe_source": "path_lookup"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_NOT_PINNED"
+   }
+  },
+  {
+   "id": "S-11",
+   "title": "Executable resolved through a shell alias",
+   "facts": {
+    "exe_source": "alias"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_NOT_PINNED"
+   }
+  },
+  {
+   "id": "S-12",
+   "title": "Executable path taken from an environment variable",
+   "facts": {
+    "exe_source": "env_override"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_NOT_PINNED"
+   }
+  },
+  {
+   "id": "S-13",
+   "title": "Operator's personal installation used instead of the managed binary",
+   "facts": {
+    "exe_source": "personal_install"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_NOT_PINNED"
+   }
+  },
+  {
+   "id": "S-14",
+   "title": "Executable reopened by path after verification (swap race)",
+   "facts": {
+    "exec_binding": "path_reopen"
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_REOPEN_RACE"
+   }
+  },
+  {
+   "id": "S-15",
+   "title": "Executable SHA-256 differs from the pinned value",
+   "facts": {
+    "exe_hash_match": false
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "EXEC_HASH_MISMATCH"
+   }
+  },
+  {
+   "id": "S-16",
+   "title": "Release signature or provenance not verified",
+   "facts": {
+    "release_verified": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "RELEASE_UNVERIFIED"
+   }
+  },
+  {
+   "id": "S-17",
+   "title": "Candidate ELF, ABI or library closure not verified",
+   "facts": {
+    "elf_verified": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ELF_UNVERIFIED"
+   }
+  },
+  {
+   "id": "S-18",
+   "title": "Project CLAUDE.md or CLAUDE.local.md competes with AGENTS.md",
+   "facts": {
+    "project_instruction_conflict": true
+   },
+   "expected": {
+    "decision": "STOP",
+    "code": "INSTRUCTION_CONFLICT"
+   }
+  },
+  {
+   "id": "S-19",
+   "title": "Operator's user-level ~/.claude/CLAUDE.md present, otherwise ideal",
+   "facts": {
+    "user_level_claude_md": true
+   },
+   "expected": {
+    "decision": "NO_GO",
+    "code": "LAUNCHER_NOT_IMPLEMENTED"
+   }
+  },
+  {
+   "id": "S-20",
+   "title": "AGENTS.md load not observed in the actual session",
+   "facts": {
+    "agents_load_observed": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "LOAD_NOT_OBSERVED"
+   }
+  },
+  {
+   "id": "S-21",
+   "title": "HAR-04 scanner false positive not yet corrected (Claude)",
+   "facts": {
+    "scanner_corrected": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "SCANNER_UNCORRECTED"
+   }
+  },
+  {
+   "id": "S-22",
+   "title": "Parser compatibility with the official stream not verified",
+   "facts": {
+    "parser_wire_verified": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "PARSER_UNVERIFIED"
+   }
+  },
+  {
+   "id": "S-23",
+   "title": "Decision A (vendor permission) NOT_PROVEN",
+   "facts": {
+    "decision_a": "not_proven"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "VENDOR_NOT_PROVEN"
+   }
+  },
+  {
+   "id": "S-24",
+   "title": "Decision A BLOCKED for subscription automation",
+   "facts": {
+    "decision_a": "blocked"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "VENDOR_NOT_PROVEN"
+   }
+  },
+  {
+   "id": "S-25",
+   "title": "Decision B (isolation) not run",
+   "facts": {
+    "decision_b": "not_run"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ISOLATION_NOT_PROVEN"
+   }
+  },
+  {
+   "id": "S-26",
+   "title": "Decision B only DISPOSABLE_FIXTURE, not host evidence",
+   "facts": {
+    "decision_b": "disposable_fixture"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ISOLATION_NOT_PROVEN"
+   }
+  },
+  {
+   "id": "S-27",
+   "title": "Decision C missing for this worker",
+   "facts": {
+    "decision_c": "none"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "OPERATOR_NOT_APPROVED"
+   }
+  },
+  {
+   "id": "S-28",
+   "title": "Decision C inherited from the other worker",
+   "facts": {
+    "decision_c": "inherited"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "APPROVAL_INHERITED"
+   }
+  },
+  {
+   "id": "S-29",
+   "title": "Decision C approved for the previous epoch only",
+   "facts": {
+    "decision_c": "previous_epoch"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "OPERATOR_NOT_APPROVED"
+   }
+  },
+  {
+   "id": "S-30",
+   "title": "Ambient ANTHROPIC_API_KEY or equivalent in the environment",
+   "facts": {
+    "ambient_credential": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "AMBIENT_CREDENTIAL"
+   }
+  },
+  {
+   "id": "S-31",
+   "title": "API-key fallback configured after quota",
+   "facts": {
+    "api_fallback": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "API_FALLBACK_FORBIDDEN"
+   }
+  },
+  {
+   "id": "S-32",
+   "title": "OAuth relay, proxy or setup-token delivery by the platform",
+   "facts": {
+    "oauth_relay": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "OAUTH_RELAY_FORBIDDEN"
+   }
+  },
+  {
+   "id": "S-33",
+   "title": "Bypass-permissions or unknown flag present",
+   "facts": {
+    "unsafe_flag": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "UNSAFE_FLAG"
+   }
+  },
+  {
+   "id": "S-34",
+   "title": "Tool mediation incomplete (some route unmediated)",
+   "facts": {
+    "mediation_complete": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "MEDIATION_INCOMPLETE"
+   }
+  },
+  {
+   "id": "S-35",
+   "title": "Hooks, plugins or MCP servers not denied",
+   "facts": {
+    "hooks_plugins_mcp_denied": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "HOOKS_MCP_PLUGINS_ENABLED"
+   }
+  },
+  {
+   "id": "S-36",
+   "title": "BPF/AppArmor policy installed but inactive",
+   "facts": {
+    "enforcement": "inactive"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ENFORCEMENT_INACTIVE"
+   }
+  },
+  {
+   "id": "S-37",
+   "title": "Enforcement state unknown",
+   "facts": {
+    "enforcement": "unknown"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ENFORCEMENT_INACTIVE"
+   }
+  },
+  {
+   "id": "S-38",
+   "title": "Worker doctor evidence stale",
+   "facts": {
+    "doctor_fresh": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "HOST_EVIDENCE_STALE"
+   }
+  },
+  {
+   "id": "S-39",
+   "title": "A second attempt while one is active",
+   "facts": {
+    "active_attempts": 1
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ACTIVE_ATTEMPT_EXISTS"
+   }
+  },
+  {
+   "id": "S-40",
+   "title": "New attempt while an earlier outcome is UNKNOWN",
+   "facts": {
+    "unknown_outcome_retained": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "UNKNOWN_OUTCOME_RETAINED"
+   }
+  },
+  {
+   "id": "S-41",
+   "title": "Replay of an earlier assignment or task identity",
+   "facts": {
+    "replay": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "REPLAY_DENIED"
+   }
+  },
+  {
+   "id": "S-42",
+   "title": "Resume with a foreign-harness session",
+   "facts": {
+    "action": "resume",
+    "resume_cross": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "CROSS_HARNESS_RESUME_DENIED"
+   }
+  },
+  {
+   "id": "S-43",
+   "title": "Resume with every precondition satisfied: still no launcher",
+   "facts": {
+    "action": "resume"
+   },
+   "expected": {
+    "decision": "NO_GO",
+    "code": "LAUNCHER_NOT_IMPLEMENTED"
+   }
+  },
+  {
+   "id": "S-44",
+   "title": "Publisher or Signer material reachable from the provider or tool domain",
+   "facts": {
+    "publisher_reachable": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "PUBLISHER_REACHABLE"
+   }
+  },
+  {
+   "id": "S-45",
+   "title": "Readiness claimed from synthetic or disposable evidence",
+   "facts": {
+    "evidence_origin": "synthetic"
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "SYNTHETIC_NOT_PROOF"
+   }
+  },
+  {
+   "id": "S-46",
+   "title": "Task or model output asks to choose the harness",
+   "facts": {
+    "action": "task_selects_harness"
+   },
+   "expected": {
+    "decision": "DENY",
+    "code": "HARNESS_SWITCH_DENIED"
+   }
+  },
+  {
+   "id": "S-47",
+   "title": "Automatic switch to the other harness after a failure or quota",
+   "facts": {
+    "action": "switch_harness_on_failure"
+   },
+   "expected": {
+    "decision": "DENY",
+    "code": "HARNESS_SWITCH_DENIED"
+   }
+  },
+  {
+   "id": "S-48",
+   "title": "Harness identity asked to mark Ready or close the Issue",
+   "facts": {
+    "action": "claim_ready"
+   },
+   "expected": {
+    "decision": "DENY",
+    "code": "READY_NOT_HARNESS"
+   }
+  },
+  {
+   "id": "S-49",
+   "title": "Harness identity asked to merge",
+   "facts": {
+    "action": "merge"
+   },
+   "expected": {
+    "decision": "DENY",
+    "code": "MERGE_HUMAN_ONLY"
+   }
+  },
+  {
+   "id": "S-50",
+   "title": "Rotation requested with an attempt still active",
+   "facts": {
+    "action": "rotate_harness",
+    "active_attempts": 1
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ROTATION_NOT_DRAINED"
+   }
+  },
+  {
+   "id": "S-51",
+   "title": "Rotation requested with an UNKNOWN outcome retained",
+   "facts": {
+    "action": "rotate_harness",
+    "unknown_outcome_retained": true
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ROTATION_UNRECONCILED"
+   }
+  },
+  {
+   "id": "S-52",
+   "title": "Rotation without proof of process-tree death",
+   "facts": {
+    "action": "rotate_harness",
+    "process_death_proven": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "PROCESS_DEATH_UNPROVEN"
+   }
+  },
+  {
+   "id": "S-53",
+   "title": "Rotation without re-attestation of the new pins",
+   "facts": {
+    "action": "rotate_harness",
+    "rotation_reattested": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ROTATION_NOT_REATTESTED"
+   }
+  },
+  {
+   "id": "S-54",
+   "title": "Rotation without fresh operator approval",
+   "facts": {
+    "action": "rotate_harness",
+    "rotation_approved": false
+   },
+   "expected": {
+    "decision": "BLOCKED",
+    "code": "ROTATION_NOT_APPROVED"
+   }
+  },
+  {
+   "id": "S-55",
+   "title": "Rotation with every step satisfied: still not implemented",
+   "facts": {
+    "action": "rotate_harness"
+   },
+   "expected": {
+    "decision": "NO_GO",
+    "code": "ROTATION_NOT_IMPLEMENTED"
+   }
+  },
+  {
+   "id": "S-56",
+   "title": "Cancellation without process-tree death proof",
+   "facts": {
+    "action": "cancel",
+    "process_death_proven": false
+   },
+   "expected": {
+    "decision": "NEEDS_HUMAN",
+    "code": "CANCEL_UNCONFIRMED"
+   }
+  },
+  {
+   "id": "S-57",
+   "title": "Timeout with external effects not reconciled",
+   "facts": {
+    "action": "timeout",
+    "effects_reconciled": false
+   },
+   "expected": {
+    "decision": "NEEDS_HUMAN",
+    "code": "OUTCOME_UNKNOWN"
+   }
+  },
+  {
+   "id": "S-58",
+   "title": "Cancellation fully proven and reconciled: record only, no replay",
+   "facts": {
+    "action": "cancel"
+   },
+   "expected": {
+    "decision": "NO_GO",
+    "code": "LAUNCHER_NOT_IMPLEMENTED"
+   }
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+{
+  "schema": "AP-CLAUDE-EVENTS/1",
+  "cli_version": "2.1.295",
+  "scope": "SOURCE_ONLY_OFFLINE_ONLY",
+  "release": {
+    "tag": "v2.1.295",
+    "source_reference_commit": "602df92bf481ed904533e95c09f740f40aab5aed",
+    "url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.295",
+    "binary_verified": false,
+    "binary_schema_compatibility": "NOT_RUN"
+  },
+  "documentation": {
+    "observed_date": "2026-11-16",
+    "version_frozen": false,
+    "urls": [
+      "https://code.claude.com/docs/en/cli-reference",
+      "https://code.claude.com/docs/en/headless",
+      "https://code.claude.com/docs/en/agent-sdk/typescript",
+      "https://platform.claude.com/docs/en/build-with-claude/streaming"
+    ],
+    "use": "STATIC_REFERENCE_ONLY_NO_SDK_OR_API_CALLS"
+  },
+  "formats": [
+    "json",
+    "stream-json"
+  ],
+  "native_discriminators": [
+    "system:init",
+    "assistant",
+    "user",
+    "result:success",
+    "result:error_during_execution",
+    "result:error_max_turns",
+    "result:error_max_budget_usd",
+    "result:error_max_structured_output_retries",
+    "system:permission_denied",
+    "rate_limit_event",
+    "system:task_started",
+    "system:task_notification",
+    "stream_event"
+  ],
+  "partial_text_discriminators": [
+    "message_start",
+    "content_block_start",
+    "content_block_delta:text_delta",
+    "content_block_stop",
+    "message_delta",
+    "message_stop"
+  ],
+  "unknown_fields": "REJECT_EXCEPT_EXPLICIT_BOUNDED_OPAQUE_CONTENT_ISLANDS",
+  "session_namespace": "claude_code",
+  "native_id_policy": "CANONICAL_UUID_V4_PROJECT_RESTRICTION",
+  "continuation": "TYPED_EXACT_PAUSED_CHECKPOINT_COMPARISON_ONLY",
+  "fork": "UNSUPPORTED_BLOCKED",
+  "limits": {
+    "event_bytes": 16384,
+    "stream_bytes": 1048576,
+    "events": 512,
+    "json_depth": 8,
+    "nodes": 4096,
+    "collection_items": 256,
+    "text_characters": 8192,
+    "correlations": 128,
+    "parser_seconds": 2.0,
+    "fixture_duration_ms": 15000
+  },
+  "protocol_states": [
+    "PASS",
+    "FAIL"
+  ],
+  "outcome_states": [
+    "COMPLETED",
+    "PAUSED",
+    "UNKNOWN"
+  ],
+  "diagnostics": [
+    "NONE",
+    "PROTOCOL_INVALID",
+    "BINDING_MISMATCH",
+    "RESOURCE_LIMIT",
+    "EVENT_REPLAY",
+    "INCOMPLETE_STREAM",
+    "UNRESOLVED_TOOL",
+    "UNSUPPORTED_VARIANT",
+    "AUTH_ERROR",
+    "RATE_LIMIT",
+    "VENDOR_ERROR",
+    "TOOL_ERROR",
+    "TOOL_DENIED",
+    "CANCELLED",
+    "BACKGROUND_UNVERIFIED",
+    "EFFECTS_UNVERIFIED",
+    "INTERRUPTED"
+  ],
+  "report_schema": "AP-CLAUDE-REPORT/1",
+  "report_fields": [
+    "schema",
+    "profile",
+    "cli_version",
+    "protocol",
+    "outcome",
+    "diagnostic",
+    "event",
+    "session",
+    "event_count",
+    "evidence",
+    "host_evidence",
+    "effects",
+    "runtime",
+    "subscription",
+    "gate_73",
+    "runtime_exit_code",
+    "launch_allowed",
+    "resume_authorized",
+    "publish_authorized"
+  ],
+  "launch_allowed": false,
+  "resume_authorized": false,
+  "host_evidence": "HOST_NOT_RUN",
+  "runtime_exit_code": 13
+}

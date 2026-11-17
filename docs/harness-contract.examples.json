@@ -1,0 +1,188 @@
+{
+  "codex": {
+    "selection": {
+      "schema": "AP-HSEL/1",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "codex",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "issuer_ref": "operator_fixture",
+      "approval_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "previous_selection_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "continuity_witness_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "state": "SELECTED",
+      "launch_allowed": false
+    },
+    "assignment": {
+      "schema": "AP-HASSIGN/1",
+      "assignment_ref": "attempt_fixture",
+      "selection_sha256": "de3c7e6e4a725673ab9f352ecabbf8e3d24ad8d8899c6bcd0515befc22604382",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "codex",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "task_authorization_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+      "model_policy_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "account_policy_ref": "codex_account_fixture",
+      "launch_allowed": false
+    },
+    "session": {
+      "schema": "AP-HSESSION/1",
+      "session_ref": "session_fixture",
+      "assignment_sha256": "d422ad49bdee0ac7c496fe7da0e111906a70b23c82df1f6fadd519d4e9313f8a",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "codex",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "native_session_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "NEW",
+      "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "launch_allowed": false
+    },
+    "events": [
+      {
+        "schema": "AP-HEVENT/1",
+        "session_ref": "session_fixture",
+        "assignment_sha256": "d422ad49bdee0ac7c496fe7da0e111906a70b23c82df1f6fadd519d4e9313f8a",
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "codex",
+          "selection_epoch": 1,
+          "capability_revision": "AP-HCAP/1",
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "seq": 1,
+        "state": "BLOCKED",
+        "reason": "ISOLATION_UNVERIFIED",
+        "usage": "UNAVAILABLE",
+        "launch_allowed": false
+      }
+    ]
+  },
+  "claude_code": {
+    "selection": {
+      "schema": "AP-HSEL/1",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "claude_code",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "issuer_ref": "operator_fixture",
+      "approval_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "previous_selection_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "continuity_witness_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "state": "SELECTED",
+      "launch_allowed": false
+    },
+    "assignment": {
+      "schema": "AP-HASSIGN/1",
+      "assignment_ref": "attempt_fixture",
+      "selection_sha256": "15c5788599fb19d008467ca8a3b340bd8c29684bdd09be195724e8cbd9ba20c7",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "claude_code",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "task_authorization_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+      "model_policy_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "account_policy_ref": "claude_code_account_fixture",
+      "launch_allowed": false
+    },
+    "session": {
+      "schema": "AP-HSESSION/1",
+      "session_ref": "session_fixture",
+      "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+      "binding": {
+        "worker_ref": "worker_fixture",
+        "enrollment_ref": "boot_fixture",
+        "harness_id": "claude_code",
+        "selection_epoch": 1,
+        "capability_revision": "AP-HCAP/1",
+        "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+        "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "native_session_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "NEW",
+      "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "launch_allowed": false
+    },
+    "events": [
+      {
+        "schema": "AP-HEVENT/1",
+        "session_ref": "session_fixture",
+        "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "claude_code",
+          "selection_epoch": 1,
+          "capability_revision": "AP-HCAP/1",
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "seq": 1,
+        "state": "BLOCKED",
+        "reason": "ISOLATION_UNVERIFIED",
+        "usage": "UNAVAILABLE",
+        "launch_allowed": false
+      }
+    ]
+  }
+}

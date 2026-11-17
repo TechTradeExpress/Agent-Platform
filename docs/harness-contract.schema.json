@@ -1,0 +1,481 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TechTradeExpress/Agent-Platform/blob/main/docs/harness-contract.schema.json",
+  "title": "AP-HAR/1 proposed offline design records; no admission authority",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/selection"
+    },
+    {
+      "$ref": "#/$defs/assignment"
+    },
+    {
+      "$ref": "#/$defs/session"
+    },
+    {
+      "$ref": "#/$defs/event"
+    },
+    {
+      "$ref": "#/$defs/matrix"
+    }
+  ],
+  "$defs": {
+    "HarnessId": {
+      "enum": [
+        "codex",
+        "claude_code"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "public_ref": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "positive_integer": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "worker_ref",
+        "enrollment_ref",
+        "harness_id",
+        "selection_epoch",
+        "capability_revision",
+        "capability_matrix_sha256",
+        "configuration_sha256",
+        "executable_manifest_sha256",
+        "parser_sha256",
+        "instructions_sha256",
+        "isolation_profile_sha256"
+      ],
+      "properties": {
+        "worker_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "enrollment_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "harness_id": {
+          "$ref": "#/$defs/HarnessId"
+        },
+        "selection_epoch": {
+          "$ref": "#/$defs/positive_integer"
+        },
+        "capability_revision": {
+          "const": "AP-HCAP/1"
+        },
+        "capability_matrix_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "configuration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "executable_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "parser_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "instructions_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "isolation_profile_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "binding",
+        "issuer_ref",
+        "approval_sha256",
+        "previous_selection_sha256",
+        "continuity_witness_sha256",
+        "state",
+        "launch_allowed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "AP-HSEL/1"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "issuer_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "approval_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "previous_selection_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "continuity_witness_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "state": {
+          "enum": [
+            "SELECTED",
+            "QUIESCING",
+            "RECONCILING",
+            "BLOCKED"
+          ]
+        },
+        "launch_allowed": {
+          "const": false
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "assignment_ref",
+        "selection_sha256",
+        "binding",
+        "task_authorization_sha256",
+        "model_policy_sha256",
+        "account_policy_ref",
+        "launch_allowed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "AP-HASSIGN/1"
+        },
+        "assignment_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "selection_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "task_authorization_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "model_policy_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "account_policy_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "launch_allowed": {
+          "const": false
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "session_ref",
+        "assignment_sha256",
+        "binding",
+        "native_session_sha256",
+        "mode",
+        "parent_checkpoint_sha256",
+        "launch_allowed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "AP-HSESSION/1"
+        },
+        "session_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "assignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "native_session_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mode": {
+          "enum": [
+            "NEW",
+            "RESUME"
+          ]
+        },
+        "parent_checkpoint_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "launch_allowed": {
+          "const": false
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "mode": {
+              "const": "NEW"
+            },
+            "parent_checkpoint_sha256": {
+              "const": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "properties": {
+            "mode": {
+              "const": "RESUME"
+            },
+            "parent_checkpoint_sha256": {
+              "not": {
+                "const": "0000000000000000000000000000000000000000000000000000000000000000"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "session_ref",
+        "assignment_sha256",
+        "binding",
+        "seq",
+        "state",
+        "reason",
+        "usage",
+        "launch_allowed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "AP-HEVENT/1"
+        },
+        "session_ref": {
+          "$ref": "#/$defs/public_ref"
+        },
+        "assignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "seq": {
+          "$ref": "#/$defs/positive_integer"
+        },
+        "state": {
+          "enum": [
+            "STARTING",
+            "RUNNING",
+            "COMPLETED",
+            "PAUSED",
+            "NEEDS_HUMAN",
+            "BLOCKED"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "NONE",
+            "NATIVE_TURN_FAILED",
+            "PROTOCOL_INVALID",
+            "OUTCOME_UNKNOWN",
+            "CANCEL_UNCONFIRMED",
+            "RESOURCE_LIMIT",
+            "AUTH_UNVERIFIED",
+            "BINDING_MISMATCH",
+            "SELECTION_UNVERIFIED",
+            "CAPABILITY_UNVERIFIED",
+            "ISOLATION_UNVERIFIED"
+          ]
+        },
+        "usage": {
+          "const": "UNAVAILABLE"
+        },
+        "launch_allowed": {
+          "const": false
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "state": {
+              "enum": [
+                "STARTING",
+                "RUNNING",
+                "COMPLETED"
+              ]
+            },
+            "reason": {
+              "const": "NONE"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "PAUSED"
+            },
+            "reason": {
+              "const": "NATIVE_TURN_FAILED"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "NEEDS_HUMAN"
+            },
+            "reason": {
+              "enum": [
+                "PROTOCOL_INVALID",
+                "OUTCOME_UNKNOWN",
+                "CANCEL_UNCONFIRMED",
+                "RESOURCE_LIMIT",
+                "AUTH_UNVERIFIED"
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "BLOCKED"
+            },
+            "reason": {
+              "enum": [
+                "BINDING_MISMATCH",
+                "SELECTION_UNVERIFIED",
+                "CAPABILITY_UNVERIFIED",
+                "ISOLATION_UNVERIFIED"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "scope",
+        "codex",
+        "claude_code",
+        "launch_allowed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "AP-HCAP/1"
+        },
+        "scope": {
+          "const": "DESIGN_ONLY"
+        },
+        "codex": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "native_event_parser",
+            "exact_managed_build_parser_compatibility",
+            "native_session_resume",
+            "root_agents_loading",
+            "official_executable_provenance",
+            "complete_tool_auth_isolation",
+            "process_tree_death",
+            "native_account_eligibility",
+            "product_execution"
+          ],
+          "properties": {
+            "native_event_parser": {
+              "const": "OFFLINE_CONTRACT"
+            },
+            "exact_managed_build_parser_compatibility": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "native_session_resume": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "root_agents_loading": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "official_executable_provenance": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "complete_tool_auth_isolation": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "process_tree_death": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "native_account_eligibility": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "product_execution": {
+              "const": "BLOCKED"
+            }
+          }
+        },
+        "claude_code": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "native_event_parser",
+            "exact_managed_build_parser_compatibility",
+            "native_session_resume",
+            "root_agents_loading",
+            "official_executable_provenance",
+            "complete_tool_auth_isolation",
+            "process_tree_death",
+            "native_account_eligibility",
+            "product_execution"
+          ],
+          "properties": {
+            "native_event_parser": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "exact_managed_build_parser_compatibility": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "native_session_resume": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "root_agents_loading": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "official_executable_provenance": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "complete_tool_auth_isolation": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "process_tree_death": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "native_account_eligibility": {
+              "const": "REQUIRED_UNVERIFIED"
+            },
+            "product_execution": {
+              "const": "BLOCKED"
+            }
+          }
+        },
+        "launch_allowed": {
+          "const": false
+        }
+      }
+    }
+  }
+}

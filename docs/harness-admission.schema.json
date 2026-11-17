@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AP-HAR-ADVICE/1: offline binding comparison, never authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "reason",
+    "assignment_sha256",
+    "selection_sha256",
+    "capabilities_sha256",
+    "inventory_sha256",
+    "evidence",
+    "host_evidence",
+    "runtime",
+    "subscription",
+    "gate_73",
+    "runtime_exit_code",
+    "reserved",
+    "prepare_authorized",
+    "launch_allowed",
+    "resume_authorized",
+    "publish_authorized"
+  ],
+  "properties": {
+    "schema": {
+      "const": "AP-HAR-ADVICE/1"
+    },
+    "status": {
+      "enum": [
+        "BLOCKED",
+        "OFFLINE_BINDING_MATCH"
+      ]
+    },
+    "reason": {
+      "enum": [
+        "assignment_replayed",
+        "authorization_mismatch",
+        "binding_mismatch",
+        "binding_snapshot_only",
+        "capability_mismatch",
+        "capability_unverified",
+        "continuity_mismatch",
+        "invalid_contract",
+        "inventory_incomplete",
+        "inventory_inconsistent",
+        "legacy_codex_only",
+        "legacy_mismatch",
+        "selection_unapproved",
+        "selection_unavailable",
+        "snapshot_drift",
+        "stale_snapshot",
+        "worker_busy_or_unknown",
+        "wrong_worker"
+      ]
+    },
+    "assignment_sha256": {
+      "oneOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      ]
+    },
+    "selection_sha256": {
+      "oneOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      ]
+    },
+    "capabilities_sha256": {
+      "oneOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      ]
+    },
+    "inventory_sha256": {
+      "oneOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      ]
+    },
+    "evidence": {
+      "const": "VERIFIED_OFFLINE"
+    },
+    "host_evidence": {
+      "const": "HOST_NOT_RUN"
+    },
+    "runtime": {
+      "const": "LIVE_NO_GO"
+    },
+    "subscription": {
+      "const": "SUBSCRIPTION_ISOLATION_BLOCKED"
+    },
+    "gate_73": {
+      "const": "BLOCKED"
+    },
+    "runtime_exit_code": {
+      "const": 13
+    },
+    "reserved": {
+      "const": false
+    },
+    "prepare_authorized": {
+      "const": false
+    },
+    "launch_allowed": {
+      "const": false
+    },
+    "resume_authorized": {
+      "const": false
+    },
+    "publish_authorized": {
+      "const": false
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "status": {
+          "const": "BLOCKED"
+        },
+        "reason": {
+          "enum": [
+            "assignment_replayed",
+            "authorization_mismatch",
+            "binding_mismatch",
+            "capability_mismatch",
+            "capability_unverified",
+            "continuity_mismatch",
+            "invalid_contract",
+            "inventory_incomplete",
+            "inventory_inconsistent",
+            "legacy_codex_only",
+            "legacy_mismatch",
+            "selection_unapproved",
+            "selection_unavailable",
+            "snapshot_drift",
+            "stale_snapshot",
+            "worker_busy_or_unknown",
+            "wrong_worker"
+          ]
+        },
+        "assignment_sha256": {
+          "const": null
+        },
+        "selection_sha256": {
+          "const": null
+        },
+        "capabilities_sha256": {
+          "const": null
+        },
+        "inventory_sha256": {
+          "const": null
+        }
+      }
+    },
+    {
+      "properties": {
+        "status": {
+          "const": "OFFLINE_BINDING_MATCH"
+        },
+        "reason": {
+          "const": "binding_snapshot_only"
+        },
+        "assignment_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "selection_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "capabilities_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      }
+    }
+  ]
+}

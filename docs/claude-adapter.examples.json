@@ -1,0 +1,270 @@
+{
+  "schema": "AP-CLAUDE-EXAMPLES/1",
+  "provenance": "SYNTHETIC_NOT_CAPTURED",
+  "cases": {
+    "complete": {
+      "report": {
+        "schema": "AP-CLAUDE-REPORT/1",
+        "profile": "AP-CLAUDE-EVENTS/1",
+        "cli_version": "2.1.295",
+        "protocol": "PASS",
+        "outcome": "COMPLETED",
+        "diagnostic": "NONE",
+        "event": {
+          "schema": "AP-HEVENT/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "seq": 3,
+          "state": "COMPLETED",
+          "reason": "NONE",
+          "usage": "UNAVAILABLE",
+          "launch_allowed": false
+        },
+        "session": {
+          "schema": "AP-HSESSION/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "native_session_sha256": "20f4e1f82f1120791f580a37e08bfe27831d103894d2f4d30b938bcab1d00bd2",
+          "mode": "NEW",
+          "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "launch_allowed": false
+        },
+        "event_count": 3,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "effects": "FIXTURE_QUIESCENT",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "tool_denied": {
+      "report": {
+        "schema": "AP-CLAUDE-REPORT/1",
+        "profile": "AP-CLAUDE-EVENTS/1",
+        "cli_version": "2.1.295",
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "TOOL_DENIED",
+        "event": {
+          "schema": "AP-HEVENT/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "seq": 3,
+          "state": "NEEDS_HUMAN",
+          "reason": "OUTCOME_UNKNOWN",
+          "usage": "UNAVAILABLE",
+          "launch_allowed": false
+        },
+        "session": {
+          "schema": "AP-HSESSION/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "native_session_sha256": "20f4e1f82f1120791f580a37e08bfe27831d103894d2f4d30b938bcab1d00bd2",
+          "mode": "NEW",
+          "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "launch_allowed": false
+        },
+        "event_count": 6,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "effects": "UNKNOWN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "background": {
+      "report": {
+        "schema": "AP-CLAUDE-REPORT/1",
+        "profile": "AP-CLAUDE-EVENTS/1",
+        "cli_version": "2.1.295",
+        "protocol": "PASS",
+        "outcome": "UNKNOWN",
+        "diagnostic": "BACKGROUND_UNVERIFIED",
+        "event": {
+          "schema": "AP-HEVENT/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "seq": 3,
+          "state": "NEEDS_HUMAN",
+          "reason": "OUTCOME_UNKNOWN",
+          "usage": "UNAVAILABLE",
+          "launch_allowed": false
+        },
+        "session": {
+          "schema": "AP-HSESSION/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "native_session_sha256": "20f4e1f82f1120791f580a37e08bfe27831d103894d2f4d30b938bcab1d00bd2",
+          "mode": "NEW",
+          "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "launch_allowed": false
+        },
+        "event_count": 8,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "effects": "UNKNOWN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "json_complete": {
+      "report": {
+        "schema": "AP-CLAUDE-REPORT/1",
+        "profile": "AP-CLAUDE-EVENTS/1",
+        "cli_version": "2.1.295",
+        "protocol": "PASS",
+        "outcome": "COMPLETED",
+        "diagnostic": "NONE",
+        "event": {
+          "schema": "AP-HEVENT/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "seq": 3,
+          "state": "COMPLETED",
+          "reason": "NONE",
+          "usage": "UNAVAILABLE",
+          "launch_allowed": false
+        },
+        "session": {
+          "schema": "AP-HSESSION/1",
+          "session_ref": "claude_fixture_session",
+          "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+          "binding": {
+            "worker_ref": "worker_fixture",
+            "enrollment_ref": "boot_fixture",
+            "harness_id": "claude_code",
+            "selection_epoch": 1,
+            "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+            "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+            "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+            "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "capability_revision": "AP-HCAP/1"
+          },
+          "native_session_sha256": "20f4e1f82f1120791f580a37e08bfe27831d103894d2f4d30b938bcab1d00bd2",
+          "mode": "NEW",
+          "parent_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "launch_allowed": false
+        },
+        "event_count": 1,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "effects": "FIXTURE_QUIESCENT",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    }
+  }
+}

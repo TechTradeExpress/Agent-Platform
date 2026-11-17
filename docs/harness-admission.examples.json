@@ -1,0 +1,182 @@
+{
+  "schema": "AP-HAR-FIXTURES/1",
+  "evidence": "EXAMPLE_ONLY",
+  "cases": {
+    "codex": {
+      "selection": {
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "codex",
+          "selection_epoch": 1,
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "capability_revision": "AP-HCAP/1"
+        },
+        "issuer_ref": "operator_fixture",
+        "approval_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+        "previous_selection_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "continuity_witness_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+        "state": "SELECTED",
+        "schema": "AP-HSEL/1",
+        "launch_allowed": false
+      },
+      "assignment": {
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "codex",
+          "selection_epoch": 1,
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "capability_revision": "AP-HCAP/1"
+        },
+        "assignment_ref": "attempt_fixture",
+        "selection_sha256": "de3c7e6e4a725673ab9f352ecabbf8e3d24ad8d8899c6bcd0515befc22604382",
+        "task_authorization_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "model_policy_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "account_policy_ref": "codex_account_fixture",
+        "schema": "AP-HASSIGN/1",
+        "launch_allowed": false
+      },
+      "result": {
+        "schema": "AP-HAR-ADVICE/1",
+        "status": "OFFLINE_BINDING_MATCH",
+        "reason": "binding_snapshot_only",
+        "assignment_sha256": "d422ad49bdee0ac7c496fe7da0e111906a70b23c82df1f6fadd519d4e9313f8a",
+        "selection_sha256": "de3c7e6e4a725673ab9f352ecabbf8e3d24ad8d8899c6bcd0515befc22604382",
+        "capabilities_sha256": "237f7757d6449fe1ce2086d05d48eebcbbc09b248d39a18e4b1f10be1a8c9867",
+        "inventory_sha256": "13e435076f9030484de2e1ef037a5f1e3efd8ef179e9d6ff3072eaa481f82bc6",
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "reserved": false,
+        "prepare_authorized": false,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "claude_code": {
+      "selection": {
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "claude_code",
+          "selection_epoch": 1,
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "capability_revision": "AP-HCAP/1"
+        },
+        "issuer_ref": "operator_fixture",
+        "approval_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+        "previous_selection_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "continuity_witness_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+        "state": "SELECTED",
+        "schema": "AP-HSEL/1",
+        "launch_allowed": false
+      },
+      "assignment": {
+        "binding": {
+          "worker_ref": "worker_fixture",
+          "enrollment_ref": "boot_fixture",
+          "harness_id": "claude_code",
+          "selection_epoch": 1,
+          "capability_matrix_sha256": "532ef4fddbe588a86f4889ade20761a9b9c73b3f4a972a98468875b44c901e39",
+          "configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "executable_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "parser_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "instructions_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "isolation_profile_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "capability_revision": "AP-HCAP/1"
+        },
+        "assignment_ref": "attempt_fixture",
+        "selection_sha256": "15c5788599fb19d008467ca8a3b340bd8c29684bdd09be195724e8cbd9ba20c7",
+        "task_authorization_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "model_policy_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "account_policy_ref": "claude_code_account_fixture",
+        "schema": "AP-HASSIGN/1",
+        "launch_allowed": false
+      },
+      "result": {
+        "schema": "AP-HAR-ADVICE/1",
+        "status": "OFFLINE_BINDING_MATCH",
+        "reason": "binding_snapshot_only",
+        "assignment_sha256": "50df006100bb6af7d8244c1d559f1a250d31a896f5b1e598948d257fb61d09a8",
+        "selection_sha256": "15c5788599fb19d008467ca8a3b340bd8c29684bdd09be195724e8cbd9ba20c7",
+        "capabilities_sha256": "a8e78efb86ac67ea79da1cfd37868bc1cc17dde5fc5661973a316c20a84222d1",
+        "inventory_sha256": "cf71c9edea6aaf6e15318aa8b6c6c0c2e6b2235092f8097be2ffab5a3dc16e0b",
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "reserved": false,
+        "prepare_authorized": false,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "claude_parser_unverified": {
+      "result": {
+        "schema": "AP-HAR-ADVICE/1",
+        "status": "BLOCKED",
+        "reason": "capability_unverified",
+        "assignment_sha256": null,
+        "selection_sha256": null,
+        "capabilities_sha256": null,
+        "inventory_sha256": null,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "reserved": false,
+        "prepare_authorized": false,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    },
+    "stale_continuity": {
+      "result": {
+        "schema": "AP-HAR-ADVICE/1",
+        "status": "BLOCKED",
+        "reason": "continuity_mismatch",
+        "assignment_sha256": null,
+        "selection_sha256": null,
+        "capabilities_sha256": null,
+        "inventory_sha256": null,
+        "evidence": "VERIFIED_OFFLINE",
+        "host_evidence": "HOST_NOT_RUN",
+        "runtime": "LIVE_NO_GO",
+        "subscription": "SUBSCRIPTION_ISOLATION_BLOCKED",
+        "gate_73": "BLOCKED",
+        "runtime_exit_code": 13,
+        "reserved": false,
+        "prepare_authorized": false,
+        "launch_allowed": false,
+        "resume_authorized": false,
+        "publish_authorized": false
+      }
+    }
+  }
+}

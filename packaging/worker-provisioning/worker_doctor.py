@@ -18,6 +18,47 @@ import time
 PREFIX = "/usr/lib/agent-platform-worker/provisioning"
 DOC = "/usr/share/doc/agent-platform-worker"
 MANAGED_BASE = "/opt/agent-platform-codex"
+# HAR-04: separate managed Claude Code namespace. Observation only: the doctor
+# never selects, repairs, launches or authenticates either harness.
+CLAUDE_BASE = "/opt/agent-platform-claude"
+CLAUDE_COMMAND_DIRS = ("/usr/bin", "/usr/local/bin")
+CLAUDE_STORE_MARKER = {"schema": "AP-CLAUDE-STORE/1"}
+CLAUDE_OWNER = (0, 0)  # root:root; tests substitute explicitly, production has no flag
+HARNESS_CONFIG = "/etc/agent-platform-worker/harness.json"
+HARNESS_IDS = ("codex", "claude_code")
+# Mirrors provisioning/claude-release-lock.json (a test enforces equality).
+CLAUDE_PINS = {
+    "2.1.295": {
+        "binary_name": "claude",
+        "binary_sha256": (
+            "4503bfe11a6c7fcc1e0b39b5e0d347c04248f750b03b0977b3ad6b531fe6f358"
+        ),
+        "binary_size": 256113848,
+        "evidence": "evidence/claude-2.1.295-provenance.json",
+        "evidence_sha256": (
+            "9a2382d065fe2fd402da2fd449421bb7e78e38f2b73b30e43a32374ad2dd8f6b"
+        ),
+        "key_fingerprint": "31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE",
+        "key_sha256": (
+            "bd70a5e4a268002704024ceba7f8446024114e94f3f0bdd11c23a9e592be81c6"
+        ),
+        "manifest_sha256": (
+            "b36d7b376c95dd409212ecce0b700cd547266d9ea014ab1f81a1d5bc49cb3cbe"
+        ),
+        "platform": "linux-x64",
+        "signature_sha256": (
+            "7cc44851b80b692481cf986699276c4c14b4301b61aabf46682ad9224ab24c32"
+        ),
+        "version": "2.1.295",
+    }
+}
+CLAUDE_ARTIFACTS = (
+    "claude_version",
+    "claude_binary_sha256",
+    "claude_manifest_sha256",
+    "claude_release_pin_sha256",
+    "claude_effective_path",
+)
 ROLES = ("ap-publisher", "ap-publisher-signer")
 UNITS = ("ap-worker-publisher", "ap-worker-publisher-signer")
 BAD_ATTRS = {
@@ -58,7 +99,12 @@ network_observation_changed network_verification_required
 app_identity_not_authenticated operator_authorization_not_observed
 account_lock_not_observed diagnostic_timeout
 verified_job_access_metadata job_access_invalid
-job_namespace_evidence_missing credential_handoff_evidence_missing""".split()
+job_namespace_evidence_missing credential_handoff_evidence_missing
+verified_managed_claude claude_not_installed claude_verification_failed
+claude_verification_required foreign_claude_command claude_path_collision
+personal_claude_requires_exec_binding verified_harness_selection_record
+harness_selection_missing harness_selection_invalid
+harness_selection_changed""".split()
 )
 SCOPE_FAILURES = frozenset(
     """object_missing observation_denied observation_failed
@@ -74,6 +120,15 @@ SCOPE_REASONS = {
     },
     "caller_path": SCOPE_FAILURES
     | {"caller_path_only", "path_invalid", "path_shadowing"},
+    "claude_path": SCOPE_FAILURES
+    | {
+        "claude_verification_required",
+        "claude_path_collision",
+        "personal_claude_requires_exec_binding",
+        "coding_identity_invalid",
+        "coding_environment_scope_unverified",
+        "path_invalid",
+    },
 }
 
 CHECKS = (
@@ -98,6 +153,9 @@ CHECKS = (
     "job_access",
     "job_namespace",
     "credential_handoff",
+    "harness_selection",
+    "claude",
+    "claude_path",
 )
 DEFERRED_CHECKS = {
     "job_namespace": "job_namespace_evidence_missing",
@@ -433,9 +491,12 @@ class Observer:
         self._codex_policy = None
         self._managed_identity = None
         self._network_verified = None
+        self._selection = None
+        self._claude_identity = None
 
     def package(self):
         self.artifacts = None
+        self._claude_identity = None
         self._codex_identity = None
         self._codex_policy = None
         self._managed_identity = None
@@ -678,6 +739,18 @@ class Observer:
             == self._codex_identity,
             "codex_verification_required",
         )
+        home = self.coding_home()
+        # Only lstat the named candidate. No home/binary/session contents read.
+        need(
+            not self.exists_name(home.rstrip("/") + "/.local/bin/codex"),
+            "personal_codex_requires_exec_binding",
+        )
+        # No safe observation of the actual coding session PATH/aliases exists.
+        # Root's clean PATH, or even a matching caller UID/HOME, cannot fill it.
+        return "NOT_RUN", "coding_environment_scope_unverified"
+
+    @staticmethod
+    def coding_home():
         # Fixed public local account metadata, never NSS plugins or shell files.
         # A matching local record is still not authenticated session/NSS proof.
         rows = [
@@ -706,13 +779,247 @@ class Observer:
             and not {".", ".."}.intersection(home.split("/")),
             "coding_identity_invalid",
         )
-        # Only lstat the named candidate. No home/binary/session contents read.
+        return home
+
+    # ---- HAR-04: harness selection record and managed Claude toolchain ----
+
+    @staticmethod
+    def selection_record(raw):
+        record = parse(raw)
         need(
-            not self.exists_name(home.rstrip("/") + "/.local/bin/codex"),
-            "personal_codex_requires_exec_binding",
+            set(record) == {"schema", "harness_id", "selection_epoch"}
+            and record["schema"] == "AP-HARNESS-LOCAL/1"
+            and type(record["harness_id"]) is str
+            and record["harness_id"] in HARNESS_IDS
+            and type(record["selection_epoch"]) is int
+            and 0 < record["selection_epoch"] < 2**63,
+            "harness_selection_invalid",
         )
-        # No safe observation of the actual coding session PATH/aliases exists.
-        # Root's clean PATH, or even a matching caller UID/HOME, cannot fill it.
+        need(
+            raw
+            == (
+                json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+            ).encode(),
+            "harness_selection_invalid",
+        )
+        return record["harness_id"], record["selection_epoch"]
+
+    def harness_selection(self):
+        """Operator-written local record; unauthenticated, never AP-HSEL/1."""
+        self._selection = None
+        try:
+            raw = read(HARNESS_CONFIG, 4096)
+        except FileNotFoundError:
+            return "NOT_RUN", "harness_selection_missing"
+        harness, epoch = self.selection_record(raw)
+        self._selection = (harness, epoch, hashlib.sha256(raw).hexdigest())
+        return "CONFIGURED", "verified_harness_selection_record"
+
+    def selection_unchanged(self):
+        """A second read must match the first; drift invalidates the selection."""
+        if self._selection is None:
+            return True
+        try:
+            raw = read(HARNESS_CONFIG, 4096)
+            return (
+                self.selection_record(raw) == self._selection[:2]
+                and hashlib.sha256(raw).hexdigest() == self._selection[2]
+            )
+        except (Blocked, OSError, ValueError):
+            return False
+
+    @staticmethod
+    def claude_key(pin):
+        return pin["version"] + "-" + pin["binary_sha256"]
+
+    @staticmethod
+    def claude_encoded(value):
+        return (
+            json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+
+    def claude_record(self, pin):
+        return {
+            "schema": "AP-CLAUDE-INSTALL/1",
+            "version": pin["version"],
+            "release_pin_sha256": hashlib.sha256(self.claude_encoded(pin)).hexdigest(),
+            "binary_sha256": pin["binary_sha256"],
+            "binary_size": pin["binary_size"],
+            "manifest_sha256": pin["manifest_sha256"],
+            "purpose": "toolchain_inventory_only",
+        }
+
+    @staticmethod
+    def read_at(parent, name, limit, mode=0o644):
+        fd = os.open(name, FLAGS, dir_fd=parent)
+        try:
+            before = meta(fd, mode=mode)
+            need(0 < before.st_size <= limit, "invalid_record")
+            data = os.read(fd, limit + 1)
+            need(
+                len(data) == before.st_size
+                and stamp(before) == stamp(os.fstat(fd))
+                and stamp(before)
+                == stamp(os.stat(name, dir_fd=parent, follow_symlinks=False)),
+                "object_changed",
+            )
+            return data
+        finally:
+            os.close(fd)
+
+    @staticmethod
+    def claude_binary(parent, pin):
+        """Stream-hash the root-owned binary; never execute or modify it."""
+        fd = os.open("claude", FLAGS, dir_fd=parent)
+        try:
+            before = meta(fd, mode=0o755)
+            need(before.st_size == pin["binary_size"], "claude_verification_failed")
+            digest, total, head = hashlib.sha256(), 0, b""
+            end = time.monotonic() + 120
+            while True:
+                need(time.monotonic() < end, "diagnostic_timeout")
+                chunk = os.read(fd, 1048576)
+                if not chunk:
+                    break
+                total += len(chunk)
+                need(total <= pin["binary_size"], "claude_verification_failed")
+                head = head or chunk[:64]
+                digest.update(chunk)
+            need(
+                total == pin["binary_size"]
+                and digest.hexdigest() == pin["binary_sha256"]
+                and stamp(before) == stamp(meta(fd, mode=0o755))
+                and stamp(before)
+                == stamp(os.stat("claude", dir_fd=parent, follow_symlinks=False)),
+                "claude_verification_failed",
+            )
+            # Header sanity only; dynamic closure/ABI is NOT_RUN for this vendor binary.
+            need(
+                head[:7] == b"\x7fELF\x02\x01\x01" and head[18:20] == b"\x3e\x00",
+                "claude_verification_failed",
+            )
+        finally:
+            os.close(fd)
+
+    def claude(self):
+        """Managed Claude toolchain identity: inventory only, never selection."""
+        self._claude_identity = None
+        if self.artifacts is not None:
+            for name in CLAUDE_ARTIFACTS:
+                self.artifacts.pop(name, None)
+        need(self.artifacts is not None, "package_verification_required")
+        try:
+            with directory(CLAUDE_BASE) as root:
+                key, pin = self._claude_store(root)
+        except FileNotFoundError:
+            return "NOT_RUN", "claude_not_installed"
+        except PermissionError:
+            raise
+        except OSError as exc:
+            raise Blocked("claude_verification_failed") from exc
+        for folder in CLAUDE_COMMAND_DIRS:
+            need(
+                not self.exists_name(folder + "/claude"),
+                "foreign_claude_command",
+            )
+        path = CLAUDE_BASE + "/versions/" + key + "/claude"
+        values = {
+            "claude_version": pin["version"],
+            "claude_binary_sha256": pin["binary_sha256"],
+            "claude_manifest_sha256": pin["manifest_sha256"],
+            "claude_release_pin_sha256": hashlib.sha256(
+                self.claude_encoded(pin)
+            ).hexdigest(),
+            "claude_effective_path": path,
+        }
+        self.artifacts.update(values)
+        self._claude_identity = tuple(values.values())
+        return "INSTALLED", "verified_managed_claude"
+
+    def _claude_store(self, root):
+        try:
+            meta(root, mode=0o755, directory=True)
+            names = set(os.listdir(root))
+            # A pending transaction or temporary pointer is never accepted.
+            need(
+                {"store.json", "versions", "current"} == names,
+                "claude_verification_failed",
+            )
+            need(
+                self.read_at(root, "store.json", 4096)
+                == self.claude_encoded(CLAUDE_STORE_MARKER),
+                "claude_verification_failed",
+            )
+            known = {self.claude_key(p): p for p in CLAUDE_PINS.values()}
+            versions = os.open("versions", FLAGS | os.O_DIRECTORY, dir_fd=root)
+            try:
+                need(
+                    meta(versions, mode=0o755, directory=True).st_dev
+                    == os.fstat(root).st_dev,
+                    "claude_verification_failed",
+                )
+                entries = set(os.listdir(versions))
+                need(
+                    0 < len(entries) <= 3 and entries <= known.keys(),
+                    "claude_verification_failed",
+                )
+                for name in sorted(entries):
+                    folder = os.open(name, FLAGS | os.O_DIRECTORY, dir_fd=versions)
+                    try:
+                        meta(folder, mode=0o755, directory=True)
+                        need(
+                            set(os.listdir(folder)) == {"claude", "record.json"},
+                            "claude_verification_failed",
+                        )
+                        need(
+                            self.read_at(folder, "record.json", 8192)
+                            == self.claude_encoded(self.claude_record(known[name])),
+                            "claude_verification_failed",
+                        )
+                        self.claude_binary(folder, known[name])
+                    finally:
+                        os.close(folder)
+            finally:
+                os.close(versions)
+            target = os.readlink("current", dir_fd=root)
+            link = os.stat("current", dir_fd=root, follow_symlinks=False)
+            need(
+                stat.S_ISLNK(link.st_mode)
+                and (link.st_uid, link.st_gid, link.st_nlink) == (*CLAUDE_OWNER, 1)
+                and target.startswith("versions/")
+                and target[9:] in entries,
+                "claude_verification_failed",
+            )
+            return target[9:], known[target[9:]]
+        except PermissionError:
+            raise
+        except OSError as exc:  # Missing, link-swapped or otherwise unsafe object.
+            raise Blocked("claude_verification_failed") from exc
+
+    def claude_path(self):
+        """Names only: alternate `claude` commands, never HOME contents."""
+        need(self._claude_identity is not None, "claude_verification_required")
+        value = os.environ.get("PATH", "")
+        parts = value.split(":")
+        need(
+            0 < len(value) <= 4096
+            and len(parts) <= 32
+            and all(
+                p.startswith("/") and not {".", ".."}.intersection(p.split("/"))
+                for p in parts
+            ),
+            "path_invalid",
+        )
+        for part in parts:
+            need(
+                not self.exists_name(part.rstrip("/") + "/claude"),
+                "claude_path_collision",
+            )
+        home = self.coding_home()
+        need(
+            not self.exists_name(home.rstrip("/") + "/.local/bin/claude"),
+            "personal_claude_requires_exec_binding",
+        )
         return "NOT_RUN", "coding_environment_scope_unverified"
 
     def dependencies(self):
@@ -1134,6 +1441,45 @@ class Observer:
         return "NOT_RUN", "bpf_attachment_evidence_missing"
 
 
+def harness_summary(checks, observer):
+    """Per-harness toolchain facts. Installed tooling never selects or authorizes."""
+    selection = getattr(observer, "_selection", None)
+    if not (
+        type(selection) is tuple
+        and len(selection) == 3
+        and selection[0] in HARNESS_IDS
+        and checks["harness_selection"]["state"] == "CONFIGURED"
+    ):
+        selection = None
+    configured = selection[0] if selection is not None else None
+    claude = dict(checks["claude"])
+    if claude["state"] == "INSTALLED" and checks["claude_path"]["state"] == "BLOCKED":
+        claude = dict(checks["claude_path"])
+    toolchains = {"codex": dict(checks["codex"]), "claude_code": claude}
+    harnesses = {
+        name: {
+            "selected": name == configured,
+            "state": value["state"],
+            "reason": value["reason"],
+        }
+        for name, value in toolchains.items()
+    }
+    installed = [n for n, v in toolchains.items() if v["state"] == "INSTALLED"]
+    return {
+        "configured": configured,
+        "selection_epoch": selection[1] if selection is not None else None,
+        "selection_sha256": selection[2] if selection is not None else None,
+        "harnesses": harnesses,
+        "selected_toolchain": (
+            toolchains[configured]["state"] if configured is not None else None
+        ),
+        # Both installed: only the recorded selection counts; never auto-selected.
+        "alternate_toolchain_ignored": len(installed) == 2,
+        "auto_selection": "NEVER",
+        "launch_allowed": False,
+    }
+
+
 def report(observer):
     checks = {}
     for name in (
@@ -1144,6 +1490,9 @@ def report(observer):
         "bpf",
         "caller_path",
         "job_access",
+        "harness_selection",
+        "claude",
+        "claude_path",
     ):
         try:
             state, reason = getattr(observer, name)()
@@ -1180,10 +1529,20 @@ def report(observer):
         checks[name] = {"state": state, "reason": reason}
     for name, reason in DEFERRED_CHECKS.items():
         checks[name] = {"state": "NOT_RUN", "reason": reason}
+    if checks["harness_selection"]["state"] == "CONFIGURED" and (
+        not observer.selection_unchanged()
+    ):
+        # An unauthorized or concurrent change of the active harness is a block.
+        observer._selection = None
+        checks["harness_selection"] = {
+            "state": "BLOCKED",
+            "reason": "harness_selection_changed",
+        }
     return {
         "schema": "AP-WORKER-DOCTOR/1",
         "status": "BLOCKED",
         "checks": checks,
+        "harness": harness_summary(checks, observer),
         "artifacts": observer.artifacts,
         "launch_allowed": False,
         "installation": checks["package"]["state"],
