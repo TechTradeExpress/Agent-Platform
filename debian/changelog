@@ -1,3 +1,12 @@
+agent-platform (0.1.0-8) trixie; urgency=medium
+
+  * PKG-11: source-qualified two-role candidates after HAR integration.
+  * Pinned original -7 reconstruction and disposable -7 to -8 lifecycle.
+  * Exact -8 fixtures are CI_ONLY / NOT_RELEASED; final release blocked.
+  * No automatic provisioning, services, vendor tools or state migration.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Tue, 17 Nov 2026 00:00:00 +0000
+
 agent-platform (0.1.0-7) trixie; urgency=medium
 
   * PKG-09: distinct P1 upgrade revision after PKG-08.

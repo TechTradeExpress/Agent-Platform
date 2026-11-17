@@ -509,7 +509,7 @@ class Observer:
             and build.get("phase") == "P1_INSTALL_INERT"
             and re.fullmatch("[0-9a-f]{40}", build.get("source_commit", ""))
             and re.fullmatch(
-                r"0\.1\.0-(?:[5-9][0-9]*|7~git[0-9a-f]{40})",
+                r"0\.1\.0-(?:[5-9][0-9]*|[78]~git[0-9a-f]{40})",
                 build.get("debian_version", ""),
             ),
             "package_record_invalid",
@@ -522,6 +522,20 @@ class Observer:
                     and build.get("build_kind") == "candidate"
                     or build["debian_version"] == "0.1.0-7"
                     and build.get("build_kind") == "final-version-unreleased"
+                ),
+                "package_record_invalid",
+            )
+        if build["debian_version"].startswith("0.1.0-8"):
+            need(
+                re.fullmatch("[0-9a-f]{40}", build.get("source_tree", ""))
+                and build.get("release_authorized") is False
+                and (
+                    build["debian_version"] == "0.1.0-8~git" + build["source_commit"]
+                    and build.get("build_kind") == "candidate"
+                    and build.get("ci_only") is False
+                    or build["debian_version"] == "0.1.0-8"
+                    and build.get("build_kind") == "ci-final-fixture"
+                    and build.get("ci_only") is True
                 ),
                 "package_record_invalid",
             )

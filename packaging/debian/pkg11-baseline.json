@@ -1,0 +1,21 @@
+{
+  "schema": "AP-PKG11-HISTORICAL-SOURCE/1",
+  "source_commit": "0fbc940ae94144f8cc29c9a0fd98afc704f58168",
+  "source_tree": "222a6fc4925e10cf2891ae8c47034a72fc58a994",
+  "source_date_epoch": 1794855509,
+  "recipe_sha256": "c17ef3b4c9b969b7ee0615e32b2773f20099a837d3b1aa45d99b237fcd329d78",
+  "version": "0.1.0-7",
+  "evidence": "https://github.com/TechTradeExpress/Agent-Platform/issues/143#issuecomment-6927206193",
+  "installed_evidence": "https://github.com/TechTradeExpress/Agent-Platform/issues/143#issuecomment-6928307181",
+  "evidence_limit": "Reported PKG-10 hashes, not access to original archives or current installed state. Control manifest independently reconstructed from immutable source.",
+  "roles": {
+    "control": {
+      "archive_sha256": "ede90003c59151f1713e8888387065f9e9f5a9f9c902332c04fd2f9e4af7bb50",
+      "manifest_sha256": "1c74f9ec8653d568dbe91692b0688408f71b2a670adde0ea2200f709982c220e"
+    },
+    "worker": {
+      "archive_sha256": "91784281d9f9d438bcd48ee10dab45b73ab9bc1d93d44301efef7305cddbbfe0",
+      "manifest_sha256": "9174f8ee35499b76d9b9f781d64826029c22cd802e3223015a32e53040afcfa9"
+    }
+  }
+}

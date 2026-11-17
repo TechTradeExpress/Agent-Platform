@@ -1,6 +1,8 @@
-Current build/version/upgrade rules: [PKG-09](worker-pkg09-upgrade.md).
-Default candidates are `0.1.0-7~git<FULL_SHA>`; old revisions require the explicit
-`--synthetic-fixture` flag and are not deployable historical artifacts.
+Current build/version/upgrade rules: [PKG-11](worker-pkg11-upgrade.md).
+Default candidates are `0.1.0-8~git<FULL_SHA>`. Exact -8 fixtures require
+`--ci-final-fixture` and remain CI_ONLY / NOT_RELEASED. `--final-version` is
+blocked. Historical -7 is reconstructed only from its pinned original source
+and recipe; older synthetic profiles are not historical installed artifacts.
 
 # Inert Debian role candidates (PKG-02)
 
@@ -13,6 +15,9 @@ installs services/profiles or activates anything. `LIVE_NO_GO`, Gate #73,
 `SUBSCRIPTION_ISOLATION_BLOCKED` and public/native exit 13 remain unchanged.
 
 ## Build and inspect
+
+For ordinary current -8 candidates use the command in [PKG-11](worker-pkg11-upgrade.md).
+The explicit commands below retain synthetic P0 N/N+1 regression coverage.
 
 Use a clean committed checkout. The existing recipe exports the specified Git
 commit, validates version/dependencies and the closed module inventory, and
@@ -48,9 +53,9 @@ uploads, release signing and an APT feed remain separate work.
 
 ## Exact P0 contents and interfaces
 
-The builder's closed C/W/source-only inventories match ADR 007: **32 Control
-modules, 4 Worker modules, 21 source-only modules (the original 16 plus the five
-PUB-02 modules reserved for reviewed Worker P1 in #111)**. Application imports are
+The builder retains closed Control, Worker and SOURCE_ONLY module inventories
+under ADR 007 and its reviewed source amendments. HAR admission, Claude parser
+and instruction-source modules remain excluded from every role/phase archive. Application imports are
 parsed before staging; a cross-role import or unclassified top-level Python
 module blocks the build. `runtime_manifest` and `__init__` are the only source
 bytes duplicated, under different private roots. Worker has no Control CLI,
@@ -78,8 +83,8 @@ existing 384 MiB ceiling; that does not admit an executable or relax the legacy
 
 Control Depends: `python3 (>= 3.12), python3-cryptography (>= 43.0.0),
 python3-cryptography (<< 51), git, gh`. Worker Depends: `python3 (>= 3.12)` only.
-Both work without Codex. Future verified upstream acquisition is #116; account,
-service and Publisher provisioning is #111; read-only readiness is #112.
+Both work without Codex. P1 adds the separately reviewed explicit upstream
+acquisition (#116), provisioning (#111) and read-only diagnostics (#112).
 Installation alone grants none of their authority.
 
 ## Retiring the experimental package
@@ -99,9 +104,11 @@ files. Residual `/etc/agent-platform/package.conf` is retained and ignored;
 new role configs are not copied or interpreted from it.
 
 Package installation, configuration, confinement, credentials and activation
-are separate. There are **no preinst/postinst/prerm/postrm/triggers**, sysusers,
+are separate. P0 has **no preinst/postinst/prerm/postrm/triggers**, sysusers,
 tmpfiles, units or AppArmor files. No account, HOME, PATH, GitHub App, key,
-UNKNOWN journal, checkpoint, anchor, worktree or backup is touched.
+UNKNOWN journal, checkpoint, anchor, worktree or backup is touched by P0 install.
+P1 adds only its blocking pre-unpack collision guard and inert units/profiles;
+no configure/remove hook provisions state or starts services.
 
 ## Synthetic migration and lifecycle
 
@@ -146,7 +153,9 @@ See [local fixture evidence and limitations](debian-role-package-validation.md).
 Revisions -5/-6 intentionally extend only Worker with the closed Publisher,
 signer, exporter, vendor units/profiles and explicit root operator provisioning
 and #116 Codex commands. Control stays P0. Build with the same recipe and exact
-source SHA, using `--revision 5` or `--revision 6` (the current default). These
+source SHA and `--synthetic-fixture --revision 5` or `--synthetic-fixture --revision 6`.
+Current -8 retains P1 without changing state semantics; -5/-6 are historical test
+profiles, not the default. These
 synthetic candidates still do not authenticate, activate units, acquire Codex
 during dpkg or include its binary/dependency. Accounts and state require a
 separate approved command, never a maintainer script. See

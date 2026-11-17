@@ -1,3 +1,9 @@
+> **Historical PKG-09 contract:** current builds/version rules and the -7 to -8
+> successor are [PKG-11](worker-pkg11-upgrade.md). The old -7 recipe/commands below
+> describe the immutable pre-HAR source, not permission to emit -7 from current
+> source. Current `--final-version` is blocked. PKG-10 #143 operator reports are
+> historical evidence, not current host observation or new deployment authority.
+
 # PKG-09: Worker P1 version and offline upgrade contract (#138)
 
 SOURCE_ONLY / INSTALL_INERT / HOST_NOT_RUN / LIVE_NO_GO. No deployment or pilot
