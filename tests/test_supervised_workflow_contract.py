@@ -338,7 +338,7 @@ def test_development_doc_defines_three_modes_and_drops_the_main_only_prompt():
         "the parent feature branch",
         "If the mode is omitted it is B",
         "A rejected non-fast-forward push is a blocker",
-        "HAR series freeze",
+        "Historical HAR series freeze",
         "unmerged into `main`",
         "Using the other CLI is not an independent review",
     ):
@@ -523,8 +523,8 @@ def test_documents_separate_user_level_file_and_record_the_scanner_limitation():
         assert needle in agents, needle
     wf = FLAT["wf"].replace("`", "")
     for needle in (
-        "false alarm, correction deferred",
-        "intentionally unchanged here (HAR-04 is frozen)",
+        "HAR-POST-01 scanner correction",
+        "never caller-controlled HOME",
         "before any native-runtime readiness assessment",
         "is never read, moved or removed",
         "only in the context of this supervised development workflow",
@@ -534,26 +534,20 @@ def test_documents_separate_user_level_file_and_record_the_scanner_limitation():
         assert needle in wf, needle
 
 
-def operator_conflicts(root, home):
-    """Existence-only classification: project and ancestors, user file excluded."""
-    user_file = home / ".claude" / "CLAUDE.md"
-    hits = []
-    for directory in (root, *root.parents):
-        for name in ("CLAUDE.md", "CLAUDE.local.md", ".claude/CLAUDE.md"):
-            candidate = directory / name
-            if candidate.exists() and candidate != user_file:
-                hits.append(candidate)
-    return hits
+@pytest.fixture(autouse=True)
+def synthetic_account_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        instruction_sources, "_account_home", lambda: str(tmp_path / "home")
+    )
 
 
 def test_correct_classification_ignores_only_the_user_level_file(tmp_path):
     root = make_tree(tmp_path, ".claude/CLAUDE.md")
     home = tmp_path / "home"
     assert (home / ".claude" / "CLAUDE.md").exists()
-    assert operator_conflicts(root, home) == []
-    # the frozen HAR-04 scanner still raises the known false alarm
     report = instruction_sources.diagnose(root, "2.1.295")
-    assert report["result"] == "CONFLICT" and report["load_confirmed"] is False
+    assert report["result"] == "CONSISTENT_UNVERIFIED"
+    assert report["load_confirmed"] is False
 
 
 @pytest.mark.parametrize(
@@ -564,18 +558,15 @@ def test_real_project_conflict_is_still_detected_next_to_user_file(
     tmp_path, project_file
 ):
     root = make_tree(tmp_path, ".claude/CLAUDE.md")
-    home = tmp_path / "home"
     target = root / project_file
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("x\n")
-    assert operator_conflicts(root, home) == [target]
     assert instruction_sources.diagnose(root, "2.1.295")["result"] == "CONFLICT"
 
 
 def test_non_user_ancestor_file_is_a_conflict_without_the_user_file(tmp_path):
     root = make_tree(tmp_path, "CLAUDE.md")
-    home = tmp_path / "home"
-    assert operator_conflicts(root, home) == [home / "CLAUDE.md"]
+    assert instruction_sources.scan(root)["result"] == "CONFLICT"
 
 
 def test_user_level_file_content_is_never_needed(tmp_path):
@@ -584,7 +575,7 @@ def test_user_level_file_content_is_never_needed(tmp_path):
     user_file = home / ".claude" / "CLAUDE.md"
     user_file.chmod(0)
     try:
-        assert operator_conflicts(root, home) == []
+        assert instruction_sources.scan(root)["result"] == "CONSISTENT_UNVERIFIED"
     finally:
         user_file.chmod(0o600)
 
@@ -607,9 +598,7 @@ def make_tree(tmp_path, ancestor_file=None):
         (None, "CONSISTENT_UNVERIFIED", None),
         ("CLAUDE.md", "CONFLICT", "claude_md_in_ancestor"),
         ("CLAUDE.local.md", "CONFLICT", "claude_local_md_in_ancestor"),
-        # Conservative HAR-04 behaviour: the user-level file is also an ancestor
-        # ".claude/CLAUDE.md"; vendor docs exempt it. Documented as UNRESOLVED.
-        (".claude/CLAUDE.md", "CONFLICT", "claude_md_in_ancestor"),
+        (".claude/CLAUDE.md", "CONSISTENT_UNVERIFIED", None),
     ],
 )
 def test_instruction_scan_reports_conflicts_but_never_confirms_load(
@@ -631,3 +620,20 @@ def test_change_adds_no_runtime_code_or_second_policy():
     for source in (ROOT / "src").rglob("*.py"):
         text = source.read_text()
         assert "AP-SUPERVISED-SCENARIOS" not in text, source
+
+
+def test_current_entrypoints_record_integration_and_two_implemented_packages():
+    readme = (ROOT / "README.md").read_text()
+    roadmap = (DOCS / "worker-packaging-rollout.md").read_text()
+    for text in (readme, DEV, WF, roadmap):
+        assert "6560eec712139c20c9ede7ceab4feb8d3c63eff0" in text
+        assert "#150" in text and "closed unmerged" in text
+    for text in (readme, roadmap):
+        assert "agent-platform-control" in text and "agent-platform-worker" in text
+        assert "0.1.0-8" in text
+        assert "HOST_NOT_RUN" in text and "LIVE_NO_GO" in text
+    assert "it implements no package\nsplit" not in readme
+    for path in (ROOT / "README.md", DOCS / "worker-packaging-rollout.md"):
+        for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", path.read_text()):
+            if not target.startswith(("http://", "https://", "mailto:")):
+                assert (path.parent / target).resolve().exists()

@@ -167,14 +167,24 @@ no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` exists in the working d
 before 2.1.281 some sessions (Bedrock, telemetry disabled) read only `CLAUDE.md`.
 `~/.claude/CLAUDE.md` and managed CLAUDE.md do not count but still load alongside.
 
-`agent_platform.instruction_sources` (SOURCE_ONLY, pure, metadata only) implements
+`agent_platform.instruction_sources` (SOURCE_ONLY, read-only, metadata only) implements
 `diagnose(root, pinned_version)`:
 
 | Result | Meaning |
 | --- | --- |
-| `CONSISTENT_UNVERIFIED` | pinned version ≥ 2.1.281, exactly one regular single-link root `AGENTS.md`, no CLAUDE files in the worktree or ancestors, no nested/ancestor/`.claude` AGENTS files |
+| `CONSISTENT_UNVERIFIED` | pinned version ≥ 2.1.281, exactly one regular single-link root `AGENTS.md`, no project CLAUDE files in the worktree or ancestors, no nested/ancestor/`.claude` AGENTS files |
 | `CONFLICT` | any competing or duplicate source (reason codes such as `claude_md_in_ancestor`, `agents_md_nested`); AGENTS.md is **not** silently assumed to win |
-| `AGENTS_MD_MISSING`, `VERSION_BLOCKED`, `NOT_RUN` | missing file, version below the contract floor, or unreadable/over-limit scan |
+| `AGENTS_MD_MISSING`, `VERSION_BLOCKED`, `NOT_RUN` | missing file, version below the contract floor, or uncertain account identity/unreadable/over-limit scan |
+
+HAR-POST-01 (#151) identifies the personal memory location using OS account
+metadata, never `HOME`. Only an ancestor matching that account home is eligible
+for the `.claude/CLAUDE.md` exemption; the personal file itself is not probed or
+read. A home used as the worktree remains project-scoped; ancestor `AGENTS.md`
+is still a conflict. All other project/ancestor conflicts remain.
+Unknown identity yields `NOT_RUN` / `identity_unavailable`; invalid paths,
+symlink directories and inaccessible metadata also fail closed. No report paths,
+new presence flags or private content are disclosed. See the
+[diagnostic details](supervised-multi-harness-workflow.md#instruction-load-observation-claude-code).
 
 `load_confirmed` is always `false`: a consistent scan is not proof of loading.
 

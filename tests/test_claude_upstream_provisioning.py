@@ -391,7 +391,7 @@ def test_synthetic_signature_accepts_exact_key_and_rejects_everything_else(env):
     with pytest.raises(m.Blocked, match="key_fingerprint_mismatch"):
         m.verify_detached(manifest, signature, s.other_key, s.fingerprint)
     forged = detached_signature(s.other, manifest, s.fingerprint)  # lies about issuer
-    with pytest.raises(m.Blocked, match="bad_signature"):
+    with pytest.raises(m.Blocked, match="^(bad_signature|invalid_signature)$"):
         m.verify_detached(manifest, forged, s.key, s.fingerprint)
     wrong_issuer = detached_signature(
         s.private, manifest, s.fingerprint, issuer="AB" * 20

@@ -502,3 +502,117 @@ def test_real_filesystem_behaviour_is_unchanged(tree):
     (tree / "pkg").mkdir()
     (tree / "pkg" / "AGENTS.md").write_bytes(b"x")
     assert "agents_md_nested" in sources.scan(tree)["reasons"]
+
+
+@pytest.mark.parametrize(
+    "project", [None, "CLAUDE.md", "CLAUDE.local.md", ".claude/CLAUDE.md"]
+)
+def test_personal_memory_exemption_is_exact(tree, monkeypatch, project):
+    home = tree.parent.parent
+    monkeypatch.setattr(sources, "_account_home", lambda: str(home))
+    personal = home / ".claude/CLAUDE.md"
+    personal.parent.mkdir()
+    personal.write_bytes(b"private contents must never be read")
+    personal.chmod(0)
+    if project:
+        target = tree.parent / project
+        target.parent.mkdir(exist_ok=True)
+        target.write_bytes(b"project")
+    real_lstat = sources._lstat
+
+    def guarded(path):
+        assert str(path) != str(personal)  # Exemption does not inspect the file.
+        return real_lstat(path)
+
+    monkeypatch.setattr(sources, "_lstat", guarded)
+    report = sources.scan(tree)
+    assert report["result"] == ("CONFLICT" if project else "CONSISTENT_UNVERIFIED")
+    assert report["load_confirmed"] is False
+    assert str(home) not in json.dumps(report)
+
+
+def test_forged_home_cannot_exempt_project_ancestor(tree, monkeypatch):
+    monkeypatch.setenv("HOME", str(tree.parent))
+    (tree.parent / ".claude").mkdir()
+    (tree.parent / ".claude/CLAUDE.md").write_bytes(b"project")
+    assert sources.scan(tree)["result"] == "CONFLICT"
+
+
+@pytest.mark.parametrize("location", ["root", "ancestor"])
+def test_account_home_that_is_project_keeps_conflicts(tree, monkeypatch, location):
+    home = tree if location == "root" else tree.parent
+    monkeypatch.setattr(sources, "_account_home", lambda: str(home))
+    if location == "ancestor":
+        (home / "AGENTS.md").write_bytes(b"ancestor project policy")
+    (home / ".claude").mkdir()
+    (home / ".claude/CLAUDE.md").write_bytes(b"project")
+    assert sources.scan(tree)["result"] == "CONFLICT"
+
+
+def test_unavailable_account_identity_is_not_run(tree, monkeypatch):
+    def unavailable():
+        raise KeyError("private detail")
+
+    monkeypatch.setattr(sources, "_account_home", unavailable)
+    report = sources.scan(tree)
+    assert report["result"] == "NOT_RUN"
+    assert report["reasons"] == ["identity_unavailable"]
+    assert "private detail" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("home", ["", "relative", "/tmp/../other"])
+def test_invalid_account_home_is_not_run(tree, monkeypatch, home):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        sources.pwd, "getpwuid", lambda uid: SimpleNamespace(pw_dir=home)
+    )
+    assert sources.scan(tree)["result"] == "NOT_RUN"
+
+
+def test_symlink_claude_directory_is_not_followed(tree, monkeypatch):
+    target = tree.parent / "private"
+    target.mkdir()
+    (tree / ".claude").symlink_to(target, target_is_directory=True)
+    real_lstat = sources._lstat
+
+    def guarded(path):
+        assert not str(path).startswith(str(tree / ".claude") + "/")
+        return real_lstat(path)
+
+    monkeypatch.setattr(sources, "_lstat", guarded)
+    assert sources.scan(tree)["result"] == "NOT_RUN"
+
+
+def test_symlink_root_component_is_not_run(tree):
+    alias = tree.parent / "alias"
+    alias.symlink_to(tree, target_is_directory=True)
+    assert sources.scan(alias)["result"] == "NOT_RUN"
+
+
+def test_symlink_ancestor_is_rejected_before_probing_descendants(tree, monkeypatch):
+    alias = tree.parent / "alias"
+    alias.symlink_to(tree, target_is_directory=True)
+    real_lstat = sources._lstat
+
+    def guarded(path):
+        assert not str(path).startswith(str(alias) + "/")
+        return real_lstat(path)
+
+    monkeypatch.setattr(sources, "_lstat", guarded)
+    assert sources.scan(alias / "child")["result"] == "NOT_RUN"
+
+
+def test_account_lookup_uses_process_uid(tree, monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+
+    def lookup(uid):
+        calls.append(uid)
+        return SimpleNamespace(pw_dir=str(tree.parent.parent))
+
+    monkeypatch.setattr(sources.pwd, "getpwuid", lookup)
+    monkeypatch.setenv("HOME", str(tree.parent))
+    assert sources.scan(tree)["result"] == "CONSISTENT_UNVERIFIED"
+    assert calls == [os.getuid()]
