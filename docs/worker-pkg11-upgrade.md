@@ -1,3 +1,5 @@
+F-02 source/profile correction and later conffile handoff: [PKG-14](pkg14-publisher-apparmor.md). HOST_NOT_RUN; no activation authority.
+
 # PKG-11: uniquely identified -8 source and historical -7 upgrade evidence (#152)
 
 SOURCE_ONLY / INSTALL_INERT / NO_LIVE / LIVE_NO_GO / HOST_NOT_RUN.

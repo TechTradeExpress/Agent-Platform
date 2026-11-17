@@ -2,6 +2,26 @@
 profile ap-worker-publisher-signer /usr/libexec/ap-worker-publisher-signer flags=(attach_disconnected) {
   #include <abstractions/base>
   #include <abstractions/python>
+  # PKG-14: descriptor walks; r permits listing.
+  / r,
+  /etc/ r,
+  /etc/ap-publisher/ r,
+  /run/ r,
+  /run/credentials/ r,
+  /run/credentials/ap-worker-publisher-signer.service/ r,
+  /usr/ r,
+  /usr/lib/ r,
+  /usr/lib/ap-worker-publisher/ r,
+  /usr/lib/ap-worker-publisher/agent_platform/ r,
+  /var/ r,
+  /var/lib/ r,
+  /var/lib/ap-publisher-signer/ r,
+  deny /etc/ap-publisher/candidate.json rwklmx,
+  deny /etc/ap-publisher-keys/ rwklmx,
+  deny /etc/ap-publisher-keys/** rwklmx,
+  deny /var/lib/ap-publisher/ rwklmx,
+  deny /run/credentials/ap-worker-publisher.service/ rwklmx,
+  deny /run/credentials/ap-worker-publisher.service/** rwklmx,
   /usr/libexec/ap-worker-publisher-signer r,
   /usr/bin/python3* ixr,
   /usr/lib/ap-worker-publisher/** r,
