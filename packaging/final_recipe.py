@@ -581,7 +581,7 @@ def _inspect_fixture(path, role, pin, environment, inputs, builder, baseline):
     }
 
 
-def _write_evidence(output, files):
+def _write_evidence(output, files, *, fixture_class="SYNTHETIC_ONLY_NONINSTALLABLE"):
     parent = _directory(output.parent)
     fd = None
     try:
@@ -618,7 +618,7 @@ def _write_evidence(output, files):
             "INTENT.json",
             encoded(
                 {
-                    "class": "SYNTHETIC_ONLY_NONINSTALLABLE",
+                    "class": fixture_class,
                     "state": "UNKNOWN",
                     "final_generation_allowed": False,
                 }
@@ -635,7 +635,7 @@ def _write_evidence(output, files):
             "COMPLETED.json",
             encoded(
                 {
-                    "class": "SYNTHETIC_ONLY_NONINSTALLABLE",
+                    "class": fixture_class,
                     "files": {n: sha(v) for n, v in files.items()},
                     "release_authorized": False,
                 }
@@ -850,6 +850,71 @@ def rehearse(
         raise
     except (OSError, ValueError, KeyError, TypeError, tarfile.TarError, ImportError):
         raise Blocked("rehearsal_unverified") from None
+
+
+def rehearse_debian(source, scratch, *, encoder_sha256, **observations):
+    """Offline Debian encoding in caller-owned disposable scratch.
+
+    The existing synthetic admission and two-pass staging run before encoding.
+    Only test identities leave the encoder. This is separate from generate().
+    """
+    scratch = Path(scratch)
+    try:
+        recipe = Path(__file__).with_name("debian_fixture_encoder.py")
+        data = _regular(recipe)
+        need(
+            _hex(encoder_sha256) and sha(data) == encoder_sha256, "encoder_pin_mismatch"
+        )
+        encoder = ModuleType("pkg162_encoder")
+        exec(compile(data, str(recipe), "exec"), encoder.__dict__)
+        fd = _directory(scratch)
+        try:
+            info = os.fstat(fd)
+            need(
+                info.st_uid == os.getuid() and not info.st_mode & 0o077,
+                "private_scratch_required",
+            )
+            need(not os.listdir(fd), "scratch_not_empty")
+        finally:
+            os.close(fd)
+        # A retained rehearsal (including UNKNOWN) blocks reuse of this path.
+        staged = scratch / "staged"
+        report = rehearse(source, staged, **observations)
+        epoch = observations["pin"].epoch
+        output = {}
+        for role in ROLES:
+            fixture = staged / f"agent-platform-{role}_{VERSION}_amd64.pkg13-fixture"
+            raw = _regular(fixture)
+            need(sha(raw) == report["roles"][role]["archive_sha256"], "staging_changed")
+            files, modes = _files(raw[len(MAGIC) :], epoch)
+            members = encoder.expected_members(files, role)
+            archive = encoder.encode(members, modes, epoch)
+            need(
+                archive
+                == encoder.encode(encoder.expected_members(files, role), modes, epoch),
+                "encoder_rebuild_mismatch",
+            )
+            encoder.verify(archive, members, modes, epoch)
+            package = f"ap-pkg162-fixture-{role}_{encoder.VERSION}_amd64.deb"
+            output[package] = archive
+        evidence = refusal() | {
+            "schema": "AP-PKG162-ENCODING/1",
+            "status": "SYNTHETIC_PASS",
+            "class": "SYNTHETIC_ONLY_DEBIAN",
+            "encoder_sha256": encoder_sha256,
+            "staging_sha256": report["bundle_sha256"],
+            "archives": {name: sha(raw) for name, raw in output.items()},
+        }
+        _write_evidence(
+            scratch / "encoded",
+            output | {"EVIDENCE.json": encoded(evidence)},
+            fixture_class="SYNTHETIC_ONLY_DEBIAN",
+        )
+        return evidence
+    except Blocked:
+        raise
+    except (OSError, EOFError, ValueError, KeyError, TypeError, tarfile.TarError):
+        raise Blocked("debian_rehearsal_unverified") from None
 
 
 if __name__ == "__main__":

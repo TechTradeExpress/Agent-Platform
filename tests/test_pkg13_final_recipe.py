@@ -784,3 +784,136 @@ def test_external_provenance_cannot_disagree_with_embedded_records(
     with pytest.raises(m.Blocked, match="external_provenance_mismatch"):
         run(fixture, tmp_path / "out")
     assert not (tmp_path / "out").exists()
+
+
+def test_real_synthetic_debian_archives(fixture, tmp_path):
+    m, b, source, pin, environment, history, inputs, _ = fixture
+    encoder_path = ROOT / "packaging/debian_fixture_encoder.py"
+    encoder = load("packaging/debian_fixture_encoder.py")
+    options = dict(
+        encoder_sha256=m.sha(encoder_path.read_bytes()),
+        pin=pin,
+        environment=environment,
+        history=history,
+        observe_tools=lambda: environment,
+        baseline=_baseline(m),
+        observe_baseline=lambda: _baseline(m),
+    )
+    first, second = tmp_path / "deb-first", tmp_path / "deb-second"
+    for directory in (first, second):
+        directory.mkdir(mode=0o700)
+    result = m.rehearse_debian(source, first, **options)
+    assert not result["final_generation_allowed"]
+    assert result == m.rehearse_debian(source, second, **options)
+    for role in m.ROLES:
+        name = f"ap-pkg162-fixture-{role}_{encoder.VERSION}_amd64.deb"
+        archive = first / "encoded" / name
+        assert archive.read_bytes() == (second / "encoded" / name).read_bytes()
+        info = subprocess.check_output(["dpkg-deb", "--info", archive], timeout=10)
+        listing = subprocess.check_output(
+            ["dpkg-deb", "--contents", archive], timeout=10
+        )
+        assert f"Package: ap-pkg162-fixture-{role}".encode() in info
+        assert f"/agent-platform-{role}/build.json".encode() in listing
+        assert b"Version: 0.0.0-162" in info
+        assert b"Architecture: amd64" in info
+        assert b"Depends:" in info
+        staged = (
+            first / "staged" / f"agent-platform-{role}_{m.VERSION}_amd64.pkg13-fixture"
+        )
+        m.inspect_fixture(
+            staged, role, pin, environment, inputs, b, baseline=_baseline(m)
+        )
+        files, modes = m._files(staged.read_bytes()[len(m.MAGIC) :], pin.epoch)
+        expected = encoder.expected_members(files, role)
+        raw = archive.read_bytes()
+        with pytest.raises((ValueError, OSError, EOFError)):
+            encoder.verify(raw[:-10], expected, modes, pin.epoch)
+        for path, replacement in (
+            ("DEBIAN/control", b"Package: wrong-role\n"),
+            (
+                f"usr/share/doc/agent-platform-{role}/build.json",
+                b'{"ci_only":false,"release_authorized":true}',
+            ),
+        ):
+            corrupt = encoder.encode(expected | {path: replacement}, modes, pin.epoch)
+            with pytest.raises(ValueError, match="invalid_debian_payload"):
+                encoder.verify(corrupt, expected, modes, pin.epoch)
+        extra = encoder.encode(
+            expected | {"extra": b"x"}, modes | {"extra": 0o644}, pin.epoch
+        )
+        with pytest.raises(ValueError, match="invalid_debian_payload"):
+            encoder.verify(extra, expected, modes, pin.epoch)
+    assert set(result["archives"]) == {
+        p.name for p in (first / "encoded").glob("*.deb")
+    }
+    with pytest.raises(m.Blocked, match="scratch_not_empty"):
+        m.rehearse_debian(source, first, **options)
+    refused = tmp_path / "bad-encoder"
+    refused.mkdir(mode=0o700)
+    with pytest.raises(m.Blocked, match="encoder_pin_mismatch"):
+        m.rehearse_debian(source, refused, **(options | {"encoder_sha256": "0" * 64}))
+    assert not list(refused.iterdir())
+    for override, reason in (
+        (
+            {"observe_tools": lambda: environment._replace(xz="0.0")},
+            "toolchain_unverified",
+        ),
+        ({"observe_baseline": lambda: None}, "historical_baseline_unverified"),
+        ({"history": history._replace(state="UNKNOWN")}, "history_unverified"),
+        ({"pin": pin._replace(tree="0" * 40)}, "source_tree_mismatch"),
+    ):
+        with pytest.raises(m.Blocked, match=reason):
+            m.rehearse_debian(source, refused, **(options | override))
+        assert not list(refused.iterdir())
+    alias = tmp_path / "deb-alias"
+    alias.symlink_to(refused, target_is_directory=True)
+    with pytest.raises(m.Blocked):
+        m.rehearse_debian(source, alias, **options)
+    assert not list(refused.iterdir())
+
+
+def test_debian_ambiguous_write_preserves_intent_and_denies_retry(
+    fixture, tmp_path, monkeypatch
+):
+    m, _, source, pin, environment, history, _, _ = fixture
+    scratch = tmp_path / "interrupted-deb"
+    scratch.mkdir(mode=0o700)
+    options = dict(
+        encoder_sha256=m.sha(
+            (ROOT / "packaging/debian_fixture_encoder.py").read_bytes()
+        ),
+        pin=pin,
+        environment=environment,
+        history=history,
+        observe_tools=lambda: environment,
+        baseline=_baseline(m),
+        observe_baseline=lambda: _baseline(m),
+    )
+    original = m._write_evidence
+
+    def interrupted(path, files, **kwargs):
+        if path.name != "encoded":
+            return original(path, files, **kwargs)
+        fsync = m.os.fsync
+
+        def fail_after_archive(fd):
+            if list(path.glob("*.deb")):
+                raise OSError("synthetic write uncertainty")
+            fsync(fd)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(m.os, "fsync", fail_after_archive)
+            return original(path, files, **kwargs)
+
+    monkeypatch.setattr(m, "_write_evidence", interrupted)
+    with pytest.raises(m.Blocked, match="debian_rehearsal_unverified"):
+        m.rehearse_debian(source, scratch, **options)
+    output = scratch / "encoded"
+    assert json.loads((output / "INTENT.json").read_bytes())["state"] == "UNKNOWN"
+    assert list(output.glob("*.deb"))
+    assert not (output / "COMPLETED.json").exists()
+    before = {path.name: path.read_bytes() for path in output.iterdir()}
+    with pytest.raises(m.Blocked, match="scratch_not_empty"):
+        m.rehearse_debian(source, scratch, **options)
+    assert {path.name: path.read_bytes() for path in output.iterdir()} == before
