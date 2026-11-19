@@ -1930,26 +1930,110 @@ def test_operator_root_guard_precedes_local_or_network_access(monkeypatch, capsy
     assert json.loads(capsys.readouterr().out)["check"] == "root_required"
 
 
-def test_operator_intent_is_durable_exact_and_never_replaces_retained_job(
-    tmp_path,
-    monkeypatch,
-):
+@pytest.fixture
+def staged_job_fs(tmp_path, monkeypatch):
+    # Exercise real ACL xattr, readback, fsync and no-replace links as the
+    # test user. Only ownership operations and reported root IDs are simulated.
+    class StageFilesystem:
+        uid = gid = 0
+
+        def __getattr__(self, name):
+            return getattr(os, name)
+
+        def fchown(self, fd, uid, gid):
+            assert (uid, gid) == (0, 0)
+
+        def root_metadata(self, info):
+            names = (
+                "st_dev",
+                "st_ino",
+                "st_mode",
+                "st_nlink",
+                "st_size",
+                "st_ctime_ns",
+                "st_mtime_ns",
+            )
+            return SimpleNamespace(
+                st_uid=self.uid,
+                st_gid=self.gid,
+                **{name: getattr(info, name) for name in names},
+            )
+
+        def fstat(self, fd):
+            return self.root_metadata(os.fstat(fd))
+
+        def stat(self, *args, **kwargs):
+            return self.root_metadata(os.stat(*args, **kwargs))
+
+    fs = StageFilesystem()
+    monkeypatch.setattr(op, "os", fs)
     monkeypatch.setattr(op, "PENDING", tmp_path / ".homelab-job.pending")
     dirfd = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY)
-    job_path = tmp_path / "job.json"
     data, head, tree, _ = artifact()
-    job = homelab_job(job_for(data, head, tree))
     try:
-        op.stage_job(job, dirfd)
-        assert stat.S_IMODE(job_path.stat().st_mode) == 0o444
-        assert job_path.read_bytes() == a.encoded(job)
-        assert not op.PENDING.exists()
-        with pytest.raises(FileExistsError):
-            op.stage_job(dict(job, id="b" * 32), dirfd)
-        assert job_path.read_bytes() == a.encoded(job)
-        assert op.PENDING.exists()
+        yield fs, dirfd, tmp_path / "job.json", homelab_job(job_for(data, head, tree))
     finally:
         os.close(dirfd)
+
+
+def test_operator_intent_is_durable_exact_and_never_replaces_retained_job(
+    staged_job_fs,
+):
+    _, dirfd, job_path, job = staged_job_fs
+    op.stage_job(job, dirfd)
+    assert stat.S_IMODE(job_path.stat().st_mode) == 0o440
+    assert io.acl_entries(os.getxattr(job_path, io.ACL_XATTR)) == [
+        (io.ACL_USER_OBJ, 4, 2**32 - 1),
+        (io.ACL_USER, 4, job["publisher_uid"]),
+        (io.ACL_USER, 4, job["signer_uid"]),
+        (io.ACL_GROUP_OBJ, 0, 2**32 - 1),
+        (io.ACL_MASK, 4, 2**32 - 1),
+        (io.ACL_OTHER, 0, 2**32 - 1),
+    ]
+    assert job_path.read_bytes() == a.encoded(job)
+    assert not op.PENDING.exists()
+    with pytest.raises(FileExistsError):
+        op.stage_job(dict(job, id="b" * 32), dirfd)
+    assert job_path.read_bytes() == a.encoded(job)
+    assert op.PENDING.exists()
+
+
+@pytest.mark.parametrize(
+    "fault",
+    ["uid", "gid", "world_read", "third_reader", "changed", "replacement"],
+)
+def test_operator_rejects_unsafe_staged_metadata(staged_job_fs, monkeypatch, fault):
+    fs, dirfd, job_path, job = staged_job_fs
+    if fault in {"uid", "gid"}:
+        setattr(fs, fault, job["worker_uid"])
+    if fault in {"world_read", "third_reader"}:
+
+        def wrong_acl(fd, key, raw):
+            if fault == "world_read":
+                raw = raw[:-6] + b"\x04\x00" + raw[-4:]
+            else:
+                extra = b"\x02\x00\x04\x00" + job["worker_uid"].to_bytes(4, "little")
+                raw = raw[:28] + extra + raw[28:]
+            os.setxattr(fd, key, raw)
+
+        monkeypatch.setattr(fs, "setxattr", wrong_acl)
+    if fault == "changed":
+        monkeypatch.setattr(
+            fs, "pread", lambda fd, *args: b"x" + os.pread(fd, *args)[1:]
+        )
+    if fault == "replacement":
+        orig = fs.stat
+
+        def other_inode(*args, **kwargs):
+            observed = orig(*args, **kwargs)
+            observed.st_ino += 1
+            return observed
+
+        monkeypatch.setattr(fs, "stat", other_inode)
+    with pytest.raises(a.Blocked):
+        op.stage_job(job, dirfd)
+    assert not job_path.exists()
+    assert op.PENDING.exists()
 
 
 def test_operator_reads_existing_journal_under_lock_without_renewing_history(
@@ -2020,11 +2104,11 @@ def test_operator_starts_fixed_units_once_and_requires_exact_completed_journal(
 
     def systemctl(*args, timeout=5):
         calls.append((args, timeout))
-        if "--property=IPAddressAllow" in args:
-            return job["github_ipv4"] + "/32"
-        if "--property=IPAddressDeny" in args:
-            return "0.0.0.0/0 ::/0"
 
+    def inspect(allow=""):
+        calls.append((("verify", allow), 0))
+
+    monkeypatch.setattr(op, "inspect_units", inspect)
     monkeypatch.setattr(op, "systemctl", systemctl)
     monkeypatch.setattr(
         op,
@@ -2035,22 +2119,27 @@ def test_operator_starts_fixed_units_once_and_requires_exact_completed_journal(
         ),
     )
     assert op.launch(job, {}) == 111
-    assert calls[-2:] == [
+    assert calls == [
+        (("verify", ""), 0),
+        (
+            (
+                "set-property",
+                "--runtime",
+                "ap-worker-publisher.service",
+                "IPAddressAllow=140.82.112.6/32",
+            ),
+            5,
+        ),
+        (("verify", "140.82.112.6/32"), 0),
         (("start", "ap-worker-publisher-signer.service"), 20),
+        (("verify", "140.82.112.6/32"), 0),
         (("start", "ap-worker-publisher.service"), 325),
     ]
-    assert calls[0][0] == (
-        "set-property",
-        "--runtime",
-        "ap-worker-publisher.service",
-        "IPAddressAllow=",
-        "IPAddressAllow=140.82.112.6/32",
-    )
 
     journal_record["job"] = "f" * 32
     with pytest.raises(a.Blocked):
         op.launch(job, {})
-    assert len(calls) == 10
+    assert len(calls) == 12
 
 
 def test_operator_failed_oneshot_retains_intent_and_makes_no_second_attempt(
@@ -2103,3 +2192,214 @@ def test_operator_failed_oneshot_retains_intent_and_makes_no_second_attempt(
     assert '"status":"UNKNOWN_NEEDS_HUMAN"' in output
     assert "fabricated private" not in output
     assert observed == [("intent", job), ("attempt", job)]
+
+
+@pytest.fixture
+def effective_units(monkeypatch):
+    # systemd 257's human-readable scalar properties and typed Service replies.
+    scalar, replies = {}, {}
+    signature = "a(sasasttttuii)"
+    for role in ("publisher", "signer"):
+        signer_role = role == "signer"
+        profile = "ap-worker-publisher" + ("-signer" if signer_role else "")
+        service = profile + ".service"
+        account = "ap-publisher" + ("-signer" if signer_role else "")
+        scalar[service] = {
+            "LoadState": "loaded",
+            "NeedDaemonReload": "no",
+            "ActiveState": "inactive",
+            "UnitFileState": "static",
+            "FragmentPath": "/usr/lib/systemd/system/" + service,
+            "DropInPaths": "",
+            "User": account,
+            "Group": account,
+            "SupplementaryGroups": "",
+            "Type": "oneshot",
+            "Restart": "no",
+            "NoNewPrivileges": "yes",
+            "CapabilityBoundingSet": "",
+            "AmbientCapabilities": "",
+            "AppArmorProfile": profile,
+            "ProtectSystem": "strict",
+            "ProtectHome": "yes",
+            "PrivateDevices": "yes",
+            "ProtectProc": "invisible",
+            "ProcSubset": "pid",
+            "RestrictNamespaces": "yes",
+            "RuntimeDirectory": account if signer_role else "",
+            "RuntimeDirectoryPreserve": "yes" if signer_role else "no",
+            "ReadOnlyPaths": "/etc/ap-publisher /usr/lib/ap-worker-publisher",
+            "ReadWritePaths": f"/var/lib/{account}/journal",
+            "InaccessiblePaths": "/etc/ap-publisher-keys /var/lib/ap-publisher-signer",
+            "PrivateNetwork": "no",
+            "NetworkNamespacePath": "",
+            "JoinsNamespaceOf": "",
+            "RestrictAddressFamilies": "AF_INET",
+            "IPAddressAllow": "",
+            "IPAddressDeny": "::/0 0.0.0.0/0",
+            "SocketBindDeny": "any",
+        }
+        executable = "/usr/libexec/" + profile
+        argv = [executable]
+        if signer_role:
+            scalar[service].update(
+                ReadWritePaths=f"/var/lib/{account}/journal /run/ap-publisher-signer",
+                InaccessiblePaths="/var/lib/ap-publisher",
+                PrivateNetwork="yes",
+                RestrictAddressFamilies="AF_UNIX",
+                IPAddressDeny="",
+            )
+            credential = ["app-key", "/etc/ap-publisher-keys/worker.pem"]
+        else:
+            argv.extend(
+                [
+                    "--job",
+                    "/etc/ap-publisher/job.json",
+                    "--artifact",
+                    "/etc/ap-publisher/candidate.json",
+                    "--execute",
+                ]
+            )
+            credential = ["app-jwt", "/run/ap-publisher-signer/app-jwt"]
+        node = "/org/freedesktop/systemd1/unit/" + (
+            service.replace("-", "_2d").replace(".", "_2e")
+        )
+        replies[node] = {
+            "ExecStartEx": (signature, [[executable, argv, [], 0, 0, 0, 0, 0, 0, 0]]),
+            "LoadCredential": ("a(ss)", [credential]),
+            "LoadCredentialEncrypted": ("a(ss)", []),
+            "ImportCredentialEx": ("a(ss)", []),
+            "SocketBindAllow": ("a(iiqq)", []),
+            "SupplementaryGroups": ("as", []),
+            "ReadOnlyPaths": ("as", scalar[service]["ReadOnlyPaths"].split()),
+            "ReadWritePaths": ("as", scalar[service]["ReadWritePaths"].split()),
+            "InaccessiblePaths": ("as", scalar[service]["InaccessiblePaths"].split()),
+            "BindPaths": ("a(ssbt)", []),
+            "BindReadOnlyPaths": ("a(ssbt)", []),
+            **{
+                key: (signature, [])
+                for key in (
+                    "ExecConditionEx",
+                    "ExecStartPreEx",
+                    "ExecStartPostEx",
+                    "ExecStopEx",
+                    "ExecStopPostEx",
+                )
+            },
+        }
+
+    def systemctl(action, all_flag, properties, service):
+        assert (action, all_flag) == ("show", "--all")
+        keys = properties.removeprefix("--property=").split(",")
+        return "\n".join(f"{key}={scalar[service][key]}" for key in keys)
+
+    def busctl(argv):
+        assert argv[:6] == [
+            "/usr/bin/busctl",
+            "--system",
+            "--no-pager",
+            "--json=short",
+            "get-property",
+            "org.freedesktop.systemd1",
+        ]
+        assert argv[7] == "org.freedesktop.systemd1.Service"
+        return "\n".join(
+            json.dumps({"type": wire_type, "data": data})
+            for wire_type, data in (replies[argv[6]][key] for key in argv[8:])
+        )
+
+    monkeypatch.setattr(op, "systemctl", systemctl)
+    monkeypatch.setattr(op, "command", busctl)
+    return scalar, replies
+
+
+def test_operator_only_allows_exact_runtime_network_dropin(effective_units):
+    units, _ = effective_units
+    op.inspect_units()
+    publisher = units["ap-worker-publisher.service"]
+    publisher["DropInPaths"] = (
+        "/run/systemd/system.control/ap-worker-publisher.service.d/"
+        "50-IPAddressAllow.conf"
+    )
+    publisher["IPAddressAllow"] = "140.82.112.6/32"
+    op.inspect_units("140.82.112.6/32")
+    with pytest.raises(a.Blocked):
+        op.inspect_units()
+    publisher["DropInPaths"] += " /etc/systemd/system/service.d/override.conf"
+    with pytest.raises(a.Blocked):
+        op.inspect_units("140.82.112.6/32")
+
+
+@pytest.mark.parametrize(
+    "role,property_name,bad_value",
+    [
+        ("publisher", "NeedDaemonReload", "yes"),
+        ("publisher", "IPAddressDeny", "0.0.0.0/0"),
+        ("publisher", "SocketBindDeny", "ipv4:any"),
+        ("signer", "PrivateNetwork", "no"),
+        ("signer", "NetworkNamespacePath", "/run/netns/publisher"),
+        ("signer", "RestrictAddressFamilies", "AF_UNIX AF_INET"),
+        ("signer", "DropInPaths", "/etc/systemd/system/service.d/override.conf"),
+    ],
+)
+def test_operator_rejects_modified_effective_unit(
+    effective_units,
+    role,
+    property_name,
+    bad_value,
+):
+    units, _ = effective_units
+    service = (
+        "ap-worker-publisher" + ("-signer" if role == "signer" else "") + ".service"
+    )
+    units[service][property_name] = bad_value
+    with pytest.raises(a.Blocked):
+        op.inspect_units()
+
+
+@pytest.mark.parametrize("fault", ["argv", "privileged", "credential", "hook"])
+def test_operator_rejects_alternate_exec_or_credential(
+    effective_units,
+    fault,
+):
+    _, replies = effective_units
+    service = replies[
+        "/org/freedesktop/systemd1/unit/ap_2dworker_2dpublisher_2dsigner_2eservice"
+    ]
+    start = service["ExecStartEx"][1][0]
+    if fault == "argv":
+        start[1].append("--unexpected")
+    if fault == "privileged":
+        start[2].append("privileged")
+    if fault == "credential":
+        service["LoadCredential"][1][0][1] = "/tmp/alternate-key"
+    if fault == "hook":
+        service["ExecStartPostEx"][1].append(start)
+    with pytest.raises(a.Blocked):
+        op.inspect_units()
+
+
+@pytest.mark.parametrize(
+    "role,key,value",
+    [
+        ("publisher", "InaccessiblePaths", ["/var/lib/ap-publisher-signer"]),
+        (
+            "publisher",
+            "InaccessiblePaths",
+            ["/etc/ap-publisher-keys /var/lib/ap-publisher-signer"],
+        ),
+        ("signer", "ReadWritePaths", ["/var/lib/ap-publisher-signer/journal"]),
+        ("signer", "SupplementaryGroups", ["agentdev"]),
+    ],
+)
+def test_operator_rejects_modified_path_or_group_lists(
+    effective_units, role, key, value
+):
+    _, replies = effective_units
+    suffix = "_2dsigner" if role == "signer" else ""
+    service = (
+        f"/org/freedesktop/systemd1/unit/ap_2dworker_2dpublisher{suffix}_2eservice"
+    )
+    replies[service][key] = ("as", value)
+    with pytest.raises(a.Blocked):
+        op.inspect_units()

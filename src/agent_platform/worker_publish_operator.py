@@ -14,7 +14,18 @@ from pathlib import Path
 
 from . import worker_publish_artifact as art
 from . import worker_publisher as pub
-from .worker_publish_io import HTTPS, Journal, read_file
+from .worker_publish_io import (
+    ACL_GROUP_OBJ,
+    ACL_MASK,
+    ACL_OTHER,
+    ACL_USER,
+    ACL_USER_OBJ,
+    ACL_XATTR,
+    HTTPS,
+    Journal,
+    acl_entries,
+    read_file,
+)
 
 CONFIG = Path(pub.JOB_PATH).parent
 PENDING = CONFIG / ".homelab-job.pending"
@@ -94,6 +105,123 @@ def host_identity():
     return identities
 
 
+def verify_unit(role, allow):
+    service = unit(role)
+    profile = service.removesuffix(".service")
+    signer = role == "signer"
+    if signer:
+        allow = ""
+    dropin = f"/run/systemd/system.control/{service}.d/50-IPAddressAllow.conf"
+    account = ROLES[role]
+    expected = {
+        "LoadState": "loaded",
+        "NeedDaemonReload": "no",
+        "ActiveState": "inactive",
+        "UnitFileState": "static",
+        "FragmentPath": "/usr/lib/systemd/system/" + service,
+        "DropInPaths": dropin if allow else "",
+        "User": account,
+        "Group": account,
+        "Type": "oneshot",
+        "Restart": "no",
+        "NoNewPrivileges": "yes",
+        "CapabilityBoundingSet": "",
+        "AmbientCapabilities": "",
+        "AppArmorProfile": profile,
+        "ProtectSystem": "strict",
+        "ProtectHome": "yes",
+        "PrivateDevices": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "RuntimeDirectory": "ap-publisher-signer" if signer else "",
+        "RuntimeDirectoryPreserve": "yes" if signer else "no",
+        "PrivateNetwork": "yes" if signer else "no",
+        "NetworkNamespacePath": "",
+        "JoinsNamespaceOf": "",
+        "RestrictAddressFamilies": "AF_UNIX" if signer else "AF_INET",
+        "IPAddressAllow": allow,
+        "IPAddressDeny": "" if signer else "0.0.0.0/0 ::/0",
+    }
+    if not signer:
+        expected["SocketBindDeny"] = "any"
+    result = systemctl("show", "--all", "--property=" + ",".join(expected), service)
+    rows = [line.split("=", 1) for line in result.splitlines()]
+    actual = dict(rows)
+    art.need(len(actual) == len(rows))
+    if not signer and actual.get("IPAddressDeny") == "::/0 0.0.0.0/0":
+        actual["IPAddressDeny"] = "0.0.0.0/0 ::/0"
+    art.need(actual == expected)
+
+    # D-Bus exposes exact argv, execution flags and credential paths. Unlike
+    # human-readable systemctl output, it preserves list and argument boundaries.
+    executable = "/usr/libexec/" + profile
+    argv = [executable]
+    if not signer:
+        argv += [
+            "--job",
+            pub.JOB_PATH,
+            "--artifact",
+            str(CONFIG / "candidate.json"),
+            "--execute",
+        ]
+    source = ["app-key", str(KEY)] if signer else ["app-jwt", SIGNER_OUTPUT]
+    writable = [f"/var/lib/{account}/journal"]
+    inaccessible = ["/etc/ap-publisher-keys", "/var/lib/ap-publisher-signer"]
+    if signer:
+        writable.append("/run/ap-publisher-signer")
+        inaccessible = ["/var/lib/ap-publisher"]
+    typed = {
+        "LoadCredential": ("a(ss)", [source]),
+        "LoadCredentialEncrypted": ("a(ss)", []),
+        "ImportCredentialEx": ("a(ss)", []),
+        "SocketBindAllow": ("a(iiqq)", []),
+        "SupplementaryGroups": ("as", []),
+        "ReadOnlyPaths": ("as", ["/etc/ap-publisher", "/usr/lib/ap-worker-publisher"]),
+        "ReadWritePaths": ("as", writable),
+        "InaccessiblePaths": ("as", inaccessible),
+        "BindPaths": ("a(ssbt)", []),
+        "BindReadOnlyPaths": ("a(ssbt)", []),
+    }
+    for hook in (
+        "ExecConditionEx",
+        "ExecStartPreEx",
+        "ExecStartPostEx",
+        "ExecStopEx",
+        "ExecStopPostEx",
+    ):
+        typed[hook] = ("a(sasasttttuii)", [])
+    manager = "org.freedesktop.systemd1"
+    unit_path = service.replace("-", "_2d").replace(".", "_2e")
+    output = command(
+        [
+            "/usr/bin/busctl",
+            "--system",
+            "--no-pager",
+            "--json=short",
+            "get-property",
+            manager,
+            "/org/freedesktop/systemd1/unit/" + unit_path,
+            manager + ".Service",
+            "ExecStartEx",
+            *typed,
+        ]
+    )
+    replies = [art.decode(line.encode()) for line in output.splitlines()]
+    art.need(len(replies) == 1 + len(typed))
+    start = replies[0]
+    art.need(start["type"] == "a(sasasttttuii)" and len(start["data"]) == 1)
+    entry = start["data"][0]
+    art.need(len(entry) == 10 and entry[:3] == [executable, argv, []])
+    for (signature, data), reply in zip(typed.values(), replies[1:], strict=True):
+        art.need(reply == {"type": signature, "data": data})
+
+
+def inspect_units(allow=""):
+    for role in ROLES:
+        verify_unit(role, allow)
+
+
 def inspect_host():
     identities = host_identity()
     for path in (pub.JOB_PATH, PENDING, SIGNER_OUTPUT):
@@ -106,23 +234,10 @@ def inspect_host():
     with open(PROFILES, "rb") as source:
         profiles = source.read(131073)
     art.need(len(profiles) <= 131072)
-    for role, account in ROLES.items():
-        service = unit(role)
-        profile = service.removesuffix(".service")
+    for role in ROLES:
+        profile = unit(role).removesuffix(".service")
         art.need((profile + " (enforce)").encode() in profiles.splitlines())
-        expected = {
-            "User": account,
-            "Group": account,
-            "Type": "oneshot",
-            "NoNewPrivileges": "yes",
-            "AppArmorProfile": profile,
-            "ActiveState": "inactive",
-            "PrivateNetwork": "yes" if role == "signer" else "no",
-        }
-        properties = systemctl(
-            "show", "--property=" + ",".join(expected), service
-        ).splitlines()
-        art.need(dict(line.split("=", 1) for line in properties) == expected)
+    inspect_units()
     return identities
 
 
@@ -209,32 +324,84 @@ def prepare(args, identities, journal_pins):
 
 
 def stage_job(job, directory):
-    # Fixed pending file means a crash around the link/fsync boundary requires
-    # reconciliation. The link never replaces an existing strict or homelab job.
+    # Fixed pending name and exclusive creation retain evidence on failure.
+    name = Path(pub.JOB_PATH).name
+    value = art.encoded(job)
+    readers = sorted(job[role + "_uid"] for role in ROLES)
+    art.need(len(set(readers)) == 2 and all(0 < uid < 2**32 - 1 for uid in readers))
+    undefined = 2**32 - 1
+    acl = [
+        (ACL_USER_OBJ, 4, undefined),
+        *((ACL_USER, 4, uid) for uid in readers),
+        (ACL_GROUP_OBJ, 0, undefined),
+        (ACL_MASK, 4, undefined),
+        (ACL_OTHER, 0, undefined),
+    ]
+    raw = b"\x02\x00\x00\x00" + b"".join(
+        tag.to_bytes(2, "little")
+        + perm.to_bytes(2, "little")
+        + uid.to_bytes(4, "little")
+        for tag, perm, uid in acl
+    )
     fd = os.open(
         PENDING.name,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-        0o644,
+        os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o400,
         dir_fd=directory,
     )
+
+    def pin(info):
+        return (
+            info.st_dev,
+            info.st_ino,
+            info.st_mode,
+            info.st_uid,
+            info.st_gid,
+            info.st_nlink,
+            info.st_size,
+            info.st_ctime_ns,
+            info.st_mtime_ns,
+        )
+
+    def verify(leaf):
+        before = os.fstat(fd)
+        art.need(
+            stat.S_ISREG(before.st_mode)
+            and stat.S_IMODE(before.st_mode) == 0o440
+            and before.st_uid == before.st_gid == 0
+            and before.st_nlink == 1
+            and before.st_size == len(value)
+        )
+        art.need(acl_entries(os.getxattr(fd, ACL_XATTR)) == acl)
+        art.need(os.pread(fd, len(value) + 1, 0) == value)
+        for observed in (
+            os.fstat(fd),
+            os.stat(leaf, dir_fd=directory, follow_symlinks=False),
+        ):
+            art.need(pin(observed) == pin(before))
+
     try:
-        value = art.encoded(job)
-        # sudo's umask must not make the immutable manifest unreadable to the roles.
-        os.fchmod(fd, 0o444)
+        os.fchown(fd, 0, 0)
         art.need(os.write(fd, value) == len(value))
+        os.setxattr(fd, ACL_XATTR, raw)
         os.fsync(fd)
+        verify(PENDING.name)
+        os.fsync(directory)
+        # link fails if an existing job occupies the destination.
+        os.link(
+            PENDING.name,
+            name,
+            src_dir_fd=directory,
+            dst_dir_fd=directory,
+            follow_symlinks=False,
+        )
+        os.fsync(directory)
+        os.unlink(PENDING.name, dir_fd=directory)
+        os.fsync(fd)
+        os.fsync(directory)
+        verify(name)
     finally:
         os.close(fd)
-    os.link(
-        PENDING.name,
-        Path(pub.JOB_PATH).name,
-        src_dir_fd=directory,
-        dst_dir_fd=directory,
-        follow_symlinks=False,
-    )
-    os.fsync(directory)
-    os.unlink(PENDING.name, dir_fd=directory)
-    os.fsync(directory)
 
 
 def launch(job, identities):
@@ -242,22 +409,12 @@ def launch(job, identities):
     # transport still enforces its own configured address and certificate.
     service = unit("publisher")
     allow = job["github_ipv4"] + "/32"
-    systemctl(
-        "set-property",
-        "--runtime",
-        service,
-        "IPAddressAllow=",
-        "IPAddressAllow=" + allow,
-    )
-    art.need(
-        systemctl("show", "--property=IPAddressAllow", "--value", service) == allow
-    )
-    art.need(
-        systemctl("show", "--property=IPAddressDeny", "--value", service)
-        in ("0.0.0.0/0 ::/0", "::/0 0.0.0.0/0", "any")
-    )
+    inspect_units()
+    systemctl("set-property", "--runtime", service, "IPAddressAllow=" + allow)
+    inspect_units(allow)
     art.need(time.time() < job["expires"])
     systemctl("start", unit("signer"), timeout=20)
+    inspect_units(allow)
     art.need(time.time() < job["expires"])
     systemctl("start", service, timeout=325)
     store = journal("publisher", identities)
