@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from . import worker_publish_artifact as art
 from .worker_publish_io import Journal, credential_path, read_file
-from .worker_publisher import confinement, receipts, validate_job
+from .worker_publisher import JOB_PATH, confinement, receipts, validate_job
 
 
 def jwt_for(key, app_id, expires, now):
@@ -32,7 +32,7 @@ def jwt_for(key, app_id, expires, now):
 def main():
     journal = None
     try:
-        original = read_file("/etc/ap-publisher/job.json", 0, 16384)
+        original = read_file(JOB_PATH, 0, 16384)
         job = validate_job(
             art.decode(original),
             int(time.time()),
@@ -50,7 +50,7 @@ def main():
         # Only this unit's credential mount is allowed by the separate AppArmor profile.
         raw = read_file(str(source), os.getuid(), 16384, credential=True)
         key = serialization.load_pem_private_key(raw, password=None)
-        art.need(read_file("/etc/ap-publisher/job.json", 0, 16384) == original)
+        art.need(read_file(JOB_PATH, 0, 16384) == original)
         value = jwt_for(key, job["app_id"], job["expires"], int(time.time()))
         value = art.encoded(
             {"job_sha256": art.digest(original), "jwt": value.decode("ascii")}

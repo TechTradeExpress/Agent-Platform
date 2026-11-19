@@ -35,7 +35,7 @@ P1_DEPENDENCIES = (
 )
 PUBLISHER_MODULES = frozenset(
     """worker_publisher worker_publish_artifact worker_publish_io
-    worker_publish_signer worker_publish_export""".split()
+    worker_publish_signer worker_publish_export worker_publish_operator""".split()
 )
 
 PYTHON_DEPENDENCIES = ["cryptography>=43.0.0,<51"]
@@ -59,7 +59,7 @@ deployment doctor harness_admission instruction_sources
 native_canary native_codex native_security
 notification_outbox notifications publisher_handoff telegram_console telegram_fake
 tool_dispatch_probe worker_publisher worker_publish_artifact worker_publish_io
-worker_publish_signer worker_publish_export""".split()
+worker_publish_signer worker_publish_export worker_publish_operator""".split()
 )
 ENTRY_POINTS = {
     "control": {"agent-platform-control": "agent_platform.cli:main"},
@@ -459,6 +459,7 @@ Display command help.
                 for name in (
                     "ap-worker-publisher",
                     "ap-worker-publisher-export",
+                    "ap-worker-publisher-operator",
                     "ap-worker-publisher-signer",
                 ):
                     copy(
@@ -485,6 +486,7 @@ Display command help.
                     "publisher-isolation-readiness.md",
                     "worker-doctor.schema.json",
                     "worker-pilot-checklist.md",
+                    "worker01-homelab-publisher.md",
                 ):
                     copy("docs/" + document, doc + document)
                 provision = private + "provisioning/"

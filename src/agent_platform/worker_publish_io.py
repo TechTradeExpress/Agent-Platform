@@ -163,20 +163,27 @@ class Journal:
     """Pre-provisioned append-only, full-lifetime nonblocking flock.
 
     A root-owned job must pin the exact prior file digest. No reset, truncate,
-    repair, missing-file creation or uncertain append retry. Root/external custody
-    of that pin remains a separately verified anti-rollback prerequisite.
+    repair, missing-file creation or uncertain append retry. Strict mode uses
+    external continuity evidence; homelab mode trusts the root operator's local
+    snapshot and does not protect against administrator rollback.
     """
 
-    def __init__(self, path, previous):
+    def __init__(self, path, previous, *, inspect_owner=None):
+        # An explicitly trusted root observer can pin an existing store without
+        # obtaining a writable descriptor or creating any state.
+        need(inspect_owner is None or os.getuid() == os.geteuid() == 0)
+        owner = os.getuid() if inspect_owner is None else inspect_owner
+        self.read_only = inspect_owner is not None
         read_file(
             path,
-            os.getuid(),
+            owner,
             4 * 1024 * 1024,
             writable_parent=True,
             allow_empty=True,
             private=True,
         )
-        self.fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK)
+        access = os.O_RDONLY if self.read_only else os.O_RDWR | os.O_APPEND
+        self.fd = os.open(path, access | os.O_NOFOLLOW | os.O_NONBLOCK)
         self.poisoned = False
         try:
             fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -186,9 +193,13 @@ class Journal:
                 and m.st_nlink == 1
                 and m.st_size <= 4 * 1024 * 1024
             )
-            need(m.st_uid == os.getuid() and stat.S_IMODE(m.st_mode) == 0o600)
+            need(m.st_uid == owner and stat.S_IMODE(m.st_mode) == 0o600)
             raw = os.pread(self.fd, m.st_size + 1, 0)
-            need(len(raw) == m.st_size and digest(raw) == previous)
+            self.sha256 = digest(raw)
+            need(
+                len(raw) == m.st_size
+                and (previous is None and self.read_only or self.sha256 == previous)
+            )
             self.events = [decode(line) for line in raw.splitlines()]
             need(len(self.events) <= 16384)
             head = digest(b"")
@@ -205,7 +216,11 @@ class Journal:
             raise
 
     def append(self, record):
-        need(not self.poisoned and self.size < 4 * 1024 * 1024 - 8192)
+        need(
+            not self.read_only
+            and not self.poisoned
+            and self.size < 4 * 1024 * 1024 - 8192
+        )
         self.poisoned = True  # any uncertain write permanently stops this instance
         m = os.stat(self.path, follow_symlinks=False)
         need(
@@ -276,6 +291,13 @@ class HTTPS:
         )
         self.ip, self.certificate = str(ip), certificate
 
+    @classmethod
+    def homelab(cls, ipv4):
+        """Keep the selected egress IP for this job; authenticate via system CA/SNI."""
+        wire = cls(ipv4, "0" * 64)
+        wire.certificate = None
+        return wire
+
     def exchange(self, method, path, payload, secret, limit=256 * 1024):
         # Private transport; the Client facade allowlists routes and exact payloads.
         started = time.monotonic()
@@ -312,10 +334,11 @@ class HTTPS:
                 max(0.001, 5 - (time.monotonic() - started)), interrupt
             )
             timer.start()
-            need(
-                digest(connection.sock.getpeercert(binary_form=True))
-                == self.certificate
-            )
+            if self.certificate is not None:
+                need(
+                    digest(connection.sock.getpeercert(binary_form=True))
+                    == self.certificate
+                )
             body = None if payload is None else encoded(payload)
             need(body is None or len(body) <= 6 * 1024 * 1024)
             headers = {

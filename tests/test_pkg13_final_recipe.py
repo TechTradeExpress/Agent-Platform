@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -75,6 +76,7 @@ def fixture(tmp_path):
     for name in (
         "ap-worker-publisher",
         "ap-worker-publisher-export",
+        "ap-worker-publisher-operator",
         "ap-worker-publisher-signer",
     ):
         files["packaging/worker-publisher/" + name] = (
@@ -97,6 +99,7 @@ def fixture(tmp_path):
         "publisher-isolation-readiness.md",
         "worker-doctor.schema.json",
         "worker-pilot-checklist.md",
+        "worker01-homelab-publisher.md",
         "worker-provisioning.md",
     ):
         files["docs/" + name] = text
@@ -704,7 +707,7 @@ def test_normal_final_flag_is_unchanged_and_not_an_escape_hatch(tmp_path):
 
 
 @pytest.mark.parametrize("ci", [False, True])
-def test_shared_staging_preserves_exact_candidate_and_ci_bytes(fixture, tmp_path, ci):
+def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_path, ci):
     import hashlib
     from types import ModuleType
 
@@ -731,18 +734,46 @@ def test_shared_staging_preserves_exact_candidate_and_ci_bytes(fixture, tmp_path
     parent.__file__ = str(ROOT / "packaging/build_deb.py")
     exec(compile(data, parent.__file__, "exec"), parent.__dict__)
     options = dict(source_tree="b" * 40, candidate=not ci, ci_final_fixture=ci)
+    historical = tmp_path / "historical"
+    shutil.copytree(source, historical, ignore=shutil.ignore_patterns(".git"))
+    (historical / "src/agent_platform/worker_publish_operator.py").unlink()
     before = parent.build(
-        source, tmp_path / "before", 8, "a" * 40, 1700000000, **options
+        historical, tmp_path / "before", 8, "a" * 40, 1700000000, **options
     )
     after = current.build(
         source, tmp_path / "after", 8, "a" * 40, 1700000000, **options
     )
-    for role in ("control", "worker"):
-        assert before[role].read_bytes() == after[role].read_bytes()
-        name = "agent-platform-" + role + ".provenance.json"
-        assert (tmp_path / "before" / name).read_bytes() == (
-            tmp_path / "after" / name
-        ).read_bytes()
+    assert before["control"].read_bytes() == after["control"].read_bytes()
+    control = "agent-platform-control.provenance.json"
+    assert (tmp_path / "before" / control).read_bytes() == (
+        tmp_path / "after" / control
+    ).read_bytes()
+
+    def files(path):
+        raw = subprocess.check_output(["dpkg-deb", "--fsys-tarfile", path], timeout=10)
+        with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
+            return {
+                item.name.removeprefix("./"): (
+                    item.mode,
+                    archive.extractfile(item).read(),
+                )
+                for item in archive
+                if item.isfile()
+            }
+
+    old, new = files(before["worker"]), files(after["worker"])
+    doc = "usr/share/doc/agent-platform-worker/"
+    assert set(new) - set(old) == {
+        "usr/libexec/ap-worker-publisher-operator",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_operator.py",
+        doc + "worker01-homelab-publisher.md",
+    }
+    assert not set(old) - set(new)
+    assert {name for name in old if old[name] != new[name]} == {
+        doc + "build.json",
+        doc + "manifest.json",
+    }
+    assert new["usr/libexec/ap-worker-publisher-operator"][0] == 0o755
 
 
 def test_unmarked_source_is_never_a_rehearsal_or_real_generation(fixture, tmp_path):

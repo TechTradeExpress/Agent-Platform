@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from agent_platform import worker_publish_artifact as a
 from agent_platform import worker_publish_io as io
+from agent_platform import worker_publish_operator as op
 from agent_platform import worker_publish_signer as signer
 from agent_platform import worker_publisher as p
 
@@ -101,6 +102,14 @@ def job_for(data, head, tree, *, old="ABSENT", pr=None):
     )
     p.validate_job(j, int(time.time()))
     return j
+
+
+def homelab_job(job):
+    return {
+        **{key: val for key, val in job.items() if key in p.HOMELAB_KEYS},
+        "contract": p.HOMELAB,
+        "bot_login": "tte-agent-worker01[bot]",
+    }
 
 
 class Wire:
@@ -368,6 +377,7 @@ def test_real_wire_encoding_create_then_update_exact_sha(store):
     )
 
 
+@pytest.mark.parametrize("local", [False, True])
 @pytest.mark.parametrize(
     "route",
     [
@@ -378,10 +388,12 @@ def test_real_wire_encoding_create_then_update_exact_sha(store):
         "/installation/repositories?per_page=2",
     ],
 )
-def test_auth_scope_and_source_mismatch_stop_before_ref(store, route):
+def test_auth_scope_and_source_mismatch_stop_before_ref(store, route, local):
     journal, _ = store
     data, head, tree, _ = artifact()
     j = job_for(data, head, tree)
+    if local:
+        j = homelab_job(j)
     wire = Wire(journal, j)
     wire.mutate = lambda path, value: {} if path == route else value
     with pytest.raises((a.Blocked, KeyError, ValueError, TimeoutError)):
@@ -390,13 +402,16 @@ def test_auth_scope_and_source_mismatch_stop_before_ref(store, route):
     assert not any(path == "/graphql" for _, path in wire.calls)
 
 
+@pytest.mark.parametrize("local", [False, True])
 @pytest.mark.parametrize(
     "route", [p.ROOT + "/git/blobs", "/graphql", p.ROOT + "/pulls"]
 )
-def test_lost_response_retains_unknown_and_no_replay(store, route):
+def test_lost_response_retains_unknown_and_no_replay(store, route, local):
     journal, path = store
     data, head, tree, _ = artifact()
     j = job_for(data, head, tree)
+    if local:
+        j = homelab_job(j)
     wire = Wire(journal, j)
     wire.fail = route
     with pytest.raises((a.Blocked, KeyError, ValueError, TimeoutError)):
@@ -411,10 +426,13 @@ def test_lost_response_retains_unknown_and_no_replay(store, route):
     assert b"FAKE_PRIVATE" not in path.read_bytes()
 
 
-def test_cas_race_after_observation_is_not_overwritten(store):
+@pytest.mark.parametrize("local", [False, True])
+def test_cas_race_after_observation_is_not_overwritten(store, local):
     journal, _ = store
     data, head, tree, _ = artifact()
     j = job_for(data, head, tree)
+    if local:
+        j = homelab_job(j)
     wire = Wire(journal, j)
     original = wire.exchange
 
@@ -720,6 +738,9 @@ def test_fixed_tls_peer_cert_headers_and_bounded_no_retry_transport(monkeypatch)
     with pytest.raises(a.Blocked, match="^publisher_blocked$"):
         io.HTTPS("140.82.112.6", "f" * 64).exchange("GET", "/app", None, "JWT_FAKE")
     assert len(requests) == 1
+    assert io.HTTPS.homelab("140.82.112.6").exchange(
+        "GET", "/app", None, "JWT_FAKE"
+    ) == (200, {"ok": True})
     for payload in (b"x" * 20, b'{"ok":1,"ok":2}', b'{"token":"FAKE_PRIVATE"'):
         Response.data = payload
         with pytest.raises(a.Blocked, match="^publisher_blocked$"):
@@ -1797,3 +1818,288 @@ def test_apparmor_ancestor_gap_matches_documented_f02_status(role, monkeypatch):
     assert proposed == ancestors  # the documented fix covers every opened ancestor
     missing = {d for d in ancestors if f"  {d} r," not in profile.splitlines()}
     assert ("F-02 status: BLOCKED_SCOPE_DEPENDENCY" in doc) is bool(missing)
+
+
+def test_homelab_creates_exact_worker01_draft_and_revokes(store):
+    journal, _ = store
+    data, head, tree, objects = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    result, wire = invoke(job, data, journal)
+    assert result == {
+        "status": "PUBLISHED",
+        "pr": 111,
+        "head": head,
+        "runtime": "LIVE_NO_GO",
+        "contract": p.HOMELAB,
+        "external_rollback_protection": "NOT_PROVIDED",
+    }
+    assert wire.tip == head and wire.objects == objects and wire.token is False
+    assert wire.calls[-1] == ("DELETE", "/installation/token")
+    assert all("/merge" not in path for _, path in wire.calls)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"expires": 0},
+        {"ref": "refs/heads/main"},
+        {
+            "worker": "worker02",
+            "app_id": 5748675,
+            "installation_id": 181691061,
+            "app_slug": "tte-agent-worker02",
+            "bot_login": "tte-agent-worker02[bot]",
+        },
+        {"bot_login": "tte-agent-worker02[bot]"},
+        {"operation": "merge"},
+        {"operation": "update", "pr": 12, "old": "a" * 40},
+        {"parent": "f" * 40},
+        {"gates": {}},
+    ],
+)
+def test_homelab_wrong_authority_or_expired_approval_blocks(change):
+    data, head, tree, _ = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    with pytest.raises(a.Blocked):
+        p.validate_job({**job, **change}, int(time.time()))
+
+
+def test_operator_prepare_uses_only_public_reads_and_exact_artifact(
+    store,
+    monkeypatch,
+):
+    log, _ = store
+    data, head, tree, _ = artifact()
+    expected = homelab_job(job_for(data, head, tree))
+    wire = Wire(log, expected)
+    original = wire.exchange
+
+    def no_writes(method, path, body, secret, limit=256 * 1024):
+        assert method == "GET" and body is secret is None
+        return original(method, path, body, secret, limit)
+
+    def candidate(path, owner, limit):
+        assert path == p.HOMELAB_ARTIFACT and owner == 0 and limit == a.MAX_WIRE
+        return data
+
+    monkeypatch.setattr(op, "read_file", candidate)
+    monkeypatch.setattr(op, "command", lambda argv: expected["github_ipv4"] + " STREAM")
+    monkeypatch.setattr(op.HTTPS, "homelab", lambda ip: wire)
+    monkeypatch.setattr(
+        op,
+        "inspect_journals",
+        lambda ids, job=None: {k: expected[k] for k in expected if "journal_sha" in k},
+    )
+    args = SimpleNamespace(
+        **{
+            k: expected[k]
+            for k in (
+                "issue",
+                "ref",
+                "head",
+                "tree",
+                "parent",
+                "artifact_sha256",
+                "app_owner_id",
+            )
+        }
+    )
+    ids = {k: expected[k] for k in expected if k.endswith(("_uid", "_gid"))}
+    wire.exchange = no_writes
+    pins = op.inspect_journals(ids)
+    job = op.prepare(args, ids, pins)
+    assert job["head"] == head and job["tree"] == tree
+    assert job["artifact_sha256"] == a.digest(data)
+    assert job["bot_login"] == "tte-agent-worker01[bot]"
+    assert not log.events
+
+    wire.mutate = lambda path, value: dict(value, id=42) if path == p.ROOT else value
+    with pytest.raises(a.Blocked):
+        op.prepare(args, ids, pins)
+    args.artifact_sha256 = "f" * 64
+    before = tuple(wire.calls)
+    with pytest.raises(a.Blocked):
+        op.prepare(args, ids, pins)
+    assert tuple(wire.calls) == before
+
+
+def test_operator_root_guard_precedes_local_or_network_access(monkeypatch, capsys):
+    monkeypatch.setattr(op.os, "getuid", lambda: 2000)
+    monkeypatch.setattr(op, "exclusive_config", lambda: pytest.fail("local access"))
+    assert op.main(["readiness"]) == 1
+    assert json.loads(capsys.readouterr().out)["check"] == "root_required"
+
+
+def test_operator_intent_is_durable_exact_and_never_replaces_retained_job(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(op, "PENDING", tmp_path / ".homelab-job.pending")
+    dirfd = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY)
+    job_path = tmp_path / "job.json"
+    data, head, tree, _ = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    try:
+        op.stage_job(job, dirfd)
+        assert stat.S_IMODE(job_path.stat().st_mode) == 0o444
+        assert job_path.read_bytes() == a.encoded(job)
+        assert not op.PENDING.exists()
+        with pytest.raises(FileExistsError):
+            op.stage_job(dict(job, id="b" * 32), dirfd)
+        assert job_path.read_bytes() == a.encoded(job)
+        assert op.PENDING.exists()
+    finally:
+        os.close(dirfd)
+
+
+def test_operator_reads_existing_journal_under_lock_without_renewing_history(
+    store,
+    monkeypatch,
+):
+    log, path = store
+    data, head, tree, _ = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    log.claim(job)
+    log.append({"phase": "UNKNOWN", "job": job["id"], "operation": "mint"})
+    before = path.read_bytes()
+    uid = os.getuid()
+    monkeypatch.setattr(io.os, "getuid", lambda: 0)
+    monkeypatch.setattr(io.os, "geteuid", lambda: 0)
+    with pytest.raises(BlockingIOError):
+        io.Journal(str(path), None, inspect_owner=uid)
+    log.close()
+    try:
+        with pytest.raises(FileNotFoundError):
+            io.Journal(str(path) + ".missing", None, inspect_owner=uid)
+        reader = io.Journal(str(path), None, inspect_owner=uid)
+        try:
+            assert reader.sha256 == a.digest(before)
+            with pytest.raises(a.Blocked):
+                reader.admissible(dict(job, id="b" * 32))
+            with pytest.raises(a.Blocked):
+                reader.append({"phase": "COMPLETE"})
+        finally:
+            reader.close()
+        assert path.read_bytes() == before
+    finally:
+        # Restore a descriptor for the shared fixture's teardown.
+        log.fd = os.open(path, os.O_RDONLY)
+
+
+def test_homelab_artifact_policy_keeps_pem_and_candidate_from_other_roles():
+    publisher = (
+        REPO / "packaging/worker-publisher/ap-worker-publisher.apparmor"
+    ).read_text()
+    signer_profile = (
+        REPO / "packaging/worker-publisher/ap-worker-publisher-signer.apparmor"
+    ).read_text()
+    assert "/etc/ap-publisher/{job,receipts,candidate,homelab-candidate}.json r," in (
+        publisher
+    )
+    assert "deny /etc/ap-publisher/{candidate,homelab-candidate}.json rwklmx," in (
+        signer_profile
+    )
+    assert "deny /etc/ap-publisher-keys/** rwklmx," in publisher
+    assert "deny /etc/ap-publisher-keys/** rwklmx," in signer_profile
+
+
+def test_operator_starts_fixed_units_once_and_requires_exact_completed_journal(
+    monkeypatch,
+):
+    data, head, tree, _ = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    calls = []
+    journal_record = {
+        "phase": "COMPLETE",
+        "job": job["id"],
+        "ref": job["ref"],
+        "issue": job["issue"],
+        "head": job["head"],
+        "pr": 111,
+    }
+
+    def systemctl(*args, timeout=5):
+        calls.append((args, timeout))
+        if "--property=IPAddressAllow" in args:
+            return job["github_ipv4"] + "/32"
+        if "--property=IPAddressDeny" in args:
+            return "0.0.0.0/0 ::/0"
+
+    monkeypatch.setattr(op, "systemctl", systemctl)
+    monkeypatch.setattr(
+        op,
+        "journal",
+        lambda role, identities: SimpleNamespace(
+            events=[{"record": journal_record}],
+            close=lambda: None,
+        ),
+    )
+    assert op.launch(job, {}) == 111
+    assert calls[-2:] == [
+        (("start", "ap-worker-publisher-signer.service"), 20),
+        (("start", "ap-worker-publisher.service"), 325),
+    ]
+    assert calls[0][0] == (
+        "set-property",
+        "--runtime",
+        "ap-worker-publisher.service",
+        "IPAddressAllow=",
+        "IPAddressAllow=140.82.112.6/32",
+    )
+
+    journal_record["job"] = "f" * 32
+    with pytest.raises(a.Blocked):
+        op.launch(job, {})
+    assert len(calls) == 10
+
+
+def test_operator_failed_oneshot_retains_intent_and_makes_no_second_attempt(
+    monkeypatch,
+    capsys,
+):
+    data, head, tree, _ = artifact()
+    job = homelab_job(job_for(data, head, tree))
+    observed = []
+    monkeypatch.setattr(
+        op,
+        "os",
+        SimpleNamespace(
+            getuid=lambda: 0, geteuid=lambda: 0, close=lambda fd: None, environ={}
+        ),
+    )
+    monkeypatch.setattr(op, "exclusive_config", lambda: 99)
+    monkeypatch.setattr(op, "inspect_host", lambda: {})
+    monkeypatch.setattr(op, "inspect_journals", lambda identities: {})
+    monkeypatch.setattr(op, "prepare", lambda *args: job)
+    monkeypatch.setattr(
+        op,
+        "stage_job",
+        lambda value, directory: observed.append(("intent", value)),
+    )
+
+    def fail(value, identities):
+        observed.append(("attempt", value))
+        raise TimeoutError("fabricated private transport detail")
+
+    monkeypatch.setattr(op, "launch", fail)
+    flags = [
+        flag
+        for k in (
+            "issue",
+            "app_owner_id",
+            "ref",
+            "head",
+            "tree",
+            "parent",
+            "artifact_sha256",
+        )
+        for flag in ("--" + k.replace("_", "-"), str(job[k]))
+    ]
+    assert op.main(["preview", *flags]) == 0
+    assert observed == []
+    assert op.main(["approve-create", *flags, "--confirm-app-policy"]) == 1
+    output = capsys.readouterr().out
+    assert output.count('"status":"DRY_RUN"') == 2
+    assert '"status":"UNKNOWN_NEEDS_HUMAN"' in output
+    assert "fabricated private" not in output
+    assert observed == [("intent", job), ("attempt", job)]

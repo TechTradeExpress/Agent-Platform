@@ -16,7 +16,7 @@ profile ap-worker-publisher-signer /usr/libexec/ap-worker-publisher-signer flags
   /var/ r,
   /var/lib/ r,
   /var/lib/ap-publisher-signer/ r,
-  deny /etc/ap-publisher/candidate.json rwklmx,
+  deny /etc/ap-publisher/{candidate,homelab-candidate}.json rwklmx,
   deny /etc/ap-publisher-keys/ rwklmx,
   deny /etc/ap-publisher-keys/** rwklmx,
   deny /var/lib/ap-publisher/ rwklmx,

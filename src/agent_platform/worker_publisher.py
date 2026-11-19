@@ -12,6 +12,11 @@ from urllib.parse import quote
 from . import worker_publish_artifact as art
 from .worker_publish_io import HTTPS, Journal, credential_path, read_file
 
+HOMELAB = "homelab-supervised"
+JOB_PATH = "/etc/ap-publisher/job.json"
+HOMELAB_ARTIFACT = "/etc/ap-publisher/homelab-candidate.json"
+HOMELAB_STATUS = {"contract": HOMELAB, "external_rollback_protection": "NOT_PROVIDED"}
+
 REPOSITORY = "TechTradeExpress/Agent-Platform"
 REPO_ID = 1436076348
 WORKERS = {
@@ -94,10 +99,23 @@ JOB_KEYS = {
 }
 
 
+HOMELAB_KEYS = JOB_KEYS - {"gates", "approval", "peer_cert_sha256"} | {"contract"}
+
+
+def homelab(job):
+    return job.get("contract") == HOMELAB
+
+
+def transport(job):
+    if homelab(job):
+        return HTTPS.homelab(job["github_ipv4"])
+    return HTTPS(job["github_ipv4"], job["peer_cert_sha256"])
+
+
 def validate_job(job, now):
-    art.need(
-        type(job) is dict and set(job) == JOB_KEYS and job["version"] == art.VERSION
-    )
+    art.need(type(job) is dict and job.get("version") == art.VERSION)
+    local = homelab(job)
+    art.need(set(job) == (HOMELAB_KEYS if local else JOB_KEYS))
     art.need(
         type(job["repo_node"]) is str
         and re.fullmatch(r"[A-Za-z0-9_=-]{1,128}", job["repo_node"])
@@ -129,10 +147,9 @@ def validate_job(job, now):
         art.need(art.sha(job[k]))
     for k in (
         "artifact_sha256",
-        "peer_cert_sha256",
         "journal_sha256",
         "signer_journal_sha256",
-        "approval",
+        *(() if local else ("peer_cert_sha256", "approval")),
     ):
         art.need(type(job[k]) is str and re.fullmatch("[a-f0-9]{64}", job[k]))
     art.need(type(job["expires"]) is int and now < job["expires"] <= now + 300)
@@ -165,6 +182,14 @@ def validate_job(job, now):
             and type(job["pr"]) is int
             and 0 < job["pr"] < 2**31
         )
+    if local:
+        art.need(
+            job["worker"] == "worker01"
+            and job["operation"] == "create"
+            and job["bot_login"] == job["app_slug"] + "[bot]"
+        )
+        transport(job)  # structural, never connects
+        return job
     # Each digest is independently retained operator evidence, not a model boolean.
     gates = {
         "isolation",
@@ -180,7 +205,7 @@ def validate_job(job, now):
             for v in job["gates"].values()
         )
     )
-    HTTPS(job["github_ipv4"], job["peer_cert_sha256"])  # structural, never connects
+    transport(job)  # structural, never connects
     return job
 
 
@@ -242,6 +267,10 @@ def confinement(job, role):
 
 
 def receipts(job):
+    if homelab(job):
+        # The fixed root-owned job is the approval itself, bound to signer output
+        # and checked again at each effect. Separate receipts apply to strict mode.
+        return
     raw = read_file("/etc/ap-publisher/receipts.json", 0, 32768)
     facts = art.decode(raw)
     art.need(type(facts) is dict and set(facts) == set(job["gates"]))
@@ -871,6 +900,7 @@ def publish(job, data, jwt, journal, client, authorize):
         "pr": pr,
         "head": job["head"],
         "runtime": "LIVE_NO_GO",
+        **(HOMELAB_STATUS if homelab(job) else {}),
     }
 
 
@@ -887,7 +917,11 @@ def main(argv=None):
     try:
         original = read_file(args.job, 0, 16384)
         job = validate_job(art.decode(original), int(time.time()))
-        data = read_file(args.artifact, 0, art.MAX_WIRE)
+        artifact_path = args.artifact
+        if homelab(job):
+            art.need(args.job == JOB_PATH)
+            artifact_path = HOMELAB_ARTIFACT
+        data = read_file(artifact_path, 0, art.MAX_WIRE)
         art.need(art.digest(data) == job["artifact_sha256"])
         objects, _, inventory, _ = art.validate(
             data, job["head"], job["tree"], job["parent"]
@@ -901,6 +935,7 @@ def main(argv=None):
                         "head": job["head"],
                         "files": len(inventory),
                         "runtime": "LIVE_NO_GO",
+                        **(HOMELAB_STATUS if homelab(job) else {}),
                     }
                 ).decode()
             )
@@ -930,7 +965,7 @@ def main(argv=None):
             data,
             jwt,
             journal,
-            Client(job, objects, HTTPS(job["github_ipv4"], job["peer_cert_sha256"])),
+            Client(job, objects, transport(job)),
             authorize,
         )
         print(art.encoded(result).decode())

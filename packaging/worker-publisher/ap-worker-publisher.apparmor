@@ -25,7 +25,7 @@ profile ap-worker-publisher /usr/libexec/ap-worker-publisher flags=(attach_disco
   /usr/libexec/ap-worker-publisher r,
   /usr/bin/python3* ixr,
   /usr/lib/ap-worker-publisher/** r,
-  /etc/ap-publisher/{job,receipts,candidate}.json r,
+  /etc/ap-publisher/{job,receipts,candidate,homelab-candidate}.json r,
   /var/lib/ap-publisher/journal rwk,
   /run/credentials/ap-worker-publisher.service/app-jwt r,
   /etc/ssl/** r,

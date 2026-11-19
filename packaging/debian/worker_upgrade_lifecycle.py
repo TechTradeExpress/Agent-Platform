@@ -82,9 +82,20 @@ def validate_profile_transition(old, new, series):
             assert new[name] == old[name]  # Historical -6 -> -7 stays immutable.
         else:
             assert old[name].count(anchor) == 1
-            assert new[name] == old[name].replace(
+            expected = old[name].replace(
                 anchor, anchor + PROFILE_ADDITIONS[name].encode(), 1
-            ), "unapproved_profile_delta"
+            )
+            if name == "ap-worker-publisher":
+                expected = expected.replace(
+                    b"{job,receipts,candidate}.json",
+                    b"{job,receipts,candidate,homelab-candidate}.json",
+                )
+            else:
+                expected = expected.replace(
+                    b"deny /etc/ap-publisher/candidate.json",
+                    b"deny /etc/ap-publisher/{candidate,homelab-candidate}.json",
+                )
+            assert new[name] == expected, "unapproved_profile_delta"
 
 
 def archive_profiles(path):
@@ -436,6 +447,23 @@ def main():
         == ""
     )
     assert snapshot() == before
+    if series == "pkg11":
+        denied = json.loads(
+            call(
+                [
+                    "/usr/bin/setpriv",
+                    "--reuid=2000",
+                    "--regid=2000",
+                    "--clear-groups",
+                    "/usr/libexec/ap-worker-publisher-operator",
+                    "readiness",
+                ],
+                1,
+            )
+        )
+        assert denied["check"] == "root_required"
+        assert denied["external_rollback_protection"] == "NOT_PROVIDED"
+        assert snapshot() == before
     call(["agent-platform-worker", "provision", "--approve"])
     assert snapshot() == before
     for name, content in new_profiles.items():
@@ -491,7 +519,7 @@ def main():
                 "installed_host_verified": False,
                 "interruption": "mixed_roles_then_unpacked_then_explicit_configure",
                 "conffile_retained_then_fixture_reset": series == "pkg11",
-                "profile_transition": "exact_pkg14_delta"
+                "profile_transition": "exact_pkg14_and_pub03_delta"
                 if series == "pkg11"
                 else "historical_identical",
                 "profile_admin_edit_retained": series == "pkg11",
