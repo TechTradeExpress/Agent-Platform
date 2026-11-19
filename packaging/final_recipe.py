@@ -372,6 +372,7 @@ def _payload_paths(role, builder, consumed):
             for n in (
                 "ap-worker-publisher",
                 "ap-worker-publisher-export",
+                "ap-worker-publisher-operator",
                 "ap-worker-publisher-signer",
             )
         }
@@ -392,6 +393,7 @@ def _payload_paths(role, builder, consumed):
                 "publisher-isolation-readiness.md",
                 "worker-doctor.schema.json",
                 "worker-pilot-checklist.md",
+                "worker01-homelab-publisher.md",
                 "worker-provisioning.md",
             )
         }

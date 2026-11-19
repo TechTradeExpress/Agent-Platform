@@ -55,6 +55,7 @@ def leaves(role):
     if role == "publisher":
         result |= {
             "/etc/ap-publisher/candidate.json",
+            "/etc/ap-publisher/homelab-candidate.json",
             "/var/lib/ap-publisher/journal",
             "/run/credentials/ap-worker-publisher.service/app-jwt",
         }
@@ -86,12 +87,21 @@ def profiles():
 
 def historical_profiles():
     m = load_lifecycle()
-    # Removing only the exact approved block reconstructs the unchanged historical
-    # bytes, whose digests are independently pinned. No network/object fallback.
+    # Reverse the exact PUB-03 leaf changes and PKG-14 block. The old digest
+    # must still equal the independently pinned historical package bytes.
     anchor = b"  #include <abstractions/python>\n"
+    current = profiles()
+    current[unit("publisher")] = current[unit("publisher")].replace(
+        b"{job,receipts,candidate,homelab-candidate}.json",
+        b"{job,receipts,candidate}.json",
+    )
+    current[unit("signer")] = current[unit("signer")].replace(
+        b"/etc/ap-publisher/{candidate,homelab-candidate}.json",
+        b"/etc/ap-publisher/candidate.json",
+    )
     return {
         name: data.replace(anchor + m.PROFILE_ADDITIONS[name].encode(), anchor, 1)
-        for name, data in profiles().items()
+        for name, data in current.items()
     }
 
 
@@ -114,8 +124,8 @@ def test_exact_profile_inventory_and_descriptor_ancestor_union(role):
         for p in Path(leaf).parents
     }
     assert required == allow
-    # Exact old hash + insertion protects all existing includes, leaf rules,
-    # denies, network/ptrace/signal policy and disallows injected rules/drop-ins.
+    # Exact old hash and the two reviewed deltas protect includes, leaf rules,
+    # denies and network/ptrace/signal policy against unrelated edits.
     m.validate_profile_transition(historical_profiles(), profiles(), "pkg11")
     assert b"/** r," not in block.encode() and " w," not in block
     opposite = "publisher" if role == "signer" else "signer"

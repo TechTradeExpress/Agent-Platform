@@ -19,6 +19,7 @@ PUBLIC_LEAVES = frozenset(
         "/usr/libexec/ap-worker-publisher",
         "/usr/libexec/ap-worker-publisher-signer",
         "/usr/libexec/ap-worker-publisher-export",
+        "/usr/libexec/ap-worker-publisher-operator",
         "/etc/agent-platform-worker/package.conf",
         "/etc/apparmor.d/ap-worker-publisher",
         "/etc/apparmor.d/ap-worker-publisher-signer",
