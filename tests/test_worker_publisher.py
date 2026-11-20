@@ -681,6 +681,9 @@ def test_fixed_tls_peer_cert_headers_and_bounded_no_retry_transport(monkeypatch)
         def settimeout(self, value):
             assert 0 < value <= 5
 
+        def dup(self):
+            return Sock()
+
         def shutdown(self, *args):
             pass
 
