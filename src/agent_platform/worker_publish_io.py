@@ -300,40 +300,46 @@ class HTTPS:
 
     def exchange(self, method, path, payload, secret, limit=256 * 1024):
         # Private transport; the Client facade allowlists routes and exact payloads.
-        started = time.monotonic()
+        deadline = time.monotonic() + 5
+
+        def remaining():
+            left = deadline - time.monotonic()
+            need(left > 0)
+            return left
+
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.load_default_certs()
         connection = http.client.HTTPSConnection(
             "api.github.com", timeout=5, context=context
         )
         timer = None
+        watchdog = None
         response = None
         try:
-            raw = socket.create_connection((self.ip, 443), timeout=5)
+            raw = socket.create_connection((self.ip, 443), timeout=remaining())
             try:
                 need(raw.getpeername()[0] == self.ip)
-                remaining = 5 - (time.monotonic() - started)
-                need(remaining > 0)
-                raw.settimeout(remaining)
-                connection.sock = connection._context.wrap_socket(
+                # getresponse() can close the TLS socket while its response file
+                # still reads from it. A separate descriptor keeps shutdown
+                # usable through that handoff without touching the response file.
+                watchdog = raw.dup()
+
+                def interrupt():
+                    try:
+                        watchdog.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+
+                timer = threading.Timer(remaining(), interrupt)
+                timer.start()
+                raw.settimeout(remaining())
+                connection.sock = context.wrap_socket(
                     raw, server_hostname="api.github.com"
                 )
             except BaseException:
                 raw.close()
                 raise
 
-            channel = connection.sock
-
-            def interrupt():
-                try:
-                    channel.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
-
-            timer = threading.Timer(
-                max(0.001, 5 - (time.monotonic() - started)), interrupt
-            )
-            timer.start()
             if self.certificate is not None:
                 need(
                     digest(connection.sock.getpeercert(binary_form=True))
@@ -355,39 +361,46 @@ class HTTPS:
                 headers["Authorization"] = "Bearer " + secret
             if body is not None:
                 headers["Content-Type"] = "application/json"
-            remaining = 5 - (time.monotonic() - started)
-            need(remaining > 0)
-            channel.settimeout(remaining)
+            connection.sock.settimeout(remaining())
             connection.request(method, path, body=body, headers=headers)
+            connection.sock.settimeout(remaining())
             response = connection.getresponse()
             need(sum(len(k) + len(v) for k, v in response.getheaders()) <= 32768)
             need(
                 response.getheader("Location") is None
                 and response.getheader("Link") is None
             )
-            remaining = 5 - (time.monotonic() - started)
-            need(remaining > 0)
-            channel.settimeout(remaining)
+            length = response.getheader("Content-Length")
+            encoding = response.getheader("Transfer-Encoding")
+            if encoding is not None:
+                need(encoding.lower() == "chunked" and length is None)
+            if length is not None:
+                length = length.strip(" \t")
+                need(length.isascii() and length.isdecimal())
+                length = int(length)
+                need(length <= limit)
             chunks = bytearray()
             while True:
-                left = 5 - (time.monotonic() - started)
-                need(left > 0)
-                channel.settimeout(left)
+                remaining()
                 part = response.read1(min(65536, limit + 1 - len(chunks)))
                 if not part:
                     break
                 chunks.extend(part)
                 need(len(chunks) <= limit)
-            data = bytes(chunks)
-            need(len(data) <= limit and time.monotonic() - started <= 5)
+            # HTTPResponse.read1() can return EOF on a short fixed-length body.
+            need(length is None or len(chunks) == length)
             need(response.status in (200, 201, 204, 404))
-            return response.status, None if not data else decode(data)
+            value = None if not chunks else decode(bytes(chunks))
+            remaining()
+            return response.status, value
         except Exception:
             raise Blocked() from None
         finally:
             if timer is not None:
                 timer.cancel()
                 timer.join(timeout=1)
+            if watchdog is not None:
+                watchdog.close()
             if response is not None:
                 response.close()
             connection.close()
