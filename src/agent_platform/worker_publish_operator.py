@@ -124,6 +124,7 @@ def verify_unit(role, allow):
         "Group": account,
         "Type": "oneshot",
         "Restart": "no",
+        "TasksMax": "4" if signer else "8",
         "NoNewPrivileges": "yes",
         "CapabilityBoundingSet": "",
         "AmbientCapabilities": "",

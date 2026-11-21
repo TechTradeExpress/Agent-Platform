@@ -902,6 +902,9 @@ def test_deployment_has_no_enablement_or_worker_key_access():
         assert "NoNewPrivileges=yes" in unit and "CapabilityBoundingSet=\n" in unit
         assert "AppArmorProfile=" in unit and "LimitCORE=0" in unit
         assert "ProtectHome=yes" in unit and "TimeoutStartSec=" in unit
+    assert [line for line in signed.splitlines() if line.startswith("TasksMax=")] == [
+        "TasksMax=4"
+    ]
     assert "LoadCredential=app-key:" not in publisher
     assert "LoadCredential=app-key:" in signed and "PrivateNetwork=yes" in signed
     assert "IPAddressDeny=any" in publisher
@@ -2219,6 +2222,7 @@ def effective_units(monkeypatch):
             "SupplementaryGroups": "",
             "Type": "oneshot",
             "Restart": "no",
+            "TasksMax": "4" if signer_role else "8",
             "NoNewPrivileges": "yes",
             "CapabilityBoundingSet": "",
             "AmbientCapabilities": "",
@@ -2339,6 +2343,8 @@ def test_operator_only_allows_exact_runtime_network_dropin(effective_units):
         ("publisher", "NeedDaemonReload", "yes"),
         ("publisher", "IPAddressDeny", "0.0.0.0/0"),
         ("publisher", "SocketBindDeny", "ipv4:any"),
+        ("signer", "TasksMax", "1"),
+        ("signer", "TasksMax", "infinity"),
         ("signer", "PrivateNetwork", "no"),
         ("signer", "NetworkNamespacePath", "/run/netns/publisher"),
         ("signer", "RestrictAddressFamilies", "AF_UNIX AF_INET"),
