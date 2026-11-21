@@ -736,7 +736,11 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
     options = dict(source_tree="b" * 40, candidate=not ci, ci_final_fixture=ci)
     historical = tmp_path / "historical"
     shutil.copytree(source, historical, ignore=shutil.ignore_patterns(".git"))
-    for module in ("worker_publish_operator", "worker_publish_reconciliation"):
+    for module in (
+        "worker_publish_operator",
+        "worker_publish_reconciliation",
+        "worker_publish_case",
+    ):
         (historical / f"src/agent_platform/{module}.py").unlink()
     before = parent.build(
         historical, tmp_path / "before", 8, "a" * 40, 1700000000, **options
@@ -767,6 +771,8 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
     assert set(new) - set(old) == {
         "usr/libexec/ap-worker-publisher-operator",
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_operator.py",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_reconciliation.py",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_case.py",
         doc + "worker01-homelab-publisher.md",
     }
     assert not set(old) - set(new)

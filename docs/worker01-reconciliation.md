@@ -103,3 +103,44 @@ file identity and metadata through stable rereads. Original live journal
 owners and modes are outside this offline envelope. A busy lock, unsafe
 metadata, changed file or missing input refuses without creating anything.
 The resulting bytes still require the independent snapshot pin.
+
+## PUB-06 case custody and continuity
+
+The Worker P1 operator adds a root-only `reconcile-v4` subcommand with
+`inspect`, `preview`, `record` and `confirm`. It is pinned to worker01 #169
+v4, the original object and both exact journal hashes. It uses the existing
+configuration lock and read-only locks on both original journals, checks
+the failed and quiescent unit states and retained JWT metadata, and copies
+only job, candidate and journal bytes. The JWT is never opened.
+
+After separate host authorization, root must arrange a private existing
+`/var/lib/ap-publisher-recovery` directory owned by root with mode 0700.
+No package hook creates or migrates this directory. Stage root-owned
+0600 singly linked inputs `proposed-job.json`, `proposed-candidate.json`,
+`evidence.json` and `decision.json` satisfying PUB-05. Obtain the three
+pins from separately trusted custody. The command requires
+`--snapshot-sha256` and, for actions other than inspect,
+`--evidence-sha256` and `--decision-sha256`. These inputs validate exact
+bytes, and custody must independently authenticate the sources.
+
+Inspect and preview are read-only. Record requires explicit
+`--authorize-record`. It exclusively creates a fixed intent, the archived
+bytes and a final record under lock, with file and directory fsync. A failed
+or interrupted record requires manual review of the entire directory.
+Do not reconstruct missing markers or repeat an uncertain record. Retain
+the returned continuity digest separately only after a successful record.
+Read-only confirm requires that independent continuity pin via
+`--continuity-sha256` and revalidates the frozen case and archive. It never
+changes files. A digest computed from a surviving file after an uncertain
+write cannot substitute for the separately retained pin.
+
+This confirmation covers local case custody only. The evidence format and
+hash checks cannot authenticate the GitHub observer or establish whether
+its privileges cover main restrictions and native closing-link inventory.
+The next stage requires an independently authenticated observation mechanism
+or a trusted signed evidence contract with provisioned observer identity and
+completeness checks. The production admission path also needs a reviewed
+atomic single-use transition under both role locks and fresh case-specific
+revalidation. No consumer for the case record is installed in Signer or
+Publisher. Existing job/JWT, journal and launch guards continue to refuse.
+Do not retire evidence, start services or retry #169 on this basis.
