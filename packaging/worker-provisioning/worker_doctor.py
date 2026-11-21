@@ -1365,7 +1365,7 @@ class Observer:
                 "User": role,
                 "Group": role,
                 "AppArmorProfile": unit,
-                "TasksMax": "1" if role.endswith("signer") else "8",
+                "TasksMax": "4" if role.endswith("signer") else "8",
                 "LimitNOFILE": "32" if role.endswith("signer") else "64",
                 "LimitNOFILESoft": "32" if role.endswith("signer") else "64",
                 "MemoryMax": "134217728" if role.endswith("signer") else "268435456",

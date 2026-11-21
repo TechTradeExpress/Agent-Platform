@@ -730,6 +730,16 @@ def test_effective_unit_checks_match_both_packaged_inert_templates(doctor, monke
     assert seen == [name + ".service" for name in doctor.UNITS]
 
 
+def test_effective_signer_rejects_single_task_limit(doctor, monkeypatch):
+    def query(argv):
+        overrides = {"TasksMax": "1"} if argv[-1].endswith("-signer.service") else {}
+        return unit_response(argv, overrides)
+
+    monkeypatch.setattr(doctor, "query", query)
+    with pytest.raises(doctor.Blocked, match="unit_constraints_rejected"):
+        doctor.Observer().units()
+
+
 @pytest.mark.parametrize("defect", ["missing", "duplicate", "unknown"])
 def test_effective_unit_response_must_be_complete_and_unique(
     doctor, monkeypatch, defect

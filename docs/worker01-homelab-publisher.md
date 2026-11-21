@@ -38,6 +38,41 @@ The operator resolves one public IPv4 address for `api.github.com` with a bounde
 
 The Publisher authenticates the App ID/slug, registration owner, installation and restricted token scope before GitHub object/ref/PR writes. It creates the approved feature branch with an absent-tip CAS and makes one Draft against `main`. Before confirming success it reads back the remote commit and verifies exact head/base, App bot attribution and native linkage to the Issue, then revokes the installation token. Independently confirm those facts from GitHub in the maintainer session. Review the Draft separately. Only the human maintainer merges.
 
+## Signer exits before execution with 233/RUNTIME_DIRECTORY
+
+On Debian 13 with systemd 257.13, an affected attempt reported
+`Result=exit-code`, `ExecMainStatus=233` and a runtime-directory setup failure
+with `Resource temporarily unavailable`. Check the loaded unit and the
+relevant journal window using read-only commands. Record only sanitized
+diagnostics. [systemd 257 exit status reference](https://www.freedesktop.org/software/systemd/man/257/systemd.exec.html)
+
+```bash
+systemctl show ap-worker-publisher-signer.service \
+  -p Result -p ExecMainStatus -p NeedDaemonReload -p FragmentPath -p DropInPaths \
+  -p TasksMax -p EffectiveTasksMax -p RuntimeDirectory -p RuntimeDirectoryMode
+journalctl -u ap-worker-publisher-signer.service -n 30 --no-pager
+```
+
+The worker01 inert A/B probe used `/usr/bin/true` and isolated runtime-directory
+names. With the same basic setup, one task failed with status 233 and two
+succeeded. Correcting the production directory owner alone had already failed.
+This points to systemd needing an additional task during directory setup. The
+packaged Signer allows four tasks for setup headroom above the observed minimum
+while retaining a finite process and thread limit. Check `EffectiveTasksMax`
+as well as `TasksMax` because a parent slice can impose a lower limit.
+[Issue #174 evidence](https://github.com/TechTradeExpress/Agent-Platform/issues/174) ·
+[systemd 257 task limits](https://www.freedesktop.org/software/systemd/man/257/systemd.resource-control.html#TasksMax=)
+
+Preserve the second failed #169 job, both journals, failed unit state and
+runtime egress allowlist. Before another attempt, the operator must separately
+reconcile the job, both journals, whether a JWT was produced, and the remote
+ref and Draft PR. Keep existing evidence until that reconciliation is complete.
+Use a separately reviewed package and a fresh exact approval for any later
+pilot attempt. A separately authorized acceptance probe may use an inert
+`/usr/bin/true` unit on a disposable Debian 13 systemd 257 host with a fresh,
+isolated runtime directory and `TasksMax=4`. Keep it free of credentials and
+publication paths. A successful probe establishes runtime-directory setup only.
+
 ## Stop and reconcile
 
 - `BLOCKED` before staging means the CLI made no publication attempt. Correct the named check and use a fresh preview and explicit approval. A stale base requires a new artifact and independent review.
