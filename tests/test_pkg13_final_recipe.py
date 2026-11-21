@@ -736,7 +736,8 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
     options = dict(source_tree="b" * 40, candidate=not ci, ci_final_fixture=ci)
     historical = tmp_path / "historical"
     shutil.copytree(source, historical, ignore=shutil.ignore_patterns(".git"))
-    (historical / "src/agent_platform/worker_publish_operator.py").unlink()
+    for module in ("worker_publish_operator", "worker_publish_reconciliation"):
+        (historical / f"src/agent_platform/{module}.py").unlink()
     before = parent.build(
         historical, tmp_path / "before", 8, "a" * 40, 1700000000, **options
     )

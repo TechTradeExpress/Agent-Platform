@@ -145,3 +145,6 @@ confinement and credential checks. Any object reuse would need verified
 identity and content. Any proposed write requires fresh exact approval.
 An UNKNOWN write cannot be replayed automatically. Do not edit, replace,
 truncate or reset journals, fabricate COMPLETE records, or bypass the guard.
+
+See the [PUB-05 offline reconciliation contract](worker01-reconciliation.md)
+for the validated worker01 evidence shape and the separate admission design.
