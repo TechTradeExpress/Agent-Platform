@@ -6,11 +6,20 @@ import os
 import pwd
 import re
 import time
+from contextlib import contextmanager
+from enum import StrEnum
 from pathlib import Path
 from urllib.parse import quote
 
 from . import worker_publish_artifact as art
-from .worker_publish_io import HTTPS, Journal, credential_path, read_file
+from .worker_publish_io import (
+    HTTPS,
+    ExchangeFailure,
+    FailureReason,
+    Journal,
+    credential_path,
+    read_file,
+)
 
 HOMELAB = "homelab-supervised"
 JOB_PATH = "/etc/ap-publisher/job.json"
@@ -325,6 +334,46 @@ def receipts(job):
         )
 
 
+class FailureStage(StrEnum):
+    POST = "object_post"
+    POST_RESPONSE = "object_post_response"
+    READBACK = "object_readback"
+    REVOKE = "token_revoke"
+
+
+class PublicationFailure(art.Blocked):
+    def __init__(self, stage: FailureStage, reason: FailureReason):
+        super().__init__()
+        self.stage = stage
+        self.reason = reason
+
+    def diagnostic(self):
+        return {"stage": self.stage, "reason": self.reason}
+
+
+@contextmanager
+def diagnose(stage, default=FailureReason.UNCLASSIFIED):
+    try:
+        yield
+    except PublicationFailure:
+        raise
+    except ExchangeFailure as exc:
+        raise PublicationFailure(stage, exc.reason) from None
+    except TimeoutError:
+        raise PublicationFailure(stage, FailureReason.TIMEOUT) from None
+    except OSError:
+        raise PublicationFailure(stage, FailureReason.TRANSPORT) from None
+    except Exception:
+        raise PublicationFailure(stage, default) from None
+
+
+def check_object_sha(response, expected):
+    if type(response) is not dict or not art.sha(response.get("sha")):
+        raise ExchangeFailure(FailureReason.RESPONSE)
+    if response["sha"] != expected:
+        raise ExchangeFailure(FailureReason.SHA)
+
+
 class Client:
     """Fixed domain facade. No caller method/path/GraphQL/payload proxy."""
 
@@ -452,7 +501,9 @@ class Client:
                         expected = value
                         break
             art.need(art.encoded(body) == art.encoded(expected))
-        art.need(time.monotonic() < self.deadline and int(time.time()) < j["expires"])
+        if time.monotonic() >= self.deadline:
+            raise ExchangeFailure(FailureReason.TIMEOUT)
+        art.need(int(time.time()) < j["expires"])
         status, value = self.wire.exchange(
             method,
             path,
@@ -464,19 +515,17 @@ class Client:
             else self.token,
             limit,
         )
-        art.need(time.monotonic() < self.deadline)
-        art.need(
-            status
-            == (
-                201
-                if method == "POST" and path != "/graphql"
-                else 204
-                if method == "DELETE"
-                else 200
-            )
-            or missing
-            and status == 404
+        if time.monotonic() >= self.deadline:
+            raise ExchangeFailure(FailureReason.TIMEOUT)
+        expected_status = (
+            201
+            if method == "POST" and path != "/graphql"
+            else 204
+            if method == "DELETE"
+            else 200
         )
+        if status != expected_status and not (missing and status == 404):
+            raise ExchangeFailure(FailureReason.STATUS)
         return None if status == 404 else value
 
     def app(self):
@@ -701,15 +750,39 @@ class Client:
             body = {"tree": art.tree(payload)}
         else:
             body = art.commit(payload)
-        v = self._call("POST", ROOT + "/git/" + kind + "s", body)
-        art.need(v["sha"] == s)
+        try:
+            with diagnose(FailureStage.POST):
+                v = self._call("POST", ROOT + "/git/" + kind + "s", body)
+        except PublicationFailure as exc:
+            if exc.reason in (FailureReason.RESPONSE, FailureReason.STATUS):
+                raise PublicationFailure(
+                    FailureStage.POST_RESPONSE, exc.reason
+                ) from None
+            raise
+        with diagnose(FailureStage.POST_RESPONSE):
+            check_object_sha(v, s)
         self.verify(s)
         return bytes.fromhex(s)
 
     def verify(self, s):
         kind, payload = self.objects[s]
-        v = self._call("GET", ROOT + "/git/" + kind + "s/" + s, limit=6 * 1024 * 1024)
-        art.need(v["sha"] == s)
+        with diagnose(FailureStage.READBACK):
+            v = self._call(
+                "GET", ROOT + "/git/" + kind + "s/" + s, limit=6 * 1024 * 1024
+            )
+            check_object_sha(v, s)
+        try:
+            self._verify_content(kind, payload, v)
+        except art.Blocked:
+            raise PublicationFailure(
+                FailureStage.READBACK, FailureReason.CONTENT
+            ) from None
+        except (KeyError, TypeError, ValueError, AttributeError):
+            raise PublicationFailure(
+                FailureStage.READBACK, FailureReason.RESPONSE
+            ) from None
+
+    def _verify_content(self, kind, payload, v):
         if kind == "blob":
             art.need(
                 v["encoding"] == "base64"
@@ -777,10 +850,12 @@ class Client:
 
     def revoke(self):
         # Revocation must still be attempted after job expiry; separate fixed 5s call.
-        status, _ = self.wire.exchange(
-            "DELETE", "/installation/token", None, self.token
-        )
-        art.need(status == 204)
+        with diagnose(FailureStage.REVOKE):
+            status, _ = self.wire.exchange(
+                "DELETE", "/installation/token", None, self.token
+            )
+            if status != 204:
+                raise ExchangeFailure(FailureReason.STATUS)
         self.token = None
         return b"revoked"
 
@@ -823,6 +898,7 @@ def publish(job, data, jwt, journal, client, authorize):
     journal.admissible(job)
     client.jwt = jwt
     pr = job["pr"]
+    failure = None
     try:
         authorize()
         client.app()
@@ -881,10 +957,20 @@ def publish(job, data, jwt, journal, client, authorize):
             )
         for _ in range(2):
             client.pr(job["head"])
+    except Exception as exc:
+        failure = exc
+        raise
     finally:
-        if client.token is not None:
-            effect("revoke", b"revoke", client.revoke, cleanup=True)
-        client.jwt = None
+        try:
+            if client.token is not None:
+                with diagnose(FailureStage.REVOKE):
+                    effect("revoke", b"revoke", client.revoke, cleanup=True)
+        except PublicationFailure as cleanup:
+            if failure is None:
+                raise
+            raise failure from cleanup
+        finally:
+            client.jwt = None
     journal.append(
         {
             "phase": "COMPLETE",
@@ -970,7 +1056,7 @@ def main(argv=None):
         )
         print(art.encoded(result).decode())
         return 0
-    except Exception:
+    except Exception as exc:
         # Only a run that appended (or failed to append) a journal record has a
         # store needing reconciliation; read-only failures leave it untouched.
         attempted = start is not None and (
@@ -981,6 +1067,17 @@ def main(argv=None):
                 {
                     "status": "UNKNOWN_NEEDS_HUMAN" if attempted else "BLOCKED",
                     "code": "publisher_stopped",
+                    **(
+                        {"failure": exc.diagnostic()}
+                        if isinstance(exc, PublicationFailure)
+                        else {}
+                    ),
+                    **(
+                        {"cleanup_failure": exc.__cause__.diagnostic()}
+                        if isinstance(exc.__cause__, PublicationFailure)
+                        and exc.__cause__.stage == FailureStage.REVOKE
+                        else {}
+                    ),
                     "runtime": "LIVE_NO_GO",
                 }
             ).decode()

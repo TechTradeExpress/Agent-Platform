@@ -80,3 +80,68 @@ publication paths. A successful probe establishes runtime-directory setup only.
 - After a verified successful attempt, root may archive the nonsecret manifest and logs and retire the expired JWT without copying its contents to the archive. Keep both journals. Before reuse of the units check or restore the separately approved egress configuration. The runtime allowlist remains until manually changed or reboot. A fresh homelab run requires returning both units to the packaged baseline before approval.
 
 `external_rollback_protection=NOT_PROVIDED` reflects the local trust model. Distinct role-owned journals use a held lock, fsync and readback around UNKNOWN/confirmed effects. They cannot withstand trusted root or hypervisor rollback, deletion or compromise. A copied installation token may be usable offline until revoked or expired, outside this tool's local controls. Packaged tests use fabricated credentials and simulated GitHub effects. Live host isolation, live token behavior and the worker01/worker02 pilot outcomes remain NOT_RUN until separately observed.
+
+## Reconcile an ambiguous object publication
+
+The 2026-11-21 v4 pilot for #169 returned `UNKNOWN_NEEDS_HUMAN`. The preserved
+record sequence was CLAIM, UNKNOWN and CONFIRMED for mint, UNKNOWN for object,
+then UNKNOWN and CONFIRMED for revoke. The Signer completed. Independent
+GitHub reads found blob `dfa754b16bb4954371826191227dd3d594f50fcb` accessible and
+found no intended tree, commit, feature ref or Draft PR at observation time.
+Blob accessibility alone cannot establish when or how it was created, which
+phase failed, or what the Publisher verified. The exact failure remains unknown.
+
+Publisher failure JSON can include a `failure` with a fixed stage and reason.
+Read the Publisher unit's output for the specific invocation. The operator's
+generic launch result and the journal's UNKNOWN records still carry their
+original meaning.
+
+| Stage | Meaning |
+| --- | --- |
+| `object_post` | No usable response from the creation exchange, or the exchange could not proceed. |
+| `object_post_response` | The creation reply did not pass HTTP, JSON or object SHA validation. |
+| `object_readback` | A GET or its object identity/content verification failed. This can happen immediately after creation or in the final verification pass. |
+| `token_revoke` | Revocation or its journal confirmation did not complete. |
+
+Reasons are fixed codes: `timeout`, `transport_error`, `unexpected_status`,
+`invalid_response`, `object_sha_mismatch`, `object_content_mismatch` and
+`unclassified_failure`. If both an operation and revocation fail, the output
+can also contain `cleanup_failure`, without masking the original failure.
+The codes describe local observations. They confer no authorization and
+cannot establish whether a remote write took effect. The journal remains the
+authority for whether another invocation must refuse.
+
+1. Stop publication and preserve the approved artifact, exact job, both
+   complete journals, available unit status and sanitized invocation results.
+   Record evidence hashes and the observed time. Restrict access to original
+   host evidence. Keep JWTs, tokens, PEMs, request bodies and raw responses
+   out of the reconciliation report. Verify the units are inactive before
+   treating the evidence as a snapshot.
+2. Independently verify the canonical repository identity, the approved
+   base and candidate object IDs from the AP-WP/1 artifact, and the current
+   remote base. Use a separately authorized read-only observer. Verify each
+   observed object by kind and canonical bytes against the approved artifact,
+   including tree entries and commit parents. For the UNKNOWN object record,
+   compare its digest with SHA-256 of the approved raw Git object ID bytes.
+   Check the exact feature ref, Draft PR and linked Issue separately, and
+   record the outcome for each as observed, absent or unknown with timestamps.
+   Ambiguous responses or visibility limits leave the result unknown.
+3. Reconcile mint and revoke from preserved evidence. A confirmed revoke in
+   this journal records a successful reply and journal append. If issuance or
+   revocation is uncertain, preserve that uncertainty and have the authorized
+   operator account for the token through confirmed revocation or expiry.
+   Keep the original journals and job evidence even if the remote object
+   matches and the ref and Draft are absent. Keep the attempt unresolved
+   in the Publisher.
+
+The current Publisher refuses further claims on an unfinished journal.
+There is no recovery command. A subsequent attempt would require a separately
+reviewed recovery implementation and explicit human authorization of its exact
+reconciliation record and proposed effects. That implementation must preserve
+the original evidence and replay guards, bind independent read-only observations
+to the original job and artifact, record an authorized resolution durably, and
+admit only proven-safe effects after fresh repository, ref, Issue, App,
+confinement and credential checks. Any object reuse would need verified
+identity and content. Any proposed write requires fresh exact approval.
+An UNKNOWN write cannot be replayed automatically. Do not edit, replace,
+truncate or reset journals, fabricate COMPLETE records, or bypass the guard.

@@ -1718,6 +1718,14 @@ def test_cli_status_distinguishes_untouched_journal_from_needs_reconciliation(
     else:
         wire.fail = f"/app/installations/{j['installation_id']}/access_tokens"
 
+    configure_publisher_cli(monkeypatch, original, data, journal, wire)
+    assert p.main(["--job", "job", "--artifact", "artifact", "--execute"]) == 1
+    out = capsys.readouterr().out
+    assert json.loads(out)["status"] == status and "FAKE" not in out
+    assert (path.read_bytes() == b"") is (status == "BLOCKED")
+
+
+def configure_publisher_cli(monkeypatch, original, data, journal, wire):
     class Session:
         def __getattr__(self, name):
             return getattr(journal, name)
@@ -1740,10 +1748,110 @@ def test_cli_status_distinguishes_untouched_journal_from_needs_reconciliation(
     monkeypatch.setenv(
         "CREDENTIALS_DIRECTORY", "/run/credentials/ap-worker-publisher.service"
     )
-    assert p.main(["--job", "job", "--artifact", "artifact", "--execute"]) == 1
-    out = capsys.readouterr().out
-    assert json.loads(out)["status"] == status and "FAKE" not in out
-    assert (path.read_bytes() == b"") is (status == "BLOCKED")
+
+
+@pytest.mark.parametrize(
+    "fault,stage,reason",
+    [
+        ("post_disconnect", "object_post", "transport_error"),
+        ("post_timeout", "object_post", "timeout"),
+        ("post_malformed_wire", "object_post_response", "invalid_response"),
+        ("post_status", "object_post_response", "unexpected_status"),
+        ("post_shape", "object_post_response", "invalid_response"),
+        ("post_sha", "object_post_response", "object_sha_mismatch"),
+        ("get_disconnect", "object_readback", "transport_error"),
+        ("get_timeout", "object_readback", "timeout"),
+        ("get_shape", "object_readback", "invalid_response"),
+        ("get_sha", "object_readback", "object_sha_mismatch"),
+        ("get_content", "object_readback", "object_content_mismatch"),
+        ("revoke_lost", "token_revoke", "transport_error"),
+        ("post_and_revoke_lost", "object_post", "transport_error"),
+    ],
+)
+def test_cli_classifies_failed_publication_without_replaying(
+    store,
+    monkeypatch,
+    capsys,
+    fault,
+    stage,
+    reason,
+):
+    journal, path = store
+    data, head, tree, _ = artifact()
+    job = job_for(data, head, tree)
+    wire = Wire(journal, job)
+    exchange = wire.exchange
+
+    def faulty(method, route, body, secret, limit=256 * 1024):
+        status, value = exchange(method, route, body, secret, limit)
+        if method == "DELETE" and fault in {"revoke_lost", "post_and_revoke_lost"}:
+            raise ConnectionResetError("FAKE_PRIVATE revoke reply")
+        is_post = route == p.ROOT + "/git/blobs"
+        is_readback = route.startswith(p.ROOT + "/git/blobs/")
+        if (is_post and fault.startswith("post")) or (
+            is_readback and fault.startswith("get")
+        ):
+            if fault.endswith("disconnect") or fault == "post_and_revoke_lost":
+                raise ConnectionResetError("FAKE_PRIVATE response lost")
+            if fault.endswith("timeout"):
+                raise TimeoutError("FAKE_PRIVATE timeout")
+            if fault.endswith("wire"):
+                raise io.ExchangeFailure(io.FailureReason.RESPONSE)
+            if fault.endswith("shape"):
+                return status, {"secret": "FAKE_PRIVATE_RESPONSE"}
+            if fault.endswith("status"):
+                return 200, value
+            if fault.endswith("sha"):
+                return status, dict(value, sha="f" * 40)
+            if fault.endswith("content"):
+                return status, dict(value, content="d3Jvbmc=")
+        return status, value
+
+    wire.exchange = faulty
+    configure_publisher_cli(monkeypatch, a.encoded(job), data, journal, wire)
+    args = ["--job", "job", "--artifact", "artifact", "--execute"]
+    assert p.main(args) == 1
+    output = capsys.readouterr().out
+    expected = {
+        "status": "UNKNOWN_NEEDS_HUMAN",
+        "code": "publisher_stopped",
+        "runtime": "LIVE_NO_GO",
+        "failure": {"stage": stage, "reason": reason},
+    }
+    if fault == "post_and_revoke_lost":
+        expected["cleanup_failure"] = {
+            "stage": "token_revoke",
+            "reason": "transport_error",
+        }
+    assert json.loads(output) == expected
+    assert "FAKE" not in output and b"FAKE" not in path.read_bytes()
+    records = [
+        (e["record"]["phase"], e["record"].get("operation")) for e in journal.events
+    ]
+    assert ("COMPLETE", None) not in records
+    assert [call for call in wire.calls if call[0] == "DELETE"] == [
+        ("DELETE", "/installation/token")
+    ]
+    if fault != "revoke_lost":
+        assert wire.tip is None and wire.pr_number is None
+        assert records[:5] == [
+            ("CLAIM", None),
+            ("UNKNOWN", "mint"),
+            ("CONFIRMED", "mint"),
+            ("UNKNOWN", "object"),
+            ("UNKNOWN", "revoke"),
+        ]
+    if fault in {"revoke_lost", "post_and_revoke_lost"}:
+        assert records[-1] == ("UNKNOWN", "revoke")
+    else:
+        assert records[-1] == ("CONFIRMED", "revoke")
+    calls, retained = list(wire.calls), path.read_bytes()
+    assert p.main(args) == 1
+    assert wire.calls == calls and path.read_bytes() == retained
+    # Even a different, freshly authorized job cannot bypass this history.
+    with pytest.raises(a.Blocked):
+        invoke(dict(job, id="d" * 32), data, journal, wire)
+    assert wire.calls == calls and path.read_bytes() == retained
 
 
 REPO = Path(__file__).resolve().parents[1]

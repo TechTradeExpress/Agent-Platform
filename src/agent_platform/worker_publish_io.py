@@ -10,6 +10,7 @@ import ssl
 import stat
 import threading
 import time
+from enum import StrEnum
 from pathlib import Path
 
 from .worker_publish_artifact import Blocked, decode, digest, encoded, need
@@ -272,6 +273,22 @@ class Journal:
         os.close(self.fd)
 
 
+class FailureReason(StrEnum):
+    TIMEOUT = "timeout"
+    TRANSPORT = "transport_error"
+    RESPONSE = "invalid_response"
+    STATUS = "unexpected_status"
+    SHA = "object_sha_mismatch"
+    CONTENT = "object_content_mismatch"
+    UNCLASSIFIED = "unclassified_failure"
+
+
+class ExchangeFailure(Blocked):
+    def __init__(self, reason: FailureReason):
+        super().__init__()
+        self.reason = reason
+
+
 class HTTPS:
     """One fixed verified origin and operator-pinned public IPv4/certificate.
 
@@ -304,7 +321,8 @@ class HTTPS:
 
         def remaining():
             left = deadline - time.monotonic()
-            need(left > 0)
+            if left <= 0:
+                raise ExchangeFailure(FailureReason.TIMEOUT)
             return left
 
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -315,6 +333,7 @@ class HTTPS:
         timer = None
         watchdog = None
         response = None
+        reason = FailureReason.TRANSPORT
         try:
             raw = socket.create_connection((self.ip, 443), timeout=remaining())
             try:
@@ -365,6 +384,7 @@ class HTTPS:
             connection.request(method, path, body=body, headers=headers)
             connection.sock.settimeout(remaining())
             response = connection.getresponse()
+            reason = FailureReason.RESPONSE
             need(sum(len(k) + len(v) for k, v in response.getheaders()) <= 32768)
             need(
                 response.getheader("Location") is None
@@ -383,18 +403,33 @@ class HTTPS:
             while True:
                 remaining()
                 part = response.read1(min(65536, limit + 1 - len(chunks)))
+                remaining()
                 if not part:
                     break
                 chunks.extend(part)
                 need(len(chunks) <= limit)
             # HTTPResponse.read1() can return EOF on a short fixed-length body.
             need(length is None or len(chunks) == length)
-            need(response.status in (200, 201, 204, 404))
-            value = None if not chunks else decode(bytes(chunks))
+            if response.status not in (200, 201, 204, 404):
+                raise ExchangeFailure(FailureReason.STATUS)
+            try:
+                value = None if not chunks else decode(bytes(chunks))
+            except ValueError:
+                raise ExchangeFailure(FailureReason.RESPONSE) from None
             remaining()
             return response.status, value
+        except ExchangeFailure:
+            raise
+        except TimeoutError:
+            raise ExchangeFailure(FailureReason.TIMEOUT) from None
+        except OSError:
+            raise ExchangeFailure(FailureReason.TRANSPORT) from None
+        except http.client.HTTPException:
+            raise ExchangeFailure(FailureReason.RESPONSE) from None
+        except Blocked:
+            raise ExchangeFailure(reason) from None
         except Exception:
-            raise Blocked() from None
+            raise ExchangeFailure(FailureReason.UNCLASSIFIED) from None
         finally:
             if timer is not None:
                 timer.cancel()
