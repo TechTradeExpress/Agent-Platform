@@ -7,7 +7,6 @@ from types import SimpleNamespace
 import pytest
 
 from agent_platform import worker_publish_io as transport
-from agent_platform.worker_publish_artifact import Blocked
 
 
 @pytest.fixture
@@ -134,8 +133,9 @@ def test_close_delimited_body(wire):
 def test_watchdog_interrupts_drip_feed_after_the_total_deadline(wire):
     wire.response = b'HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n{"slow":true}'
     wire.slow = True
-    with pytest.raises(Blocked, match="^publisher_blocked$"):
+    with pytest.raises(transport.ExchangeFailure, match="^publisher_blocked$") as exc:
         exchange()
+    assert exc.value.reason == transport.FailureReason.TIMEOUT
     assert wire.reads == 2 and wire.interrupted
     assert wire.timer_cancelled and wire.watchdog_closed and wire.requests == 1
 
@@ -163,6 +163,11 @@ def test_watchdog_interrupts_drip_feed_after_the_total_deadline(wire):
 )
 def test_invalid_responses_fail_closed(wire, response, limit):
     wire.response = b"HTTP/1.1 " + response
-    with pytest.raises(Blocked, match="^publisher_blocked$"):
+    with pytest.raises(transport.ExchangeFailure, match="^publisher_blocked$") as exc:
         exchange(limit)
+    assert exc.value.reason == (
+        transport.FailureReason.STATUS
+        if response.startswith(b"302")
+        else transport.FailureReason.RESPONSE
+    )
     assert wire.timer_cancelled and wire.watchdog_closed and wire.requests == 1
