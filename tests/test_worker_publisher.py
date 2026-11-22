@@ -954,7 +954,7 @@ def test_cli_execute_complete_flow_without_any_real_credentials(
     assert wire.token is False and wire.pr_number == 111
 
 
-@pytest.mark.parametrize("interrupted", [False, True])
+@pytest.mark.parametrize("interrupted", [None, "file", "directory"])
 def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
     store, tmp_path, monkeypatch, capsys, interrupted
 ):
@@ -991,27 +991,15 @@ def test_signer_one_shot_binds_job_and_keeps_key_out_of_publisher(
         "CREDENTIALS_DIRECTORY",
         "/run/credentials/ap-worker-publisher-signer.service",
     )
-    real = signer.os.open
     output = tmp_path / "app-jwt"
-    monkeypatch.setattr(signer.os.path, "lexists", lambda _: output.exists())
-
-    def open_private(path, *args, **kwargs):
-        return real(
-            str(output) if path == "/run/ap-publisher-signer/app-jwt" else path,
-            *args,
-            **kwargs,
-        )
-
-    monkeypatch.setattr(signer.os, "open", open_private)
+    monkeypatch.setattr(signer, "OUTPUT_DIRECTORY", str(tmp_path))
     real_fsync = signer.os.fsync
 
     def sync(fd):
-        if (
-            interrupted
-            and output.exists()
-            and os.fstat(fd).st_ino == output.stat().st_ino
-        ):
-            raise OSError("FABRICATED interruption")
+        if interrupted and output.exists():
+            inode = (output if interrupted == "file" else tmp_path).stat().st_ino
+            if os.fstat(fd).st_ino == inode:
+                raise OSError("FABRICATED interruption")
         return real_fsync(fd)
 
     monkeypatch.setattr(signer.os, "fsync", sync)

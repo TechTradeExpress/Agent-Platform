@@ -95,6 +95,11 @@ def validate_profile_transition(old, new, series):
                     b"deny /etc/ap-publisher/candidate.json",
                     b"deny /etc/ap-publisher/{candidate,homelab-candidate}.json",
                 )
+                expected = expected.replace(
+                    b"  /run/ap-publisher-signer/app-jwt rw,\n",
+                    b"  /run/ap-publisher-signer/ r,\n"
+                    b"  /run/ap-publisher-signer/app-jwt rw,\n",
+                )
             assert new[name] == expected, "unapproved_profile_delta"
 
 

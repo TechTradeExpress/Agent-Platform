@@ -99,6 +99,9 @@ def historical_profiles():
         b"/etc/ap-publisher/{candidate,homelab-candidate}.json",
         b"/etc/ap-publisher/candidate.json",
     )
+    current[unit("signer")] = current[unit("signer")].replace(
+        b"  /run/ap-publisher-signer/ r,\n", b"", 1
+    )
     return {
         name: data.replace(anchor + m.PROFILE_ADDITIONS[name].encode(), anchor, 1)
         for name, data in current.items()
