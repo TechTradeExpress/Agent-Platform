@@ -2520,3 +2520,29 @@ def test_operator_rejects_modified_path_or_group_lists(
     replies[service][key] = ("as", value)
     with pytest.raises(a.Blocked):
         op.inspect_units()
+
+
+@pytest.mark.parametrize("failing_sync", [None, 1, 2])
+def test_signer_output_sync_and_no_replacement(tmp_path, monkeypatch, failing_sync):
+    monkeypatch.setattr(signer, "OUTPUT_DIRECTORY", str(tmp_path))
+    sync = os.fsync
+    calls = []
+
+    def fault(fd):
+        calls.append(stat.S_ISDIR(os.fstat(fd).st_mode))
+        if len(calls) == failing_sync:
+            raise OSError("synthetic fsync failure")
+        sync(fd)
+
+    monkeypatch.setattr(signer.os, "fsync", fault)
+    if failing_sync is None:
+        signer.write_output(b"synthetic")
+    else:
+        with pytest.raises(OSError, match="synthetic fsync failure"):
+            signer.write_output(b"synthetic")
+    assert calls == ([False] if failing_sync == 1 else [False, True])
+    with pytest.raises(FileExistsError):
+        signer.write_output(b"replacement")
+    result = tmp_path / "app-jwt"
+    assert result.read_bytes() == b"synthetic"
+    assert stat.S_IMODE(result.stat().st_mode) == 0o400

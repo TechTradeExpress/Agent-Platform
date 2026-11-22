@@ -29,6 +29,29 @@ def jwt_for(key, app_id, expires, now):
     return prefix + b"." + b64(key.sign(prefix, padding.PKCS1v15(), hashes.SHA256()))
 
 
+OUTPUT_DIRECTORY = "/run/ap-publisher-signer"
+
+
+def write_output(value):
+    directory = os.open(OUTPUT_DIRECTORY, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        fd = os.open(
+            "app-jwt",
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o400,
+            dir_fd=directory,
+        )
+        try:
+            art.need(os.write(fd, value) == len(value))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        # A successful file fsync alone does not confirm the directory entry.
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
 def main():
     journal = None
     try:
@@ -41,7 +64,7 @@ def main():
         receipts(job)
         source = credential_path("signer")
         # Retained output is evidence, never an overwrite/restart opportunity.
-        art.need(not os.path.lexists("/run/ap-publisher-signer/app-jwt"))
+        art.need(not os.path.lexists(os.path.join(OUTPUT_DIRECTORY, "app-jwt")))
         journal = Journal(
             "/var/lib/ap-publisher-signer/journal", job["signer_journal_sha256"]
         )
@@ -55,16 +78,7 @@ def main():
         value = art.encoded(
             {"job_sha256": art.digest(original), "jwt": value.decode("ascii")}
         )
-        fd = os.open(
-            "/run/ap-publisher-signer/app-jwt",
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-            0o400,
-        )
-        try:
-            art.need(os.write(fd, value) == len(value))
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        write_output(value)
         journal.append(
             {
                 "phase": "COMPLETE",
