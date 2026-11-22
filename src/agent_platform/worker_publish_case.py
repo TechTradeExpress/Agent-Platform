@@ -3,6 +3,7 @@
 import argparse
 import fcntl
 import os
+import re
 import stat
 import time
 from contextlib import ExitStack, contextmanager
@@ -23,6 +24,17 @@ PUBLISHER_LOG = "e7628e3a105c103105b828bc1ce4c5bb81094fbd5471e7c4da2c8dc8fb3e8a6
 SIGNER_LOG = "5fb0bdba2a9ecafb641856ca2428f81aa29b3e69ba5fd0e83404ffd1b2529bfe"
 INTENT = "v4-intent.json"
 RESOLUTION = "v4-resolution.json"
+
+ARCHIVED = {
+    "original-job.json": reconciliation.RECORD_LIMIT,
+    "original-candidate.json": art.MAX_WIRE,
+    "original-publisher.jsonl": reconciliation.JOURNAL_LIMIT,
+    "original-signer.jsonl": reconciliation.JOURNAL_LIMIT,
+    "retained-proposed-candidate.json": art.MAX_WIRE,
+    "retained-proposed-job.json": reconciliation.RECORD_LIMIT,
+    "retained-evidence.json": reconciliation.RECORD_LIMIT,
+    "retained-decision.json": reconciliation.RECORD_LIMIT,
+}
 
 
 @contextmanager
@@ -244,12 +256,56 @@ def _record(directory, parts, intent, resolution):
     return art.digest(resolution)
 
 
-def _confirm(directory, parts, intent, resolution, continuity_pin):
-    art.need(type(continuity_pin) is str and continuity_pin == art.digest(resolution))
-    art.need(_read(directory, INTENT, 16384) == intent)
-    art.need(_read(directory, RESOLUTION, 16384) == resolution)
-    for name, data in parts.items():
-        art.need(_read(directory, name, len(data)) == data)
+def _confirm(directory, continuity_pin):
+    """Verify an archived record without inspecting live host or applying a clock."""
+    art.need(
+        type(continuity_pin) is str and re.fullmatch("[a-f0-9]{64}", continuity_pin)
+    )
+    resolution = _read(directory, RESOLUTION, reconciliation.RECORD_LIMIT)
+    art.need(art.digest(resolution) == continuity_pin)
+    intent = _read(directory, INTENT, reconciliation.RECORD_LIMIT)
+    art.need(
+        resolution
+        == art.encoded(
+            {
+                "schema": "PUB-06/resolution/1",
+                "case": CASE,
+                "intent_sha256": art.digest(intent),
+                "admission_allowed": False,
+            }
+        )
+    )
+    marker = art.decode(intent)
+    art.need(
+        set(marker)
+        == {"schema", "case", "snapshot", "evidence", "decision", "retained"}
+    )
+    art.need(art.encoded(marker) == intent)
+    art.need(marker["schema"] == "PUB-06/intent/1" and marker["case"] == CASE)
+    pins = marker["retained"]
+    art.need(type(pins) is dict and set(pins) == set(ARCHIVED))
+    observed = {}
+    for name, limit in ARCHIVED.items():
+        observed[name] = art.digest(_read(directory, name, limit))
+    art.need(observed == pins)
+    art.need(observed["retained-evidence.json"] == marker["evidence"])
+    art.need(observed["retained-decision.json"] == marker["decision"])
+    art.need(
+        marker["snapshot"]
+        == art.digest(
+            art.encoded(
+                {
+                    "schema": "PUB-05/snapshot/1",
+                    "job": observed["original-job.json"],
+                    "artifact": observed["original-candidate.json"],
+                    "publisher": observed["original-publisher.jsonl"],
+                    "signer": observed["original-signer.jsonl"],
+                }
+            )
+        )
+    )
+    art.need(_read(directory, INTENT, reconciliation.RECORD_LIMIT) == intent)
+    art.need(_read(directory, RESOLUTION, reconciliation.RECORD_LIMIT) == resolution)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -258,11 +314,9 @@ class _Parser(argparse.ArgumentParser):
 
 
 def main(argv, operator):
-    parser = argparse.ArgumentParser(
-        description="Root-only frozen worker01 case custody"
-    )
+    parser = _Parser(description="Root-only frozen worker01 case custody")
     parser.add_argument("action", choices=("inspect", "preview", "record", "confirm"))
-    parser.add_argument("--snapshot-sha256", required=True)
+    parser.add_argument("--snapshot-sha256")
     parser.add_argument("--evidence-sha256")
     parser.add_argument("--decision-sha256")
     parser.add_argument("--continuity-sha256")
@@ -274,6 +328,37 @@ def main(argv, operator):
         check = "argument_scope"
         art.need(args.authorize_record == (args.action == "record"))
         art.need((args.continuity_sha256 is not None) == (args.action == "confirm"))
+        if args.action == "confirm":
+            art.need(
+                all(
+                    value is None
+                    for value in (
+                        args.snapshot_sha256,
+                        args.evidence_sha256,
+                        args.decision_sha256,
+                    )
+                )
+            )
+            check = "archive_or_continuity"
+            with case_directory() as directory:
+                _confirm(directory, args.continuity_sha256)
+            operator.report(
+                "CUSTODY_CONFIRMED",
+                check="remote_effects_unresolved",
+                admission_allowed=False,
+                publish_allowed=False,
+            )
+            return 0
+        art.need(args.snapshot_sha256 is not None)
+        art.need(
+            all(
+                (value is not None) == (args.action != "inspect")
+                for value in (
+                    args.evidence_sha256,
+                    args.decision_sha256,
+                )
+            )
+        )
         check = "case_lock_or_history"
         with ExitStack() as locks:
             config = operator.exclusive_config()
@@ -308,11 +393,6 @@ def main(argv, operator):
                         directory, parts, intent, resolution
                     )
                     status = "RESOLUTION_INTENT_RECORDED"
-                else:
-                    _confirm(
-                        directory, parts, intent, resolution, args.continuity_sha256
-                    )
-                    status = "RESOLUTION_CONFIRMED"
             check = "production_admission_unavailable"
     except Exception:
         status, details = "STOP", {}

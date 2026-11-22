@@ -118,8 +118,7 @@ After separate host authorization, root must arrange a private existing
 No package hook creates or migrates this directory. Stage root-owned
 0600 singly linked inputs `proposed-job.json`, `proposed-candidate.json`,
 `evidence.json` and `decision.json` satisfying PUB-05. Obtain the three
-pins from separately trusted custody. The command requires
-`--snapshot-sha256` and, for actions other than inspect,
+pins from separately trusted custody. Inspect requires `--snapshot-sha256`. Preview and record also need
 `--evidence-sha256` and `--decision-sha256`. These inputs validate exact
 bytes, and custody must independently authenticate the sources.
 
@@ -129,9 +128,14 @@ bytes and a final record under lock, with file and directory fsync. A failed
 or interrupted record requires manual review of the entire directory.
 Do not reconstruct missing markers or repeat an uncertain record. Retain
 the returned continuity digest separately only after a successful record.
-Read-only confirm requires that independent continuity pin via
-`--continuity-sha256` and revalidates the frozen case and archive. It never
-changes files. A digest computed from a surviving file after an uncertain
+Read-only confirm takes only the independently retained
+`--continuity-sha256`. Under the case-directory lock it checks the final
+marker, canonical intent, exact archived file set and contents. On success it
+reports `CUSTODY_CONFIRMED` with `remote_effects_unresolved`. Confirmation
+works after approval expiry or restart, including when temporary inputs and
+retained runtime metadata are no longer available. It reads no live job,
+journal, JWT or unit state. Inspect, preview and record keep their original
+checks, including approval freshness where applicable. A digest computed from a surviving file after an uncertain
 write cannot substitute for the separately retained pin.
 
 This confirmation covers local case custody only. The evidence format and
@@ -144,3 +148,31 @@ atomic single-use transition under both role locks and fresh case-specific
 revalidation. No consumer for the case record is installed in Signer or
 Publisher. Existing job/JWT, journal and launch guards continue to refuse.
 Do not retire evidence, start services or retry #169 on this basis.
+
+
+### Remaining admission gates
+
+1. Define an independently provisioned observer contract for this repository
+   and App. Pin the observer principal and signing public key under root
+   custody, separate from the worker App and publication credentials.
+   Bind a fresh signed result to the exact worker case, proposed job,
+   challenge, observation time and endpoint scope. Verify the actual read
+   capabilities through authenticated successful observations of branch
+   restrictions and bypass actors, the installed App's identity and grants,
+   and complete exact-ref and native Issue-linked PR inventory. Each denied,
+   truncated, incomplete or ambiguous observation must produce STOP. A valid
+   signature alone cannot establish visibility.
+2. With that contract reviewed, add a separate launch decision bound to the
+   confirmed archive, fresh observation challenge, exact new job and a
+   unique authorization ID. Under configuration and both role locks,
+   recheck the old journal pins, current main and candidate. Write and
+   durably confirm an exclusive consumption intent before anything can
+   start, preserving the old attempt. Use an explicitly bound fresh journal
+   generation if needed, available only to that exact new launch. Both
+   roles must reject the old ref, old ID, foreign generation and any
+   existing or uncertain claim. Preserve independent authorization for any
+   retirement of retained state.
+3. Test races, lost persistence acknowledgments, replay after restart,
+   claim-before-mint interruption and authorization expiry. An interrupted
+   consumption cannot renew approval or automatically start either role.
+   Keep live deployment and the first #169 attempt separately authorized.

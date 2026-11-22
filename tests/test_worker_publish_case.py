@@ -68,10 +68,10 @@ def test_record_requires_separate_exact_confirmation(store, inputs):
     pin = case._record(fd, *inputs)
     before = {p.name: p.read_bytes() for p in path.iterdir()}
     with pytest.raises(art.Blocked):
-        case._confirm(fd, *inputs, "0" * 64)
+        case._confirm(fd, "0" * 64)
     other = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
     try:
-        case._confirm(other, *inputs, pin)
+        case._confirm(other, pin)
         with pytest.raises(art.Blocked):
             case._record(other, *inputs)
     finally:
@@ -98,7 +98,7 @@ def test_uncertain_fsync_never_retries_or_repairs(store, inputs, monkeypatch, bo
     assert (path / case.INTENT).exists()
     before = {p.name: p.read_bytes() for p in path.iterdir()}
     with pytest.raises(art.Blocked):
-        case._confirm(fd, *inputs, None)
+        case._confirm(fd, None)
     with pytest.raises(art.Blocked):
         case._record(fd, *inputs)
     assert before == {p.name: p.read_bytes() for p in path.iterdir()}
@@ -125,7 +125,7 @@ def test_confirmation_requires_original_archive_bytes_and_metadata(
         else:
             os.link(other, leaf)
     with pytest.raises((art.Blocked, OSError)):
-        case._confirm(fd, *inputs, pin)
+        case._confirm(fd, pin)
 
 
 def test_nonroot_cli_stops_before_host_reads(monkeypatch, capsys):
@@ -183,3 +183,63 @@ def test_frozen_host_checks_only_metadata(monkeypatch, fault):
     else:
         with pytest.raises(art.Blocked):
             case._frozen_host(operator, job)
+
+
+def test_cli_confirms_archived_bytes_after_expiry_and_restart(
+    store, inputs, monkeypatch, capsys
+):
+    from contextlib import contextmanager
+
+    fs, fd, path = store
+    pin = case._record(fd, *inputs)
+    # Lose the original process context and discard the transient staged inputs.
+    for name in (
+        "proposed-job.json",
+        "proposed-candidate.json",
+        "evidence.json",
+        "decision.json",
+    ):
+        (path / name).unlink()
+
+    @contextmanager
+    def reopen():
+        new = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            yield new
+        finally:
+            os.close(new)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("confirmation consulted the live or approval path")
+
+    monkeypatch.setattr(fs, "getuid", lambda: 0)
+    monkeypatch.setattr(fs, "geteuid", lambda: 0)
+    monkeypatch.setattr(case.time, "time", lambda: 10**10)
+    monkeypatch.setattr(case, "case_directory", reopen)
+    monkeypatch.setattr(case, "frozen_snapshot", forbidden)
+    monkeypatch.setattr(operator, "exclusive_config", forbidden)
+    monkeypatch.setattr(case.reconciliation, "preview", forbidden)
+
+    args = ["reconcile-v4", "confirm", "--continuity-sha256"]
+    assert operator.main([*args, pin]) == 0
+    report = art.decode(capsys.readouterr().out.encode())
+    assert report["status"] == "CUSTODY_CONFIRMED"
+    assert report["check"] == "remote_effects_unresolved"
+    assert report["admission_allowed"] is report["publish_allowed"] is False
+    assert operator.main([*args, "0" * 64]) == 1
+    (path / case.INTENT).write_bytes(b'{"replaced":true}')
+    assert operator.main([*args, pin]) == 1
+
+
+def test_no_confirmation_of_damaged_final_marker_after_reopen(store, inputs):
+    _, fd, path = store
+    pin = case._record(fd, *inputs)
+    (path / case.RESOLUTION).write_bytes(inputs[2][:-1])
+    other = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        with pytest.raises(art.Blocked):
+            case._confirm(other, pin)
+        with pytest.raises(art.Blocked):
+            case._record(other, *inputs)
+    finally:
+        os.close(other)
