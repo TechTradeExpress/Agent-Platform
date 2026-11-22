@@ -176,3 +176,63 @@ Do not retire evidence, start services or retry #169 on this basis.
    claim-before-mint interruption and authorization expiry. An interrupted
    consumption cannot renew approval or automatically start either role.
    Keep live deployment and the first #169 attempt separately authorized.
+
+### Signed observer implementation
+
+On a separately authorized administrator workstation, call
+`worker_publish_observer.collect_signed` with an explicitly supplied
+fine-grained administrator credential, Ed25519 signing key and approved
+IPv4 peer. There is no credential lookup, installation-token minting or
+service. Use the public key pinned independently on worker01. Supply the
+exact new job bytes, snapshot digest, custody continuity digest and a fresh
+challenge provisioned separately by root. Keep administrator credentials
+and private signing keys outside worker01.
+
+The collector checks the authenticated `su-17` user ID and repository admin
+visibility. It checks classic protection, all listed repository and inherited
+rulesets, effective main rules and explicitly visible empty bypass lists.
+It checks the organization installation inventory, exact installation grant,
+App owner and metadata, and repeats the independent reads. The only POST
+is the fixed read-only native Issue inventory GraphQL query. Exact feature
+ref lookups, all-state head-PR lists and native linked PR results must be
+empty and complete. REST requests use a bounded 100-entry page. A pagination
+link, full page, missing visibility or absent administrative endpoint is a
+STOP. Multiple-page inventories are outside the current supported profile.
+
+Exact selected repository IDs require a separate signed
+`AP-worker01-selection/1` attestation produced after inspection of the
+administrative installation inventory. It binds the same case, challenge
+and proposed job and lists exactly the intended repository. Missing or
+unverified selection stops collection before remote reads. A selected
+installation alone cannot prove membership. The signed report distinguishes
+this attestation from API-derived fingerprints. Neither signature proves
+the administrator's API grants, which the collector checks by successful
+and complete endpoint observations. The trusted administrator must only sign
+reports produced by the reviewed collector.
+
+For a future separately approved host validation, provision the independent
+public-key SHA-256 and fresh challenge as the exact 64 ASCII hex characters
+in a separately provisioned root-only `observer-trust` directory, as
+`/etc/ap-publisher/observer-trust/key-pin` and
+`/etc/ap-publisher/observer-trust/challenge`. Place the 32-byte raw public key,
+canonical report and selection JSON, and raw 64-byte detached signatures in
+the private case directory as `observer-public-key`, `observer-report.json`,
+`observer-selection.json`, `observer-report.sig` and
+`observer-selection.sig`. Supply the snapshot and continuity digests to
+`reconcile-v4 verify-observation`. It takes the existing locks, checks
+the frozen case and custody, validates the staged proposed job and artifact,
+and verifies both signatures, freshness and scope. It also compares the
+observed blob's canonical digest with the retained original artifact.
+`OBSERVATION_VERIFIED` has no admission or publication authority.
+`confirm` retains its independent archival meaning.
+
+The remaining admission gate is the fresh cross-role journal generation.
+The existing units read the original fixed job and journal paths, and the
+Signer refuses retained JWT metadata at its fixed output path. Starting
+those units after consuming a decision would still hit those guards. Do
+not repoint or replace the original files or spend a launch authorization
+against this path. The minimum viable next change is an explicit
+case-bound generation with isolated signer and publisher paths and exact
+cross-role handoff. Integrate an exclusive durable consumption intent
+before either role claims the new generation, with independent review
+and adverse restart tests. Preserve the original frozen paths.

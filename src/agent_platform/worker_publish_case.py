@@ -308,6 +308,39 @@ def _confirm(directory, continuity_pin):
     art.need(_read(directory, RESOLUTION, reconciliation.RECORD_LIMIT) == resolution)
 
 
+def _verify_observation(directory, snapshot, snapshot_pin, archive_pin, now):
+    from . import worker_publish_observer as observer
+
+    _confirm(directory, archive_pin)
+    marker = art.decode(_read(directory, INTENT, reconciliation.RECORD_LIMIT))
+    art.need(marker["snapshot"] == snapshot_pin)
+    old, history = reconciliation._history(snapshot, snapshot_pin, OBJECT, now)
+    job = _read(directory, "proposed-job.json", reconciliation.RECORD_LIMIT)
+    candidate = _read(directory, "proposed-candidate.json", art.MAX_WIRE)
+    reconciliation._proposed(snapshot, old, job, candidate, now)
+    # Root custody installs these trust pins independently of report intake.
+    key_pin = read_file(
+        "/etc/ap-publisher/observer-trust/key-pin", 0, 64, private=True
+    ).decode()
+    challenge = read_file(
+        "/etc/ap-publisher/observer-trust/challenge", 0, 64, private=True
+    ).decode()
+    bound = observer.binding(snapshot_pin, job, archive_pin, challenge, now)
+    observer.verify_report(
+        _read(directory, "observer-public-key", 32),
+        key_pin,
+        _read(directory, "observer-report.json", reconciliation.RECORD_LIMIT),
+        _read(directory, "observer-report.sig", 64),
+        bound=bound,
+        selection_bytes=_read(
+            directory, "observer-selection.json", reconciliation.RECORD_LIMIT
+        ),
+        selection_signature=_read(directory, "observer-selection.sig", 64),
+        blob_sha256=history["object_sha256"],
+        now=now,
+    )
+
+
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
         self.exit(2, '{"status":"STOP","check":"invalid_arguments"}\n')
@@ -315,7 +348,10 @@ class _Parser(argparse.ArgumentParser):
 
 def main(argv, operator):
     parser = _Parser(description="Root-only frozen worker01 case custody")
-    parser.add_argument("action", choices=("inspect", "preview", "record", "confirm"))
+    parser.add_argument(
+        "action",
+        choices=("inspect", "preview", "record", "confirm", "verify-observation"),
+    )
     parser.add_argument("--snapshot-sha256")
     parser.add_argument("--evidence-sha256")
     parser.add_argument("--decision-sha256")
@@ -327,7 +363,10 @@ def main(argv, operator):
         art.need(os.getuid() == os.geteuid() == 0)
         check = "argument_scope"
         art.need(args.authorize_record == (args.action == "record"))
-        art.need((args.continuity_sha256 is not None) == (args.action == "confirm"))
+        art.need(
+            (args.continuity_sha256 is not None)
+            == (args.action in {"confirm", "verify-observation"})
+        )
         if args.action == "confirm":
             art.need(
                 all(
@@ -352,7 +391,7 @@ def main(argv, operator):
         art.need(args.snapshot_sha256 is not None)
         art.need(
             all(
-                (value is not None) == (args.action != "inspect")
+                (value is not None) == (args.action in {"preview", "record"})
                 for value in (
                     args.evidence_sha256,
                     args.decision_sha256,
@@ -378,6 +417,21 @@ def main(argv, operator):
             if args.action != "inspect":
                 status, check = "STOP", "case_inputs_or_continuity"
                 directory = locks.enter_context(case_directory())
+                if args.action == "verify-observation":
+                    _verify_observation(
+                        directory,
+                        snapshot,
+                        args.snapshot_sha256,
+                        args.continuity_sha256,
+                        now,
+                    )
+                    operator.report(
+                        "OBSERVATION_VERIFIED",
+                        check="production_admission_unavailable",
+                        admission_allowed=False,
+                        publish_allowed=False,
+                    )
+                    return 0
                 pins = reconciliation.PreviewPins(
                     args.snapshot_sha256, args.evidence_sha256, args.decision_sha256
                 )

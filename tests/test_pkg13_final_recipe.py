@@ -740,6 +740,7 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "worker_publish_operator",
         "worker_publish_reconciliation",
         "worker_publish_case",
+        "worker_publish_observer",
     ):
         (historical / f"src/agent_platform/{module}.py").unlink()
     before = parent.build(
@@ -773,6 +774,7 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_operator.py",
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_reconciliation.py",
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_case.py",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_observer.py",
         doc + "worker01-homelab-publisher.md",
     }
     assert not set(old) - set(new)
