@@ -328,6 +328,8 @@ def test_p1_archives_exact_payload_no_activation_and_repeatability(tmp_path):
             "/etc/agent-platform-worker/package.conf",
             "/etc/apparmor.d/ap-worker-publisher",
             "/etc/apparmor.d/ap-worker-publisher-signer",
+            "/etc/apparmor.d/ap-worker-publisher-recovery",
+            "/etc/apparmor.d/ap-worker-publisher-recovery-signer",
         ]
     with tarfile.open(
         fileobj=io.BytesIO(
@@ -356,7 +358,12 @@ def test_p1_archives_exact_payload_no_activation_and_repeatability(tmp_path):
             files_["usr/lib/agent-platform-worker/provisioning/codex_upstream.py"]
             == (ROOT / "provisioning/codex_upstream.py").read_bytes()
         )
-        for name in ["ap-worker-publisher", "ap-worker-publisher-signer"]:
+        for name in (
+            "ap-worker-publisher",
+            "ap-worker-publisher-signer",
+            "ap-worker-publisher-recovery",
+            "ap-worker-publisher-recovery-signer",
+        ):
             assert (
                 files_["usr/lib/systemd/system/" + name + ".service"]
                 == (
