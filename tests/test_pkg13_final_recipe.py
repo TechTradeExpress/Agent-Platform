@@ -78,11 +78,18 @@ def fixture(tmp_path):
         "ap-worker-publisher-export",
         "ap-worker-publisher-operator",
         "ap-worker-publisher-signer",
+        "ap-worker-publisher-recovery",
+        "ap-worker-publisher-recovery-signer",
     ):
         files["packaging/worker-publisher/" + name] = (
             b"#!/bin/sh\n# AP-PKG13 SYNTHETIC ONLY\nexit 99\n"
         )
-    for unit in ("ap-worker-publisher", "ap-worker-publisher-signer"):
+    for unit in (
+        "ap-worker-publisher",
+        "ap-worker-publisher-signer",
+        "ap-worker-publisher-recovery",
+        "ap-worker-publisher-recovery-signer",
+    ):
         files["packaging/worker-publisher/" + unit + ".service"] = (
             b"[Unit]\nDescription=AP-PKG13 SYNTHETIC ONLY\n[Service]\n"
             b"Type=oneshot\nExecStart=/bin/false\nRestart=no\n"
@@ -742,6 +749,7 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "worker_publish_case",
         "worker_publish_observer",
         "worker_publish_generation",
+        "worker_publish_recovery_paths",
     ):
         (historical / f"src/agent_platform/{module}.py").unlink()
     before = parent.build(
@@ -777,6 +785,13 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_case.py",
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_observer.py",
         doc + "worker01-homelab-publisher.md",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_recovery_paths.py",
+        "usr/libexec/ap-worker-publisher-recovery",
+        "usr/libexec/ap-worker-publisher-recovery-signer",
+        "usr/lib/systemd/system/ap-worker-publisher-recovery.service",
+        "usr/lib/systemd/system/ap-worker-publisher-recovery-signer.service",
+        "etc/apparmor.d/ap-worker-publisher-recovery",
+        "etc/apparmor.d/ap-worker-publisher-recovery-signer",
     }
     assert not set(old) - set(new)
     assert {name for name in old if old[name] != new[name]} == {

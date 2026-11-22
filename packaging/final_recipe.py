@@ -370,13 +370,12 @@ def _payload_paths(role, builder, consumed):
         names |= {
             "usr/libexec/" + n
             for n in (
-                "ap-worker-publisher",
+                *builder.PUBLISHER_UNITS,
                 "ap-worker-publisher-export",
                 "ap-worker-publisher-operator",
-                "ap-worker-publisher-signer",
             )
         }
-        for unit in ("ap-worker-publisher", "ap-worker-publisher-signer"):
+        for unit in builder.PUBLISHER_UNITS:
             names |= {
                 "usr/lib/systemd/system/" + unit + ".service",
                 "etc/apparmor.d/" + unit,
@@ -562,7 +561,7 @@ def _inspect_fixture(path, role, pin, environment, inputs, builder, baseline):
             },
             "publisher_closure_mismatch",
         )
-        for unit in ("ap-worker-publisher", "ap-worker-publisher-signer"):
+        for unit in builder.PUBLISHER_UNITS:
             expected_conf.append("/etc/apparmor.d/" + unit)
             unit_data = payload["usr/lib/systemd/system/" + unit + ".service"]
             need(

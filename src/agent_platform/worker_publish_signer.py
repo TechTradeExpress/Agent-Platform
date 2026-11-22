@@ -99,5 +99,11 @@ def main():
             journal.close()
 
 
+def recovery_main():
+    from .worker_publish_recovery_paths import stop
+
+    return stop("signer")
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

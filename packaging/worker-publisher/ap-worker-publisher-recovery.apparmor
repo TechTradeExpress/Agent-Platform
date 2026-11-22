@@ -1,0 +1,24 @@
+#include <tunables/global>
+profile ap-worker-publisher-recovery /usr/libexec/ap-worker-publisher-recovery flags=(attach_disconnected) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  /usr/libexec/ap-worker-publisher-recovery r,
+  /usr/bin/python3* ixr,
+  /usr/lib/ap-worker-publisher/** r,
+  /usr/lib/** mr,
+  /etc/ld.so.cache r,
+  deny network,
+  deny ptrace,
+  signal (receive) peer=unconfined,
+  deny signal (send),
+  deny /etc/ap-publisher{,-keys}/{,**} rwklmx,
+  deny /var/lib/ap-publisher{,-signer,-recovery}/{,**} rwklmx,
+  deny /run/ap-publisher-signer/{,**} rwklmx,
+  deny /run/credentials/{,**} rwklmx,
+  deny /etc/ap-publisher-recovery-169/{,**} rwklmx,
+  deny /var/lib/ap-publisher-recovery-169-{signer,publisher}/{,**} rwklmx,
+  deny /run/ap-publisher-recovery-169-{signer,publisher}/{,**} rwklmx,
+  deny /home/** rwklmx,
+  deny /root/** rwklmx,
+  deny /proc/*/{mem,environ,fd/**,map_files/**} rwklmx,
+}

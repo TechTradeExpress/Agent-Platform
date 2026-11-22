@@ -264,3 +264,61 @@ to Publisher through systemd credentials. It must validate effective
 AppArmor and cgroup BPF before connecting the spent marker to service start.
 No role may derive authority by reading a persisted spent record after a
 restart. Installation and a real GitHub attempt remain separate decisions.
+
+## Stage A recovery process boundary
+
+The sole generation is `worker01/169/v4/recovery-1`, with ref
+`refs/heads/feature/issue-169-worker01-draft-pilot-recovery`.
+
+| Item | Fixed path |
+| --- | --- |
+| Job | `/etc/ap-publisher-recovery-169/job.json` |
+| AP-WP/1 artifact | `/etc/ap-publisher-recovery-169/candidate.json` |
+| Signer journal | `/var/lib/ap-publisher-recovery-169-signer/journal` |
+| Publisher journal | `/var/lib/ap-publisher-recovery-169-publisher/journal` |
+| Signer JWT and result | `/run/ap-publisher-recovery-169-signer/{app-jwt,result.json}` |
+| Publisher runtime | `/run/ap-publisher-recovery-169-publisher` |
+| Publisher credential destinations | `/run/credentials/ap-worker-publisher-recovery.service/{app-jwt,signer-result}` |
+
+Worker P1 adds two manual one-shot units using the separate existing service
+accounts. Stage A installs no generation inputs or journals and provisions
+no role state at upgrade. The systemd runtime directories are private to
+their respective role. Both entrypoints exit 1 with
+`recovery_authorization_unavailable` before opening any job, journal or
+credential. Both AppArmor profiles deny network and credential access.
+Both units use a private network namespace, allow only AF_UNIX, deny socket
+bind and specify a deny-all IP policy. There is no credential import or
+automatic activation. Historical units and profiles are independent.
+
+### Data contract for Stage B
+
+Keep the existing canonical signed `AP-worker01-create-draft/1` approval
+and its observer binding. Authenticate the next role's permission against
+trusted operator identity and both separately pinned signing keys. The
+authenticated transport must bind every field below to the intended role.
+
+- Exact generation, case, role, job ID, ref, repository identity, App and
+  installation IDs, issue identity, current main SHA and proposed head/tree.
+- SHA-256 of canonical AP-WP/1 job and artifact bytes, confirmed custody
+  resolution, preserved snapshot, signed observation and signed approval.
+- SHA-256 of the durable spent record, challenge, issuance and expiration,
+  and a nonreplayable boot-scoped launch identifier. Signer requires both
+  journals at the pinned empty state. Publisher requires its pinned empty
+  journal and an independently verified successful Signer claim.
+- Signer JWT envelope has exactly `generation`, `job_sha256` and `jwt`.
+  Signer result has exactly `schema` (value
+  `AP-worker01-recovery-signer-result/1`), `generation`, `id`,
+  `job_sha256`, `artifact_sha256` and `jwt_sha256` (digest of the
+  complete canonical JWT envelope). The role grant and authenticated
+  transfer must bind the signer result and its journal claim to this
+  launch. The envelope digest checks integrity and correlation.
+
+Use canonical encoded JSON with exact keys and bounded reads. Phase B must
+validate root-owned inputs with an exact reader ACL for the two role UIDs,
+and role-owned journals in private directories, with no symlinks or extra
+ACL principals. Systemd credential destinations must enforce the existing
+per-unit credential copy contract. A missing, uncertain, stale or replayed
+grant stops the role before any credential read or journal mutation.
+Stage A includes handoff I/O tests with fabricated JWT bytes in disposable
+directories. These tests do not authorize activation or demonstrate live
+systemd, AppArmor or BPF enforcement.
