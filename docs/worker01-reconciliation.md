@@ -322,3 +322,20 @@ grant stops the role before any credential read or journal mutation.
 Stage A includes handoff I/O tests with fabricated JWT bytes in disposable
 directories. These tests do not authorize activation or demonstrate live
 systemd, AppArmor or BPF enforcement.
+
+### Continuity acknowledgment prerequisite
+
+The existing generation lease can request an independent `spent-continuity`
+acknowledgment after the spent approval, job and artifact writes have each
+returned from fsync. The signature covers the existing observation binding,
+signed decision digests, independent witness key pin and one random launch ID.
+The witnessed lease cannot claim Signer until the acknowledgment is verified
+and separately fsynced. Any failure poisons the lease. A restart cannot rebuild
+a lease from a retained acknowledgment.
+
+The witness must retain the exact signed acknowledgment independently of
+worker01 and reject additional launches for this generation. Signature
+verification on worker01 establishes authenticity only. It does not establish
+whether an independent witness retained its copy. This source change supplies
+neither a live witness integration nor a cross-process grant. Both recovery
+units retain their Stage A denial and credentials and network restrictions.

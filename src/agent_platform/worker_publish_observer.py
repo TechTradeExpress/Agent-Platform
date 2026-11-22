@@ -59,7 +59,7 @@ def binding(snapshot_pin, raw, archive_pin, challenge, now):
 def sign(key, purpose, value):
     """Operator-side helper. Key loading is owned by the external operator."""
     art.need(isinstance(key, Ed25519PrivateKey))
-    art.need(purpose in ("selection", "report", "create-draft"))
+    art.need(purpose in ("selection", "report", "create-draft", "spent-continuity"))
     raw = art.encoded(value)
     art.need(len(raw) <= LIMIT)
     return key.sign(DOMAIN + purpose.encode() + b"\0" + raw)
@@ -69,7 +69,7 @@ def verify(public_key, key_pin, purpose, raw, signature):
     """The expected public key digest comes from separately trusted config."""
     art.need(type(public_key) is bytes and len(public_key) == 32)
     art.need(_sha256(key_pin) and art.digest(public_key) == key_pin)
-    art.need(purpose in ("selection", "report", "create-draft"))
+    art.need(purpose in ("selection", "report", "create-draft", "spent-continuity"))
     art.need(type(signature) is bytes and len(signature) == 64)
     value = reconciliation._canonical(raw)
     try:

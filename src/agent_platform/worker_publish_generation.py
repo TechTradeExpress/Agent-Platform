@@ -6,6 +6,7 @@ The lease deliberately cannot be reconstructed after loss of its controller.
 
 import fcntl
 import os
+import secrets
 import stat
 from contextlib import contextmanager
 
@@ -13,6 +14,7 @@ from . import worker_publish_artifact as art
 from . import worker_publish_case as case
 from . import worker_publish_observer as observer
 from . import worker_publish_reconciliation as reconciliation
+from . import worker_publish_recovery_paths as recovery
 
 GENERATION = "generation-v4"
 SPENT = "create-draft-spent.json"
@@ -21,11 +23,19 @@ PUBLISHER = "publisher-claim.json"
 HANDOFF = "signer-handoff.json"
 JOB = "generation-job.json"
 ARTIFACT = "generation-candidate.json"
+CONTINUITY = "spent-continuity.json"
 
 
 class _Lease:
     def __init__(
-        self, directory, approval, job_sha256, artifact_sha256, expires, clock
+        self,
+        directory,
+        approval,
+        job_sha256,
+        artifact_sha256,
+        expires,
+        clock,
+        continuity,
     ):
         self._directory = directory
         self._approval = approval
@@ -34,11 +44,35 @@ class _Lease:
         self._expires = expires
         self._clock = clock
         self._phase = "spent"
+        self._continuity = continuity
+        self._receipt = None
 
-    def _claim(self, expected, name, record):
+    def continuity_challenge(self):
+        """Return the exact record an independent witness may acknowledge."""
+        art.need(self._continuity is not None and self._phase == "spent")
+        art.need(self._clock() < self._expires)
+        return art.encoded(self._continuity[0])
+
+    def confirm_continuity(self, signature):
+        """Confirm continuity only in the process that received successful fsyncs."""
         phase = self._phase
         self._phase = "stopped"
-        art.need(phase == expected and self._clock() < self._expires)
+        art.need(phase == "spent" and self._continuity is not None)
+        expected, key, pin = self._continuity
+        art.need(self._clock() < self._expires)
+        raw = art.encoded(expected)
+        art.need(
+            observer.verify(key, pin, "spent-continuity", raw, signature) == expected
+        )
+        self._verify_inputs()
+        receipt = art.encoded({"record": expected, "signature": signature.hex()})
+        case._create(self._directory, CONTINUITY, receipt)
+        self._receipt = receipt
+        art.need(self._clock() < self._expires)
+        self._phase = "continuity"
+        return art.digest(raw)
+
+    def _verify_inputs(self):
         art.need(
             case._read(self._directory, SPENT, reconciliation.RECORD_LIMIT)
             == self._approval
@@ -51,13 +85,29 @@ class _Lease:
             art.digest(case._read(self._directory, ARTIFACT, art.MAX_WIRE))
             == self._artifact_sha256
         )
+
+    def _claim(self, expected, name, record):
+        phase = self._phase
+        self._phase = "stopped"
+        art.need(phase == expected and self._clock() < self._expires)
+        self._verify_inputs()
+        if self._continuity is not None:
+            art.need(self._receipt is not None)
+            art.need(
+                case._read(self._directory, CONTINUITY, reconciliation.RECORD_LIMIT)
+                == self._receipt
+            )
         case._create(self._directory, name, art.encoded(record))
 
     def signer_claim(self, job_sha256):
         if job_sha256 != self._job_sha256:
             self._phase = "stopped"
             raise art.Blocked()
-        self._claim("spent", SIGNER, {"job_sha256": self._job_sha256})
+        self._claim(
+            "continuity" if self._continuity is not None else "spent",
+            SIGNER,
+            {"job_sha256": self._job_sha256},
+        )
         self._phase = "signer"
 
     def signer_handoff(self, digest):
@@ -106,6 +156,8 @@ def consume(
     approval,
     approval_signature,
     clock,
+    witness_key=None,
+    witness_pin=None,
 ):
     """Consume in a caller-pinned private directory while holding its exclusive lock.
 
@@ -127,7 +179,7 @@ def consume(
     lease = None
     try:
         fcntl.flock(locked, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        for filename in (SPENT, SIGNER, PUBLISHER, HANDOFF, JOB, ARTIFACT):
+        for filename in (SPENT, SIGNER, PUBLISHER, HANDOFF, JOB, ARTIFACT, CONTINUITY):
             case._absent(locked, filename)
         case._confirm(archive_directory, archive_pin)
         intent = art.decode(
@@ -173,6 +225,30 @@ def consume(
                 "expires": expires,
             }
         )
+        continuity = None
+        if witness_key is not None or witness_pin is not None:
+            art.need(type(witness_key) is bytes and len(witness_key) == 32)
+            art.need(
+                observer._sha256(witness_pin) and art.digest(witness_key) == witness_pin
+            )
+            art.need(witness_pin not in (approval_pin, observer_pin))
+            continuity = (
+                {
+                    "schema": "AP-worker01-spent-continuity/1",
+                    "case": case.CASE,
+                    "generation": recovery.GENERATION,
+                    "launch_id": secrets.token_hex(32),
+                    "binding": bound,
+                    "approval_sha256": art.digest(approval),
+                    "approval_signature_sha256": art.digest(approval_signature),
+                    "observer_key_sha256": observer_pin,
+                    "witness_key_sha256": witness_pin,
+                    "report_sha256": art.digest(report),
+                    "expires": expires,
+                },
+                witness_key,
+                witness_pin,
+            )
         # Any partial write or lost acknowledgment leaves a blocker. Nothing
         # is handed to a role until all three writes have returned durably.
         case._create(locked, SPENT, approval)
@@ -180,7 +256,13 @@ def consume(
         case._create(locked, ARTIFACT, artifact)
         art.need(clock() < expires)
         lease = _Lease(
-            locked, approval, bound["job"], bound["artifact"], expires, clock
+            locked,
+            approval,
+            bound["job"],
+            bound["artifact"],
+            expires,
+            clock,
+            continuity,
         )
         yield lease
     finally:

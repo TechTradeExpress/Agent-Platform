@@ -220,3 +220,83 @@ def test_bad_signer_handoff_poisoned_for_this_process(scenario):
             lease.publisher_claim(job, "b" * 64)
         with pytest.raises(art.Blocked):
             lease.publisher_claim(job, "a" * 64)
+
+
+@pytest.fixture
+def witness(scenario):
+    _, _, args, _, _, _ = scenario
+    key = Ed25519PrivateKey.generate()
+    args["witness_key"] = key.public_key().public_bytes_raw()
+    args["witness_pin"] = art.digest(args["witness_key"])
+    return key
+
+
+def test_confirmed_spend_flatly_binds_challenge_to_consumption(scenario, witness):
+    fd, root, args, _, _, _ = scenario
+    job = art.digest(args["job"])
+    with generation.consume(fd, **args) as lease:
+        packet = lease.continuity_challenge()
+        value = art.decode(packet)
+        assert value["binding"]["job"] == job
+        assert value["binding"]["artifact"] == art.digest(args["artifact"])
+        assert value["binding"]["main"] == art.decode(args["job"])["parent"]
+        assert value["approval_sha256"] == art.digest(args["approval"])
+        assert value["observer_key_sha256"] == args["observer_pin"]
+        signature = observer.sign(witness, "spent-continuity", value)
+        assert lease.confirm_continuity(signature) == art.digest(packet)
+        assert art.decode((root / generation.CONTINUITY).read_bytes()) == {
+            "record": value,
+            "signature": signature.hex(),
+        }
+        lease.signer_claim(job)
+    with pytest.raises(art.Blocked), generation.consume(fd, **args):
+        pytest.fail("a retained continuity receipt recreated a lease")
+
+
+@pytest.mark.parametrize("fault", ["missing", "foreign_launch", "wrong_domain", "sync"])
+def test_uncertain_continuity_stops_before_signer(
+    scenario, witness, monkeypatch, fault
+):
+    fd, root, args, _, fs, _ = scenario
+    with generation.consume(fd, **args) as lease:
+        value = art.decode(lease.continuity_challenge())
+        if fault == "foreign_launch":
+            value["launch_id"] = "0" * 64
+        if fault == "sync":
+
+            def unavailable(_):
+                raise OSError("synthetic lost fsync acknowledgment")
+
+            monkeypatch.setattr(fs, "fsync", unavailable)
+        if fault != "missing":
+            signature = observer.sign(
+                witness,
+                "create-draft" if fault == "wrong_domain" else "spent-continuity",
+                value,
+            )
+            with pytest.raises((art.Blocked, OSError)):
+                lease.confirm_continuity(signature)
+        with pytest.raises(art.Blocked):
+            lease.signer_claim(art.digest(args["job"]))
+    assert not (root / generation.SIGNER).exists()
+    with pytest.raises(art.Blocked), generation.consume(fd, **args):
+        pytest.fail("uncertain acknowledgment recreated a lease")
+
+
+def test_observer_key_cannot_also_witness_spend(scenario):
+    fd, root, args, _, _, _ = scenario
+    args.update(witness_key=args["observer_key"], witness_pin=args["observer_pin"])
+    with pytest.raises(art.Blocked), generation.consume(fd, **args):
+        pytest.fail("observer and witness trust were combined")
+    assert not list(root.iterdir())
+
+
+def test_spent_continuity_must_remain_intact_at_signer_claim(scenario, witness):
+    fd, root, args, _, _, _ = scenario
+    with generation.consume(fd, **args) as lease:
+        value = art.decode(lease.continuity_challenge())
+        lease.confirm_continuity(observer.sign(witness, "spent-continuity", value))
+        (root / generation.CONTINUITY).write_bytes(b"{}")
+        with pytest.raises(art.Blocked):
+            lease.signer_claim(art.digest(args["job"]))
+    assert not (root / generation.SIGNER).exists()
