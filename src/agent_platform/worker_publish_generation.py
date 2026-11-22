@@ -1,0 +1,189 @@
+"""Source-only custody primitive for a fresh worker01/#169 generation.
+
+No runtime credential, systemd, Publisher, Signer or GitHub execution path.
+The lease deliberately cannot be reconstructed after loss of its controller.
+"""
+
+import fcntl
+import os
+import stat
+from contextlib import contextmanager
+
+from . import worker_publish_artifact as art
+from . import worker_publish_case as case
+from . import worker_publish_observer as observer
+from . import worker_publish_reconciliation as reconciliation
+
+GENERATION = "generation-v4"
+SPENT = "create-draft-spent.json"
+SIGNER = "signer-claim.json"
+PUBLISHER = "publisher-claim.json"
+HANDOFF = "signer-handoff.json"
+JOB = "generation-job.json"
+ARTIFACT = "generation-candidate.json"
+
+
+class _Lease:
+    def __init__(
+        self, directory, approval, job_sha256, artifact_sha256, expires, clock
+    ):
+        self._directory = directory
+        self._approval = approval
+        self._job_sha256 = job_sha256
+        self._artifact_sha256 = artifact_sha256
+        self._expires = expires
+        self._clock = clock
+        self._phase = "spent"
+
+    def _claim(self, expected, name, record):
+        phase = self._phase
+        self._phase = "stopped"
+        art.need(phase == expected and self._clock() < self._expires)
+        art.need(
+            case._read(self._directory, SPENT, reconciliation.RECORD_LIMIT)
+            == self._approval
+        )
+        art.need(
+            art.digest(case._read(self._directory, JOB, reconciliation.RECORD_LIMIT))
+            == self._job_sha256
+        )
+        art.need(
+            art.digest(case._read(self._directory, ARTIFACT, art.MAX_WIRE))
+            == self._artifact_sha256
+        )
+        case._create(self._directory, name, art.encoded(record))
+
+    def signer_claim(self, job_sha256):
+        if job_sha256 != self._job_sha256:
+            self._phase = "stopped"
+            raise art.Blocked()
+        self._claim("spent", SIGNER, {"job_sha256": self._job_sha256})
+        self._phase = "signer"
+
+    def signer_handoff(self, digest):
+        """Bind an opaque result digest. This primitive never accepts JWT bytes."""
+        if not observer._sha256(digest):
+            self._phase = "stopped"
+            raise art.Blocked()
+        self._claim(
+            "signer", HANDOFF, {"job_sha256": self._job_sha256, "result": digest}
+        )
+        self._phase = "handoff"
+
+    def publisher_claim(self, job_sha256, result_digest):
+        try:
+            art.need(job_sha256 == self._job_sha256 and observer._sha256(result_digest))
+            expected = art.encoded({"job_sha256": job_sha256, "result": result_digest})
+            art.need(
+                case._read(self._directory, HANDOFF, reconciliation.RECORD_LIMIT)
+                == expected
+            )
+            self._claim("handoff", PUBLISHER, {"job_sha256": self._job_sha256})
+        finally:
+            self._phase = "stopped"
+
+
+@contextmanager
+def consume(
+    directory,
+    *,
+    snapshot,
+    snapshot_pin,
+    object_id,
+    archive_pin,
+    archive_directory,
+    challenge,
+    job,
+    artifact,
+    observer_key,
+    observer_pin,
+    report,
+    report_signature,
+    selection,
+    selection_signature,
+    approval_key,
+    approval_pin,
+    approval,
+    approval_signature,
+    clock,
+):
+    """Consume in a caller-pinned private directory while holding its exclusive lock.
+
+    This is an uninstalled source primitive. The caller must use the fixed
+    generation namespace and hold configuration and old-journal locks.
+    """
+    art.need(os.getuid() == os.geteuid() == 0)
+    info = os.fstat(directory)
+    art.need(stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700)
+    art.need(info.st_uid == info.st_gid == 0)
+    entry = os.stat(GENERATION, dir_fd=archive_directory, follow_symlinks=False)
+    art.need(stat.S_ISDIR(entry.st_mode))
+    art.need((entry.st_dev, entry.st_ino) == (info.st_dev, info.st_ino))
+    # Take a separate open file description. Two calls with the same supplied
+    # descriptor must still contend, and cannot unlock each other's lease.
+    locked = os.open(
+        ".", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory
+    )
+    lease = None
+    try:
+        fcntl.flock(locked, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        for filename in (SPENT, SIGNER, PUBLISHER, HANDOFF, JOB, ARTIFACT):
+            case._absent(locked, filename)
+        case._confirm(archive_directory, archive_pin)
+        intent = art.decode(
+            case._read(archive_directory, case.INTENT, reconciliation.RECORD_LIMIT)
+        )
+        art.need(intent["snapshot"] == snapshot_pin)
+        now = clock()
+        old, history = reconciliation._history(snapshot, snapshot_pin, object_id, now)
+        new, _ = reconciliation._proposed(
+            snapshot,
+            old,
+            job,
+            artifact,
+            now,
+            fresh_generation=True,
+        )
+        bound = observer.binding(snapshot_pin, job, archive_pin, challenge, now)
+        observer.verify_report(
+            observer_key,
+            observer_pin,
+            report,
+            report_signature,
+            bound=bound,
+            selection_bytes=selection,
+            selection_signature=selection_signature,
+            blob_sha256=history["object_sha256"],
+            now=now,
+        )
+        art.need(approval_pin != observer_pin)
+        permission = observer.verify(
+            approval_key, approval_pin, "create-draft", approval, approval_signature
+        )
+        issued, expires = permission["issued"], permission["expires"]
+        art.need(type(issued) is type(expires) is int)
+        art.need(art.decode(report)["at"] <= issued <= now < expires <= new["expires"])
+        art.need(
+            permission
+            == {
+                "schema": "AP-worker01-create-draft/1",
+                "binding": bound,
+                "report_sha256": art.digest(report),
+                "issued": issued,
+                "expires": expires,
+            }
+        )
+        # Any partial write or lost acknowledgment leaves a blocker. Nothing
+        # is handed to a role until all three writes have returned durably.
+        case._create(locked, SPENT, approval)
+        case._create(locked, JOB, job)
+        case._create(locked, ARTIFACT, artifact)
+        art.need(clock() < expires)
+        lease = _Lease(
+            locked, approval, bound["job"], bound["artifact"], expires, clock
+        )
+        yield lease
+    finally:
+        if lease is not None:
+            lease._phase = "stopped"
+        os.close(locked)

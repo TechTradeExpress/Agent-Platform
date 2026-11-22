@@ -236,3 +236,31 @@ case-bound generation with isolated signer and publisher paths and exact
 cross-role handoff. Integrate an exclusive durable consumption intent
 before either role claims the new generation, with independent review
 and adverse restart tests. Preserve the original frozen paths.
+
+### Fresh-generation source tests
+
+The source-only generation primitive requires the canonical new job with the
+two empty-journal digests already present in the signed report. It verifies
+the custody pin and fresh observations, then a detached `create-draft`
+signature from a separately pinned approval key. Under the fixed private
+generation directory lock, it creates a spent record before copying the new
+job and artifact. An in-process lease can record one Signer claim, one
+handoff digest and one Publisher claim. A surviving spent record closes replay even after a lost acknowledgment.
+The lease is deliberately unrecoverable after controller exit. Fault tests
+simulate fsync errors with retained files. A real outage before the first
+directory fsync can lose that marker. No role has a lease at that point.
+Proving irreversible consumption even across that boundary needs an
+independent continuity record or separately acknowledged durable intent. Existing evidence and journals stay
+untouched. The integration tests use synthetic handoff digests and copied
+archives, and exercise the unchanged operator observation command.
+
+This primitive is excluded from Worker P1 and has no service entrypoint.
+A process-local lease cannot authenticate a separate systemd unit after
+exec. The original roles still have fixed journal, job and credential paths,
+and the current confinement does not admit fresh paths. A future reviewed
+runtime must provide an authenticated controller-to-unit claim protocol,
+generation-specific per-UID journals and a Signer-only JWT output delivered
+to Publisher through systemd credentials. It must validate effective
+AppArmor and cgroup BPF before connecting the spent marker to service start.
+No role may derive authority by reading a persisted spent record after a
+restart. Installation and a real GitHub attempt remain separate decisions.

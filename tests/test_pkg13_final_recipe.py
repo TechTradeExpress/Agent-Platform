@@ -741,6 +741,7 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "worker_publish_reconciliation",
         "worker_publish_case",
         "worker_publish_observer",
+        "worker_publish_generation",
     ):
         (historical / f"src/agent_platform/{module}.py").unlink()
     before = parent.build(
