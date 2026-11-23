@@ -22,7 +22,15 @@ INSTALLATION = 181691110
 RULESET = 26772477
 LIMIT = 16384
 WINDOW = 300
-PURPOSES = ("selection", "report", "create-draft", "spent-continuity", "pre-spend")
+PURPOSES = (
+    "selection",
+    "report",
+    "create-draft",
+    "spent-continuity",
+    "pre-spend",
+    "recovery-signer",
+    "recovery-publisher",
+)
 DOMAIN = b"AP-worker01-observer/1\0"
 
 

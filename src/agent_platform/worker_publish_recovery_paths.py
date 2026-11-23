@@ -8,7 +8,7 @@ from . import worker_publish_artifact as art
 from . import worker_publish_case as case
 from . import worker_publish_reconciliation as reconciliation
 from . import worker_publisher as pub
-from .worker_publish_io import read_file
+from .worker_publish_io import Journal, read_file
 
 GENERATION = "worker01/169/v4/recovery-1"
 REF = "refs/heads/feature/issue-169-worker01-draft-pilot-recovery"
@@ -130,3 +130,175 @@ def stop(role):
     # No stage A production path reads data, loads credentials or opens journals.
     print('{"status":"BLOCKED","code":"recovery_authorization_unavailable"}')
     return 1
+
+
+def verify_signer_journal(job_bytes, launch_id, jwt, result, journal):
+    """Require an exact launch-bound, hash-chained terminal Signer history."""
+    job = reconciliation._canonical(job_bytes)
+    verify_handoff(job_bytes, jwt, result)
+    art.need(type(journal) is bytes and 0 < len(journal) <= 16384)
+    records, _ = reconciliation._chain(journal, 3)
+    operation = {"job": job["id"], "operation": "sign", "launch_id": launch_id}
+    subject = {
+        "job": job["id"],
+        "ref": job["ref"],
+        "issue": job["issue"],
+        "head": job["head"],
+    }
+    art.need(
+        records
+        == [
+            {"phase": "CLAIM", **subject},
+            {"phase": "UNKNOWN", **operation},
+            {
+                "phase": "COMPLETE",
+                **subject,
+                **operation,
+                "jwt_sha256": art.digest(jwt),
+                "result_sha256": art.digest(result),
+            },
+        ]
+    )
+
+
+def inspect_signer_handoff(job_bytes, launch_id, journal_identity):
+    """Read retained results as root under the Signer journal's flock."""
+    job = reconciliation._canonical(job_bytes)
+    signer = Journal(str(SIGNER_JOURNAL), None, inspect_owner=job["signer_uid"])
+    try:
+        art.need(signer.identity == journal_identity)
+        art.need(0 < signer.size <= 16384)
+
+        def identity(path):
+            info = path.lstat()
+            art.need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1)
+            art.need(info.st_uid == job["signer_uid"])
+            art.need(info.st_gid == job["signer_gid"])
+            art.need(stat.S_IMODE(info.st_mode) == 0o400)
+            return info
+
+        before = [identity(path) for path in (SIGNER_OUTPUT, SIGNER_RESULT)]
+        jwt, result = [
+            read_file(
+                str(path),
+                job["signer_uid"],
+                16384,
+                writable_parent=True,
+                private=True,
+            )
+            for path in (SIGNER_OUTPUT, SIGNER_RESULT)
+        ]
+        journal = os.pread(signer.fd, signer.size + 1, 0)
+        art.need(len(journal) == signer.size and art.digest(journal) == signer.sha256)
+        verify_signer_journal(job_bytes, launch_id, jwt, result, journal)
+        after = [identity(path) for path in (SIGNER_OUTPUT, SIGNER_RESULT)]
+        for first, last in zip(before, after, strict=True):
+            art.need(
+                os.path.samestat(first, last)
+                and first.st_size == last.st_size
+                and first.st_mtime_ns == last.st_mtime_ns
+                and first.st_ctime_ns == last.st_ctime_ns
+            )
+        current = SIGNER_JOURNAL.lstat()
+        art.need((current.st_dev, current.st_ino) == journal_identity)
+        art.need(current.st_size == signer.size and current.st_nlink == 1)
+        return jwt, result, journal
+    finally:
+        signer.close()
+
+
+def verify_grant(
+    role,
+    raw,
+    signature,
+    *,
+    public_key,
+    key_pin,
+    job_bytes,
+    artifact,
+    approval,
+    pre_spend_receipt,
+    observation,
+    launch_id,
+    now,
+    handoff=None,
+):
+    """Verify bound role authority against independently obtained exact inputs.
+
+    Callers supply the pinned key and evidence from trusted sources. This
+    verifier performs no journal claim, unit launch or credential release.
+    """
+    from . import worker_publish_observer as observer
+
+    art.need(role in ("signer", "publisher"))
+    value = observer.verify(public_key, key_pin, "recovery-" + role, raw, signature)
+    job = reconciliation._canonical(job_bytes)
+    pub.validate_job(job, now)
+    art.need(pub.homelab(job) and job["issue"] == 169 and job["ref"] == REF)
+    art.need(job["head"] != case.HEAD and job["artifact_sha256"] != case.ARTIFACT)
+    art.need(type(artifact) is bytes and art.digest(artifact) == job["artifact_sha256"])
+    expires = value.get("expires")
+    decision = reconciliation._canonical(approval)
+    receipt = reconciliation._canonical(pre_spend_receipt)
+    receipt_record = receipt["record"]
+    art.need(set(receipt) == {"record", "signature"})
+    art.need(type(receipt_record) is dict and observer._sha256(launch_id))
+    art.need(type(receipt["signature"]) is str and len(receipt["signature"]) == 128)
+    verified_receipt = observer.verify(
+        public_key,
+        key_pin,
+        "pre-spend",
+        art.encoded(receipt_record),
+        bytes.fromhex(receipt["signature"]),
+    )
+    art.need(
+        verified_receipt
+        == {
+            "schema": "AP-worker01-pre-spend/1",
+            "generation": GENERATION,
+            "case": case.CASE,
+            "launch_id": launch_id,
+            "approval_sha256": art.digest(approval),
+            "expires": decision["expires"],
+        }
+    )
+    bound = decision["binding"]
+    art.need(
+        decision["schema"] == "AP-worker01-create-draft/1"
+        and decision["report_sha256"] == art.digest(observation)
+        and bound["job"] == art.digest(job_bytes)
+        and bound["artifact"] == job["artifact_sha256"]
+        and bound["main"] == job["parent"]
+    )
+    art.need(
+        type(expires) is int
+        and now < expires <= min(job["expires"], decision["expires"])
+    )
+    expected = {
+        "schema": "AP-worker01-recovery-grant/1",
+        "case": case.CASE,
+        "generation": GENERATION,
+        "role": role,
+        "audience": "ap-worker-publisher-recovery"
+        + ("-signer" if role == "signer" else "")
+        + ".service",
+        "launch_id": launch_id,
+        "job_sha256": art.digest(job_bytes),
+        "artifact_sha256": job["artifact_sha256"],
+        "approval_sha256": art.digest(approval),
+        "pre_spend_sha256": art.digest(pre_spend_receipt),
+        "observation_sha256": art.digest(observation),
+        "main": job["parent"],
+        "expires": expires,
+    }
+    if role == "publisher":
+        art.need(type(handoff) is tuple and len(handoff) == 3)
+        jwt, result, journal = handoff
+        expected["signer_result_sha256"] = art.digest(result)
+        expected["signer_journal_sha256"] = art.digest(journal)
+    else:
+        art.need(handoff is None)
+    art.need(value == expected)
+    if role == "publisher":
+        verify_signer_journal(job_bytes, launch_id, jwt, result, journal)
+    return job

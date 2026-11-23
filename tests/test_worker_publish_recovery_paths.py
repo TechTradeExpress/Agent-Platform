@@ -253,3 +253,201 @@ def test_stage_a_units_have_no_credential_or_network_grant(role):
     assert "deny network," in profile
     assert "deny /run/credentials/{,**} rwklmx," in profile
     assert "/etc/ap-publisher-recovery-169/job.json r," not in profile
+
+
+@pytest.mark.parametrize(
+    ("role", "fault"),
+    [
+        ("signer", None),
+        ("publisher", None),
+        ("signer", "role"),
+        ("signer", "signature"),
+        ("signer", "pin"),
+        ("signer", "audience"),
+        ("publisher", "launch"),
+        ("publisher", "artifact"),
+        ("publisher", "unknown"),
+        ("publisher", "jwt"),
+        ("publisher", "observation"),
+        ("publisher", "expiry"),
+        ("publisher", "receipt"),
+    ],
+)
+def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from agent_platform import worker_publish_observer as observer
+    from agent_platform import worker_publish_pre_spend as pre_spend
+
+    job, _ = pair
+    job_bytes = art.encoded(job)
+    launch = "2" * 64
+    artifact_bytes = artifact()[0]
+    key = Ed25519PrivateKey.generate()
+    public = key.public_key().public_bytes_raw()
+    pin = art.digest(public)
+    now = job["expires"] - 10
+    observation = b"synthetic observation"
+    decision = art.encoded(
+        {
+            "schema": "AP-worker01-create-draft/1",
+            "report_sha256": art.digest(observation),
+            "expires": job["expires"],
+            "binding": {
+                "job": art.digest(job_bytes),
+                "artifact": job["artifact_sha256"],
+                "main": job["parent"],
+            },
+        }
+    )
+    request = pre_spend.challenge(art.digest(decision), launch, job["expires"])
+    receipt = art.encoded(
+        {
+            "record": request,
+            "signature": observer.sign(key, "pre-spend", request).hex(),
+        }
+    )
+    jwt, result = recovery.signer_payload(job_bytes, "synthetic.jwt")
+    identity = {"job": job["id"], "ref": job["ref"], "head": job["head"], "issue": 169}
+    operation = {"job": job["id"], "operation": "sign", "launch_id": launch}
+    previous = art.digest(b"")
+    lines = []
+    for record in (
+        {"phase": "CLAIM", **identity},
+        {"phase": "UNKNOWN", **operation},
+        {
+            "phase": "UNKNOWN" if fault == "unknown" else "COMPLETE",
+            **identity,
+            **operation,
+            "jwt_sha256": art.digest(jwt),
+            "result_sha256": art.digest(result),
+        },
+    ):
+        line = art.encoded({"previous": previous, "record": record})
+        lines.append(line + b"\n")
+        previous = art.digest(line)
+    journal = b"".join(lines)
+    audience = "ap-worker-publisher-recovery"
+    audience += "-signer" if role == "signer" else ""
+    value = {
+        "schema": "AP-worker01-recovery-grant/1",
+        "case": case.CASE,
+        "generation": recovery.GENERATION,
+        "role": role,
+        "audience": audience + ".service",
+        "launch_id": launch,
+        "job_sha256": art.digest(job_bytes),
+        "artifact_sha256": job["artifact_sha256"],
+        "approval_sha256": art.digest(decision),
+        "pre_spend_sha256": art.digest(receipt),
+        "observation_sha256": art.digest(observation),
+        "main": job["parent"],
+        "expires": now if fault == "expiry" else job["expires"],
+    }
+    if role == "publisher":
+        value.update(
+            signer_result_sha256=art.digest(result),
+            signer_journal_sha256=art.digest(journal),
+        )
+    if fault == "role":
+        value["role"] = "publisher"
+    if fault == "audience":
+        value["audience"] = "other.service"
+    signature = observer.sign(key, "recovery-" + role, value)
+    kwargs = dict(
+        public_key=public,
+        key_pin="a" * 64 if fault == "pin" else pin,
+        job_bytes=job_bytes,
+        artifact=b"wrong" if fault == "artifact" else artifact_bytes,
+        approval=decision,
+        pre_spend_receipt=(receipt + b" " if fault == "receipt" else receipt),
+        observation=b"wrong" if fault == "observation" else observation,
+        launch_id="4" * 64 if fault == "launch" else launch,
+        now=now,
+        handoff=(
+            jwt if fault != "jwt" else jwt.replace(b"synthetic", b"other"),
+            result,
+            journal,
+        )
+        if role == "publisher"
+        else None,
+    )
+    if fault:
+        with pytest.raises(art.Blocked):
+            recovery.verify_grant(
+                role,
+                art.encoded(value),
+                b"0" * 64 if fault == "signature" else signature,
+                **kwargs,
+            )
+    else:
+        assert (
+            recovery.verify_grant(role, art.encoded(value), signature, **kwargs) == job
+        )
+
+
+def test_root_inspects_signer_handoff_under_original_journal_lock(
+    pair, tmp_path, monkeypatch
+):
+    import fcntl
+
+    from agent_platform import worker_publish_io as io
+
+    job, _ = pair
+    job.update(signer_uid=os.getuid(), signer_gid=os.getgid())
+    job_bytes = art.encoded(job)
+    launch = "3" * 64
+    journal_path = tmp_path / "journal"
+    journal_path.touch(mode=0o600)
+    runtime = tmp_path / "runtime"
+    runtime.mkdir(mode=0o700)
+    jwt_path = runtime / "app-jwt"
+    result_path = runtime / "result.json"
+    monkeypatch.setattr(recovery, "SIGNER_JOURNAL", journal_path)
+    monkeypatch.setattr(recovery, "SIGNER_OUTPUT", jwt_path)
+    monkeypatch.setattr(recovery, "SIGNER_RESULT", result_path)
+    recovery.write_signer_handoff(job_bytes, "synthetic.jwt")
+
+    def fixture_read(path, owner, limit, **kwargs):
+        assert Path(path) in (journal_path, jwt_path, result_path)
+        assert owner == job["signer_uid"]
+        assert kwargs["private"] is True
+        assert Path(path).stat().st_size <= limit
+        return Path(path).read_bytes()
+
+    monkeypatch.setattr(io, "read_file", fixture_read)
+    monkeypatch.setattr(recovery, "read_file", fixture_read)
+    store = io.Journal(str(journal_path), art.digest(b""))
+    jwt, result = jwt_path.read_bytes(), result_path.read_bytes()
+    store.claim(job, signer=True)
+    operation = {"job": job["id"], "operation": "sign", "launch_id": launch}
+    store.append({"phase": "UNKNOWN", **operation})
+    store.append(
+        {
+            "phase": "COMPLETE",
+            **operation,
+            "ref": job["ref"],
+            "head": job["head"],
+            "issue": job["issue"],
+            "jwt_sha256": art.digest(jwt),
+            "result_sha256": art.digest(result),
+        }
+    )
+    identity = store.identity
+    store.close()
+    monkeypatch.setattr(io.os, "getuid", lambda: 0)
+    monkeypatch.setattr(io.os, "geteuid", lambda: 0)
+    assert recovery.inspect_signer_handoff(job_bytes, launch, identity) == (
+        jwt,
+        result,
+        journal_path.read_bytes(),
+    )
+    with journal_path.open("rb") as held:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(BlockingIOError):
+            recovery.inspect_signer_handoff(job_bytes, launch, identity)
+    with pytest.raises(art.Blocked):
+        recovery.inspect_signer_handoff(job_bytes, launch, (0, 0))
+    jwt_path.chmod(0o440)
+    with pytest.raises(art.Blocked):
+        recovery.inspect_signer_handoff(job_bytes, launch, identity)
