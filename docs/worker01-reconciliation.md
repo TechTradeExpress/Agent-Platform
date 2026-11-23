@@ -339,3 +339,56 @@ verification on worker01 establishes authenticity only. It does not establish
 whether an independent witness retained its copy. This source change supplies
 neither a live witness integration nor a cross-process grant. Both recovery
 units retain their Stage A denial and credentials and network restrictions.
+
+### Admission decision in the homelab-supervised trust model
+
+Root and the Proxmox administrator are trusted to preserve history and
+follow the stop procedure. External rollback protection remains
+`NOT_PROVIDED`. Assume the filesystem and storage honor a successful file
+and directory fsync. A signature authenticates a decision. It supplies
+neither write durability nor evidence that the operator has never attempted
+to spend that decision.
+
+| Boundary | Durable information and permitted action |
+| --- | --- |
+| Before both fsyncs return successfully | The marker may survive or disappear. No launch grant may exist. An uncertain spend burns the invocation and stops this decision. |
+| After both fsyncs return, before launching Signer | Under the storage assumption, SPENT survives restart. A live controller may continue only after checking the independently retained continuity pin. A fresh controller refuses, even with an intact SPENT and matching pin. |
+| After either role starts | The controller and roles must persist their respective claims before releasing credentials or attempting a remote write. A lost acknowledgment stops the sequence. No restart can create a replacement grant. |
+| After GitHub could have applied a write | Preserve the existing UNKNOWN record and revoke as defined by the existing publication protocol. GitHub readback is reconciliation evidence. It cannot reopen this approval or authorize a retry. |
+
+Create-only SPENT and confirmed fsync protect the transition to the first
+effect against an ordinary crash. They cannot, by themselves, enforce the
+stricter rule that the **same approval is never reused after an uncertain
+first fsync**. Consider two histories with an independently retained pin
+for the preexisting v4 custody archive. In the first, the operator never
+started spending the new approval. In the second, the operator created
+SPENT, lost power before the directory fsync returned, and the directory
+entry disappeared. In both histories, a fresh controller sees the same
+signed approval, the same archive pin and no SPENT. It cannot allow the
+first history while rejecting the second from those inputs.
+
+The minimum missing fact is an independently retained **pre-spend intent
+for this exact approval and launch**, established before attempting local
+SPENT. A separately stored operator-held continuity pin can commit to that
+intent and the operator can record that it was presented once. Neither a
+new server nor a new signing key is required in this trust model. A pin
+to the unchanged v4 archive does not distinguish the histories. A pin
+issued only after successful SPENT fsync also cannot distinguish them.
+If the pre-spend record or the controller's confirmation is unavailable,
+stop. A saved pin alone must never reconstruct a launch after controller
+exit. This is an operator continuity requirement and depends on the trusted
+administrator preserving the independent record across maintenance or
+restores. An adversarial VM snapshot rollback remains outside this model.
+
+Systemd credentials can deliver root-selected data privately to each
+pinned unit. They establish which systemd unit received a copy, subject to
+the trusted systemd configuration. For the Signer result, a root-controlled
+handoff must additionally confirm that the exact launch's Signer journal
+reached the durable terminal record under its lock, verify the output
+origin and metadata, and bind the checked result and JWT digest to the
+Publisher's signed grant. A credential copied from an arbitrary file or
+a matching digest alone supplies no such provenance.
+
+The current preexisting archive pin and experimental post-spend witness
+receipt do not implement pre-spend continuity. Keep both recovery
+entrypoints blocked pending that contract and the process handoff.
