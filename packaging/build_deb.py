@@ -19,7 +19,9 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_REVISION = 8
+CURRENT_REVISION = 8  # Pinned exact-version CI and final rehearsal contract.
+UPGRADE_CANDIDATE_REVISION = 9
+CANDIDATE_REVISIONS = (CURRENT_REVISION, UPGRADE_CANDIDATE_REVISION)
 # Historical final -7 must be reconstructed only by its own pinned old recipe.
 HISTORICAL_SOURCES = {7: "0fbc940ae94144f8cc29c9a0fd98afc704f58168"}
 SYNTHETIC_REVISIONS = (3, 4, 5, 6)
@@ -179,18 +181,13 @@ def validate(source, revision=4):
             )
             + "\n"
         )
-    if re.findall(
+    versions = re.findall(
         rb"^agent-platform \(([^)]+)\)", checked_file(source / "debian/changelog"), re.M
-    ) != [
-        b"0.1.0-8",
-        b"0.1.0-7",
-        b"0.1.0-6",
-        b"0.1.0-5",
-        b"0.1.0-4",
-        b"0.1.0-3",
-        b"0.1.0-2",
-        b"0.1.0-1",
-    ]:
+    )
+    historical = [f"0.1.0-{number}".encode() for number in range(8, 0, -1)]
+    if versions != [b"0.1.0-9", *historical] and (
+        revision == UPGRADE_CANDIDATE_REVISION or versions != historical
+    ):
         raise ValueError("review_changelog_version_mapping")
     return controls
 
@@ -212,18 +209,20 @@ def build(
     """
     if revision in HISTORICAL_SOURCES:
         raise ValueError("historical_revision_requires_original_recipe")
-    if revision not in (*SYNTHETIC_REVISIONS, CURRENT_REVISION) or not re.fullmatch(
+    if revision not in (*SYNTHETIC_REVISIONS, *CANDIDATE_REVISIONS) or not re.fullmatch(
         "[0-9a-f]{40}", commit
     ):
         raise ValueError("unsupported_candidate_identity")
     if type(epoch) is not int or not 0 <= epoch <= 2**31 - 1:
         raise ValueError("unsupported_build_epoch")
-    if revision == CURRENT_REVISION and not re.fullmatch(
+    if revision in CANDIDATE_REVISIONS and not re.fullmatch(
         "[0-9a-f]{40}", source_tree or ""
     ):
         raise ValueError("source_tree_required")
-    if candidate and revision != CURRENT_REVISION:
+    if candidate and revision not in CANDIDATE_REVISIONS:
         raise ValueError("unsupported_candidate_revision")
+    if revision == UPGRADE_CANDIDATE_REVISION and not candidate:
+        raise ValueError("upgrade_revision_requires_source_qualified_candidate")
     if (
         revision == CURRENT_REVISION
         and candidate == ci_final_fixture
@@ -294,6 +293,13 @@ def _stage_archives(
     Final-profile staging only supports an explicitly non-Debian rehearsal
     encoder. No real final archive writer is implemented/admitted here.
     """
+    if revision == UPGRADE_CANDIDATE_REVISION and (
+        kind != "candidate"
+        or ci_only
+        or version != f"0.1.0-{UPGRADE_CANDIDATE_REVISION}~git{commit}"
+        or not re.fullmatch("[0-9a-f]{40}", commit)
+    ):
+        raise ValueError("upgrade_revision_requires_source_qualified_candidate")
     final = kind == "final-unreleased"
     if final and (
         archive_writer is _write_deb
@@ -621,7 +627,7 @@ Display command help.
                 "synthetic_baseline": revision == 3,
             }
             provenance["build_kind"] = kind
-            if revision == CURRENT_REVISION:
+            if revision in CANDIDATE_REVISIONS:
                 provenance["ci_only"] = ci_only
                 provenance["release_authorized"] = False
             if final:
@@ -765,7 +771,7 @@ def main():
     parser.add_argument(
         "--revision",
         type=int,
-        choices=(*SYNTHETIC_REVISIONS, 7, CURRENT_REVISION),
+        choices=(*SYNTHETIC_REVISIONS, 7, *CANDIDATE_REVISIONS),
         default=CURRENT_REVISION,
     )
     parser.add_argument(
@@ -799,7 +805,7 @@ def main():
         args.revision != CURRENT_REVISION or args.synthetic_fixture
     ):
         parser.error("CI final fixture requires current revision without old profiles")
-    if args.revision == CURRENT_REVISION and args.synthetic_fixture:
+    if args.revision in CANDIDATE_REVISIONS and args.synthetic_fixture:
         parser.error("current revision is not a historical synthetic profile")
     commit = (
         source_git(
@@ -832,7 +838,9 @@ def main():
             commit,
             epoch,
             source_tree=tree,
-            candidate=args.revision == CURRENT_REVISION and not args.ci_final_fixture,
+            candidate=(
+                args.revision in CANDIDATE_REVISIONS and not args.ci_final_fixture
+            ),
             ci_final_fixture=args.ci_final_fixture,
         )
 

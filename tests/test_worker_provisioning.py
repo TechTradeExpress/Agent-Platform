@@ -460,7 +460,7 @@ def test_p1_cli_codex_is_explicit_fixed_path_dispatch(monkeypatch):
 
 def test_p1_preinst_template_has_no_configure_or_remove_activation():
     text = (ROOT / "packaging/worker-provisioning/preinst").read_text()
-    assert "systemctl show --property=ActiveState" in text
+    assert "systemctl show --all --property=ActiveState" in text
     assert not any(
         "systemctl " + verb in text
         for verb in ["start", "restart", "enable", "stop", "daemon-reload"]

@@ -8,6 +8,29 @@ This is an offline contract, not final generation or distribution authority.
 Separate final-profile source implementation and non-installable rehearsal:
 [PKG-13](pkg13-final-build-preparation.md); real generation remains BLOCKED.
 
+## PKG-19 frozen Worker P1 upgrade candidate
+
+From the clean, reviewed source checkout, build both source-qualified archives:
+
+```sh
+python3 packaging/build_deb.py --revision 9 --source-commit "$(git rev-parse HEAD)" --output /tmp/pkg19-candidate
+```
+
+Revision 9 is candidate-only. Debian orders every `0.1.0-9~git<FULL_SHA>`
+above the pinned installed `0.1.0-8~git73bb2d521347ec87fb2c584ada8ee86a0ab3eaba`
+and exact `0.1.0-8`. Source SHA suffixes do not order subsequent builds
+within revision 9. The default -8 build and exact -8 CI/rehearsal contracts
+remain available for compatibility.
+
+The preinst reads stable systemd properties twice. Loaded inactive one-shots
+are quiescent only with zero process IDs, no queued job, no restart policy
+and no populated service cgroup. A failed historical Publisher can satisfy
+the same requirements. The guard leaves failed state and historical data
+untouched. Uncertain manager results block unpack. This is a point-in-time
+check and the separately authorized host upgrade must exclude concurrent
+operator activation. Release authorization under PKG-18, host checks in
+#183, and explicit permission to install are still required.
+
 # Inert Debian role candidates (PKG-02)
 
 **CANDIDATE / NOT_RELEASED / NO_SERVICE / NO_LIVE_AUTHORITY.** Debian 13 trixie,

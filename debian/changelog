@@ -1,3 +1,11 @@
+agent-platform (0.1.0-9) trixie; urgency=medium
+
+  * PKG-19: source-qualified candidates for the frozen Worker P1 upgrade.
+  * Admit only quiescent historical service states during package replacement.
+  * Exact revision 9 releases remain unavailable.
+
+ -- TechTradeExpress <maintainers@techtradeexpress.com>  Mon, 23 Nov 2026 00:00:00 +0000
+
 agent-platform (0.1.0-8) trixie; urgency=medium
 
   * PKG-11: source-qualified two-role candidates after HAR integration.

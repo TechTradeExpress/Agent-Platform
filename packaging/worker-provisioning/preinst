@@ -23,9 +23,69 @@ for unit in ap-worker-publisher ap-worker-publisher-signer; do
 done
 # Read-only manager observation; never start/stop/reload/enable anything.
 if test -d /run/systemd/system; then
+    read_state() {
+        timeout 5 /usr/bin/systemctl show --all --property=ActiveState,SubState,LoadState,MainPID,ControlPID,Job,Transient,Type,Restart,ControlGroup "$1.service"
+    }
     for unit in ap-worker-publisher ap-worker-publisher-signer; do
-        state=$(timeout 5 /usr/bin/systemctl show --property=ActiveState --value "$unit.service") || fail
-        test "$state" = inactive || fail
+        first=$(read_state "$unit") || fail
+        group="/system.slice/$unit.service"
+        # A populated service cgroup blocks even if systemd reports zero PIDs.
+        if test -e "/sys/fs/cgroup$group" || test -L "/sys/fs/cgroup$group"; then
+            test -d "/sys/fs/cgroup$group" && test ! -L "/sys/fs/cgroup$group" || fail
+            test -r "/sys/fs/cgroup$group/cgroup.events" || fail
+            populated=$(timeout 5 awk '$1 == "populated" {print $2}' "/sys/fs/cgroup$group/cgroup.events") || fail
+            test "$populated" = 0 || fail
+        fi
+        second=$(read_state "$unit") || fail
+        test "$first" = "$second" || fail
+        # Require a complete, exact property set. Reordering is harmless;
+        # duplicate, omitted or unexpected properties are ambiguous.
+        facts=$(printf '%s\n' "$first" | LC_ALL=C sort) || fail
+        # Only the default, known cgroup location or no manager cgroup is safe.
+        case "$facts" in
+            *"
+ControlGroup=$group
+"*) facts=$(printf '%s\n' "$facts" | sed "s|^ControlGroup=$group\$|ControlGroup=|") || fail ;;
+        esac
+        inactive='ActiveState=inactive
+ControlGroup=
+ControlPID=0
+Job=
+LoadState=loaded
+MainPID=0
+Restart=no
+SubState=dead
+Transient=no
+Type=oneshot'
+        failed='ActiveState=failed
+ControlGroup=
+ControlPID=0
+Job=
+LoadState=loaded
+MainPID=0
+Restart=no
+SubState=failed
+Transient=no
+Type=oneshot'
+        missing='ActiveState=inactive
+ControlGroup=
+ControlPID=0
+Job=
+LoadState=not-found
+MainPID=0
+Restart=no
+SubState=dead
+Transient=no
+Type=simple'
+        if test "$facts" = "$inactive"; then continue; fi
+        if test "$unit" = ap-worker-publisher && test "$facts" = "$failed"; then
+            continue
+        fi
+        # An absent service is expected only when installing for the first time.
+        if test "${1-}" = install && test -z "${2-}" && test "$facts" = "$missing"; then
+            continue
+        fi
+        fail
     done
 fi
 for dir in /usr/lib/ap-worker-publisher /usr/lib/agent-platform-worker/provisioning; do
