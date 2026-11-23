@@ -787,6 +787,7 @@ def test_shared_staging_preserves_historical_bytes_except_pub03(fixture, tmp_pat
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_observer.py",
         doc + "worker01-homelab-publisher.md",
         "usr/lib/ap-worker-publisher/agent_platform/worker_publish_recovery_paths.py",
+        "usr/lib/ap-worker-publisher/agent_platform/worker_publish_generation.py",
         "usr/libexec/ap-worker-publisher-recovery",
         "usr/libexec/ap-worker-publisher-recovery-signer",
         "usr/lib/systemd/system/ap-worker-publisher-recovery.service",

@@ -352,3 +352,242 @@ def test_lost_local_spent_cannot_reuse_operator_approval(scenario, monkeypatch):
         ):
             pytest.fail("a saved receipt matched the new live challenge")
     assert not list(root.iterdir())
+
+
+def test_dispatch_real_role_processes(scenario, monkeypatch):
+    import fcntl
+    import subprocess
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    fd, _, args, _, _, path = scenario
+    key = Ed25519PrivateKey.generate()
+    args["approval_key"] = key.public_key().public_bytes_raw()
+    args["approval_pin"] = art.digest(args["approval_key"])
+    args["approval_signature"] = observer.sign(
+        key, "create-draft", art.decode(args["approval"])
+    )
+    outside = path / "outside"
+    staging = path / "staging"
+    runtime = path / "runtime"
+    for private in (outside, staging, runtime):
+        private.mkdir(mode=0o700)
+    signer_journal = path / "signer-journal"
+    publisher_journal = path / "publisher-journal"
+    for journal in (signer_journal, publisher_journal):
+        journal.touch(mode=0o600)
+    live = path / "live"
+    monkeypatch.setattr(recovery, "LIVE_PATH", str(live))
+    monkeypatch.setattr(recovery, "GRANT_DIRECTORY", str(staging))
+    monkeypatch.setattr(recovery, "SIGNER_JOURNAL", signer_journal)
+
+    def root_journal(location, previous, *, inspect_owner):
+        assert location == str(signer_journal)
+        target = Path(location)
+        stream = target.open("rb")
+        fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        data = stream.read()
+        metadata = os.fstat(stream.fileno())
+        assert previous is None or art.digest(data) == previous
+        return SimpleNamespace(
+            identity=(metadata.st_dev, metadata.st_ino),
+            size=len(data),
+            sha256=art.digest(data),
+            fd=stream.fileno(),
+            close=stream.close,
+        )
+
+    monkeypatch.setattr(recovery, "Journal", root_journal)
+    monkeypatch.setattr(recovery, "SIGNER_OUTPUT", runtime / "app-jwt")
+    monkeypatch.setattr(recovery, "SIGNER_RESULT", runtime / "result.json")
+    monkeypatch.setattr(
+        recovery, "read_file", lambda name, *_a, **_kw: Path(name).read_bytes()
+    )
+    role_job = art.decode(args["job"])
+
+    def uid(role, gid=False):
+        return role_job[role + ("_gid" if gid else "_uid")]
+
+    original_lstat = Path.lstat
+
+    def mapped_lstat(target):
+        info = original_lstat(target)
+        if target in (recovery.SIGNER_OUTPUT, recovery.SIGNER_RESULT):
+            props = dict(
+                zip(
+                    (
+                        "st_mode",
+                        "st_ino",
+                        "st_dev",
+                        "st_nlink",
+                        "st_uid",
+                        "st_gid",
+                        "st_size",
+                        "st_atime",
+                        "st_mtime",
+                        "st_ctime",
+                    ),
+                    info,
+                    strict=True,
+                )
+            )
+            props.update(
+                st_uid=uid("signer"),
+                st_gid=uid("signer", gid=True),
+                st_mtime_ns=info.st_mtime_ns,
+                st_ctime_ns=info.st_ctime_ns,
+            )
+            return SimpleNamespace(**props)
+        return info
+
+    monkeypatch.setattr(Path, "lstat", mapped_lstat)
+
+    def reserve(raw):
+        ledger = os.open(outside, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            return pre_spend.reserve(ledger, raw, key, args["clock"]())
+        finally:
+            os.close(ledger)
+
+    rsa_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_key = rsa_key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    )
+    program = """
+import fcntl
+import os
+import sys
+from pathlib import Path
+from agent_platform import worker_publish_recovery_paths as r
+from agent_platform import worker_publish_io as io
+from agent_platform import worker_publish_signer as s
+from agent_platform import worker_publisher as p
+
+role, base, credentials, raw_time = sys.argv[1:]
+base, credentials = Path(base), Path(credentials)
+r.time.time = lambda: int(raw_time)
+p.confinement = lambda job, actual, recovery: None
+
+def read_credential(file_path, owner, limit, *, credential=False, **kwargs):
+    if credential:
+        exact = '/run/credentials/' + r.role_unit(role)
+        assert file_path.startswith(exact + '/')
+        target = credentials / Path(file_path).name
+        with target.open('rb') as stream:
+            io.systemd_credential(stream.fileno(), os.fstat(stream.fileno()),
+                                  owner, directory=False)
+            data = stream.read(limit + 1)
+        assert 0 < len(data) <= limit
+        return data
+    return Path(file_path).read_bytes()
+
+def live(launch):
+    with (base / 'live').open('rb') as stream:
+        assert stream.read() == launch.encode('ascii')
+        request = r._FLOCK.pack(fcntl.F_WRLCK, os.SEEK_SET, 0, 0, 0)
+        status = fcntl.fcntl(stream.fileno(), fcntl.F_GETLK, request)
+        kind, _, _, _, owner = r._FLOCK.unpack(status)
+        r.art.need(kind == fcntl.F_WRLCK and owner > 0)
+
+r.read_file = io.read_file = read_credential
+r.require_live_controller = live
+r.SIGNER_JOURNAL = base / 'signer-journal'
+r.PUBLISHER_JOURNAL = base / 'publisher-journal'
+r.SIGNER_OUTPUT = base / 'runtime' / 'app-jwt'
+r.SIGNER_RESULT = base / 'runtime' / 'result.json'
+raise SystemExit(s.recovery_main() if role == 'signer' else p.recovery_main())
+"""
+    seen = []
+
+    def start(unit):
+        role = "signer" if unit == recovery.role_unit("signer") else "publisher"
+        copies = path / (role + "-credentials")
+        copies.mkdir(mode=0o700)
+        entries = {
+            "handoff": (staging / (role + ".json")).read_bytes(),
+            "approval-pin": args["approval_pin"].encode("ascii"),
+        }
+        if role == "signer":
+            entries["app-key"] = private_key
+        else:
+            # Signer-controlled bytes change only after the operator has copied them.
+            recovery.SIGNER_OUTPUT.chmod(0o600)
+            recovery.SIGNER_OUTPUT.write_bytes(b"changed")
+        for name, value in entries.items():
+            target = copies / name
+            target.write_bytes(value)
+            target.chmod(0o400)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-B",
+                "-c",
+                program,
+                role,
+                str(path),
+                str(copies),
+                str(args["clock"]()),
+            ],
+            env={"CREDENTIALS_DIRECTORY": "/run/credentials/" + unit},
+            capture_output=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        if role == "publisher":
+            assert b'"publication":"DISABLED"' in result.stdout
+        seen.append(unit)
+
+    def sign(role, raw):
+        ledger = os.open(outside, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            return pre_spend.sign_grant(ledger, role, raw, key, args["clock"]())
+        finally:
+            os.close(ledger)
+
+    stage = os.open(staging, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        with generation.consume(fd, **args, reserve_outside_worker=reserve) as lease:
+            generation.dispatch(
+                lease,
+                directory=stage,
+                job=args["job"],
+                artifact=args["artifact"],
+                observation=args["report"],
+                approval_key=args["approval_key"],
+                approval_pin=args["approval_pin"],
+                start=start,
+                sign=sign,
+            )
+    finally:
+        os.close(stage)
+    assert seen == [recovery.role_unit("signer"), recovery.role_unit("publisher")]
+    evidence = publisher_journal.read_bytes()
+    assert b"HANDOFF_VERIFIED" in evidence
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            program,
+            "publisher",
+            str(path),
+            str(path / "publisher-credentials"),
+            str(args["clock"]()),
+        ],
+        env={
+            "CREDENTIALS_DIRECTORY": "/run/credentials/"
+            + recovery.role_unit("publisher")
+        },
+        capture_output=True,
+        timeout=10,
+    )
+    assert result.returncode == 1 and b"BLOCKED" in result.stdout
+    assert publisher_journal.read_bytes() == evidence

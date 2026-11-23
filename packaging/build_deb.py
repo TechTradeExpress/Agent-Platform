@@ -43,7 +43,7 @@ PUBLISHER_MODULES = frozenset(
     """worker_publisher worker_publish_artifact worker_publish_io
     worker_publish_signer worker_publish_export worker_publish_operator
     worker_publish_reconciliation worker_publish_case worker_publish_observer
-    worker_publish_recovery_paths""".split()
+    worker_publish_recovery_paths worker_publish_generation""".split()
 )
 
 PYTHON_DEPENDENCIES = ["cryptography>=43.0.0,<51"]

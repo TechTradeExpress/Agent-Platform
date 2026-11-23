@@ -218,7 +218,7 @@ def validate_job(job, now):
     return job
 
 
-def confinement(job, role):
+def confinement(job, role, *, recovery=False):
     art.need(role in ("publisher", "signer"))
     art.need(
         not any(
@@ -258,7 +258,10 @@ def confinement(job, role):
         "worker_publish_export.py",
     ):
         read_file(str(base / name), 0, 128 * 1024)
-    expected = "ap-worker-publisher" + ("-signer" if role == "signer" else "")
+    expected = "ap-worker-publisher"
+    if recovery:
+        expected += "-recovery"
+    expected += "-signer" if role == "signer" else ""
     # Only own process metadata, never another principal or a credential store.
     with open("/proc/self/attr/current", "rb") as f:
         art.need(f.read(256).strip(b"\0\n") == (expected + " (enforce)").encode())
@@ -1089,9 +1092,9 @@ def main(argv=None):
 
 
 def recovery_main():
-    from .worker_publish_recovery_paths import stop
+    from .worker_publish_recovery_paths import run_publisher_handoff
 
-    return stop("publisher")
+    return run_publisher_handoff()
 
 
 if __name__ == "__main__":

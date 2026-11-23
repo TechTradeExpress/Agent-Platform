@@ -226,13 +226,18 @@ def test_handoff_rejects_mismatched_job_or_result(pair):
 
 
 @pytest.mark.parametrize("role", ["publisher", "signer"])
-def test_stage_a_units_have_no_credential_or_network_grant(role):
+def test_recovery_units_pin_credentials_and_deny_network(role):
     suffix = "-signer" if role == "signer" else ""
     name = "ap-worker-publisher-recovery" + suffix
     unit = (UNITS / (name + ".service")).read_text()
     profile = (UNITS / (name + ".apparmor")).read_text()
     account = "ap-publisher" + suffix
-    assert "[Install]" not in unit and "LoadCredential=" not in unit
+    assert "[Install]" not in unit
+    assert (
+        f"LoadCredential=handoff:/run/ap-publisher-recovery-169-grants/{role}.json"
+        in unit
+    )
+    assert ("LoadCredential=app-key:" in unit) == (role == "signer")
     assert "IPAddressAllow=" not in unit
     for line in (
         "Type=oneshot",
@@ -251,7 +256,7 @@ def test_stage_a_units_have_no_credential_or_network_grant(role):
     ):
         assert line in unit.splitlines()
     assert "deny network," in profile
-    assert "deny /run/credentials/{,**} rwklmx," in profile
+    assert "deny /run/ap-publisher-recovery-169-grants/{,**} rwklmx," in profile
     assert "/etc/ap-publisher-recovery-169/job.json r," not in profile
 
 

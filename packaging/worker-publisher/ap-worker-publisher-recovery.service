@@ -1,5 +1,5 @@
 [Unit]
-Description=Blocked stage A of worker01 Issue 169 recovery (publisher)
+Description=Worker01 Issue 169 recovery (publisher)
 
 [Service]
 Type=oneshot
@@ -9,6 +9,9 @@ SupplementaryGroups=
 UMask=0077
 UnsetEnvironment=GH_TOKEN GITHUB_TOKEN GIT_ASKPASS SSH_AUTH_SOCK SSLKEYLOGFILE SSL_CERT_FILE SSL_CERT_DIR OPENSSL_CONF OPENSSL_MODULES HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
 ExecStart=/usr/libexec/ap-worker-publisher-recovery
+LoadCredential=handoff:/run/ap-publisher-recovery-169-grants/publisher.json
+LoadCredential=approval-pin:/etc/ap-publisher-recovery-169/approval-pin
+ReadWritePaths=/var/lib/ap-publisher-recovery-169-publisher/journal
 AppArmorProfile=ap-worker-publisher-recovery
 NoNewPrivileges=yes
 CapabilityBoundingSet=

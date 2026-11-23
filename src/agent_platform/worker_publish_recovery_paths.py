@@ -1,7 +1,10 @@
 """Pinned filesystem and handoff contract for worker01/#169 recovery stage A."""
 
+import fcntl
 import os
 import stat
+import struct
+import time
 from pathlib import Path
 
 from . import worker_publish_artifact as art
@@ -127,7 +130,6 @@ def verify_handoff(job_bytes, jwt, result):
 
 def stop(role):
     art.need(role in ("signer", "publisher"))
-    # No stage A production path reads data, loads credentials or opens journals.
     print('{"status":"BLOCKED","code":"recovery_authorization_unavailable"}')
     return 1
 
@@ -302,3 +304,145 @@ def verify_grant(
     if role == "publisher":
         verify_signer_journal(job_bytes, launch_id, jwt, result, journal)
     return job
+
+
+# One bounded credential from the root operator. The artifact is embedded for
+# this pilot so the unit never opens a separately writable input path.
+CREDENTIAL_LIMIT = 512 * 1024
+GRANT_DIRECTORY = "/run/ap-publisher-recovery-169-grants"
+LIVE_PATH = "/run/ap-publisher-recovery-169-live"
+# Linux amd64 struct flock. The Debian package and this pilot are amd64.
+_FLOCK = struct.Struct("@hhqqi4x")
+
+
+def require_live_controller(launch_id):
+    art.need(os.uname().machine == "x86_64")
+    raw = read_file(LIVE_PATH, 0, 64)
+    art.need(raw == launch_id.encode("ascii"))
+    fd = os.open(LIVE_PATH, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        metadata = os.fstat(fd)
+        art.need(stat.S_ISREG(metadata.st_mode) and metadata.st_nlink == 1)
+        art.need(metadata.st_uid == metadata.st_gid == 0)
+        art.need(stat.S_IMODE(metadata.st_mode) == 0o644)
+        art.need(os.pread(fd, 65, 0) == raw)
+        request = _FLOCK.pack(fcntl.F_WRLCK, os.SEEK_SET, 0, 0, 0)
+        status = fcntl.fcntl(fd, fcntl.F_GETLK, request)
+        kind, _, _, _, owner = _FLOCK.unpack(status)
+        art.need(kind == fcntl.F_WRLCK and owner > 0)
+        art.need(os.path.samestat(metadata, os.stat(LIVE_PATH, follow_symlinks=False)))
+    finally:
+        os.close(fd)
+
+
+PRE_SPEND_PURPOSE = "pre-spend"
+
+
+def pre_spend_challenge(approval_sha256, launch_id, expires):
+    from . import worker_publish_observer as observer
+
+    art.need(observer._sha256(approval_sha256) and observer._sha256(launch_id))
+    art.need(type(expires) is int)
+    return {
+        "schema": "AP-worker01-pre-spend/1",
+        "case": case.CASE,
+        "generation": GENERATION,
+        "approval_sha256": approval_sha256,
+        "launch_id": launch_id,
+        "expires": expires,
+    }
+
+
+def role_unit(role):
+    art.need(role in ("signer", "publisher"))
+    return (
+        "ap-worker-publisher-recovery"
+        + ("-signer" if role == "signer" else "")
+        + ".service"
+    )
+
+
+def read_role_credential(role, leaf, limit):
+    art.need(role in ("signer", "publisher"))
+    allowed = {"handoff", "approval-pin"}
+    if role == "signer":
+        allowed.add("app-key")
+    art.need(leaf in allowed)
+    directory = f"/run/credentials/{role_unit(role)}"
+    art.need(os.environ.get("CREDENTIALS_DIRECTORY") == directory)
+    return read_file(directory + "/" + leaf, os.getuid(), limit, credential=True)
+
+
+def receive(role, now):
+    import base64
+
+    raw = read_role_credential(role, "handoff", CREDENTIAL_LIMIT)
+    data = art.decode(raw)
+    art.need(type(data) is dict and art.encoded(data) == raw)
+    fields = {
+        "grant",
+        "signature",
+        "public_key",
+        "job",
+        "artifact",
+        "spent",
+        "pre_spend_receipt",
+        "observation",
+        "launch_id",
+    }
+    if role == "publisher":
+        fields |= {"jwt", "result", "signer_journal"}
+    art.need(set(data) == fields)
+    launch_id = data.pop("launch_id")
+    parts = {
+        name: base64.b64decode(value, validate=True) for name, value in data.items()
+    }
+    handoff = None
+    if role == "publisher":
+        handoff = tuple(parts[name] for name in ("jwt", "result", "signer_journal"))
+    pin = read_role_credential(role, "approval-pin", 64).decode("ascii")
+    job = verify_grant(
+        role,
+        parts["grant"],
+        parts["signature"],
+        public_key=parts["public_key"],
+        key_pin=pin,
+        job_bytes=parts["job"],
+        artifact=parts["artifact"],
+        approval=parts["spent"],
+        pre_spend_receipt=parts["pre_spend_receipt"],
+        observation=parts["observation"],
+        launch_id=launch_id,
+        now=now,
+        handoff=handoff,
+    )
+    art.validate(parts["artifact"], job["head"], job["tree"], job["parent"])
+    decision = reconciliation._canonical(parts["grant"])
+    art.need(int(time.time()) < decision["expires"])
+    pub.confinement(job, role, recovery=True)
+    require_live_controller(launch_id)
+    return job, launch_id, parts
+
+
+def run_publisher_handoff():
+
+    journal = None
+    try:
+        job, launch_id, _ = receive("publisher", int(time.time()))
+        journal = Journal(str(PUBLISHER_JOURNAL), job["journal_sha256"])
+        art.need(not journal.events)
+        journal.claim(job)
+        journal.append(
+            {
+                "phase": "HANDOFF_VERIFIED",
+                "job": job["id"],
+                "launch_id": launch_id,
+            }
+        )
+        print('{"status":"HANDOFF_VERIFIED","publication":"DISABLED"}')
+        return 0
+    except Exception:
+        return stop("publisher")
+    finally:
+        if journal is not None:
+            journal.close()

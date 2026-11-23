@@ -12,26 +12,13 @@ from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 
 from . import worker_publish_artifact as art
-from . import worker_publish_case as case
 from . import worker_publish_observer as observer
 from . import worker_publish_reconciliation as reconciliation
 from . import worker_publish_recovery_paths as recovery
 
 RECORD = "worker01-169-v4-recovery-1.pre-spent.json"
-PURPOSE = "pre-spend"
-
-
-def challenge(approval_sha256, launch_id, expires):
-    art.need(observer._sha256(approval_sha256) and observer._sha256(launch_id))
-    art.need(type(expires) is int)
-    return {
-        "schema": "AP-worker01-pre-spend/1",
-        "case": case.CASE,
-        "generation": recovery.GENERATION,
-        "approval_sha256": approval_sha256,
-        "launch_id": launch_id,
-        "expires": expires,
-    }
+PURPOSE = recovery.PRE_SPEND_PURPOSE
+challenge = recovery.pre_spend_challenge
 
 
 def reserve(directory, raw, key, now):
@@ -98,9 +85,31 @@ def private_directory(path):
         os.close(fd)
 
 
+def sign_grant(directory, role, raw, key, now):
+    grant = reconciliation._canonical(raw)
+    art.need(role in ("signer", "publisher"))
+    art.need(grant["schema"] == "AP-worker01-recovery-grant/1")
+    art.need(grant["role"] == role and grant["audience"] == recovery.role_unit(role))
+    fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    fd = os.open(RECORD, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    try:
+        info = os.fstat(fd)
+        art.need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1)
+        art.need(info.st_uid == os.getuid() and info.st_gid == os.getgid())
+        art.need(stat.S_IMODE(info.st_mode) == 0o600)
+        reserved = reconciliation._canonical(os.read(fd, observer.LIMIT + 1))
+        art.need(now < grant["expires"] <= reserved["expires"])
+        for name in ("case", "generation", "launch_id", "approval_sha256"):
+            art.need(grant[name] == reserved[name])
+        return observer.sign(key, "recovery-" + role, grant)
+    finally:
+        os.close(fd)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ledger", required=True)
+    parser.add_argument("--grant-role", choices=("signer", "publisher"))
     args = parser.parse_args(argv)
     try:
         # fd 3 is the operator-supplied approval private-key stream. Only the
@@ -112,7 +121,11 @@ def main(argv=None):
         raw = sys.stdin.buffer.read(observer.LIMIT + 1)
         art.need(0 < len(raw) <= observer.LIMIT)
         with private_directory(args.ledger) as directory:
-            signature = reserve(directory, raw, key, int(time.time()))
+            now = int(time.time())
+            if args.grant_role is None:
+                signature = reserve(directory, raw, key, now)
+            else:
+                signature = sign_grant(directory, args.grant_role, raw, key, now)
         sys.stdout.buffer.write(signature.hex().encode("ascii") + b"\n")
         return 0
     except Exception:

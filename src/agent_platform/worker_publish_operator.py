@@ -442,6 +442,10 @@ def report(status, **fields):
 
 
 def main(argv):
+    if argv and argv[:1] == ["recovery-handoff"]:
+        from . import worker_publish_generation as generation
+
+        return generation.operator_main(argv[1:], sys.modules[__name__])
     if argv and argv[:1] == ["reconcile-v4"]:
         from . import worker_publish_case
 

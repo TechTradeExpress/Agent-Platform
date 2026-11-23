@@ -100,9 +100,40 @@ def main():
 
 
 def recovery_main():
-    from .worker_publish_recovery_paths import stop
+    from . import worker_publish_recovery_paths as recovery
 
-    return stop("signer")
+    journal = None
+    try:
+        job, launch_id, parts = recovery.receive("signer", int(time.time()))
+        journal = Journal(str(recovery.SIGNER_JOURNAL), job["signer_journal_sha256"])
+        art.need(not journal.events)
+        journal.claim(job, signer=True)
+        operation = {"job": job["id"], "operation": "sign", "launch_id": launch_id}
+        journal.append({"phase": "UNKNOWN", **operation})
+        recovery.require_live_controller(launch_id)
+        raw = recovery.read_role_credential("signer", "app-key", 16384)
+        key = serialization.load_pem_private_key(raw, password=None)
+        value = jwt_for(key, job["app_id"], job["expires"], int(time.time()))
+        jwt = value.decode("ascii")
+        recovery.write_signer_handoff(parts["job"], jwt)
+        envelope, result = recovery.signer_payload(parts["job"], jwt)
+        journal.append(
+            {
+                "phase": "COMPLETE",
+                **operation,
+                "ref": job["ref"],
+                "issue": job["issue"],
+                "head": job["head"],
+                "jwt_sha256": art.digest(envelope),
+                "result_sha256": art.digest(result),
+            }
+        )
+        return 0
+    except Exception:
+        return recovery.stop("signer")
+    finally:
+        if journal is not None:
+            journal.close()
 
 
 if __name__ == "__main__":
