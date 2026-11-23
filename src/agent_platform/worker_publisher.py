@@ -218,7 +218,7 @@ def validate_job(job, now):
     return job
 
 
-def confinement(job, role):
+def confinement(job, role, *, recovery=False):
     art.need(role in ("publisher", "signer"))
     art.need(
         not any(
@@ -258,7 +258,10 @@ def confinement(job, role):
         "worker_publish_export.py",
     ):
         read_file(str(base / name), 0, 128 * 1024)
-    expected = "ap-worker-publisher" + ("-signer" if role == "signer" else "")
+    expected = "ap-worker-publisher"
+    if recovery:
+        expected += "-recovery"
+    expected += "-signer" if role == "signer" else ""
     # Only own process metadata, never another principal or a credential store.
     with open("/proc/self/attr/current", "rb") as f:
         art.need(f.read(256).strip(b"\0\n") == (expected + " (enforce)").encode())
@@ -860,7 +863,7 @@ class Client:
         return b"revoked"
 
 
-def publish(job, data, jwt, journal, client, authorize):
+def publish(job, data, jwt, journal, client, authorize, *, before_effect=None):
     validate_job(job, int(time.time()))
     art.need(art.digest(data) == job["artifact_sha256"])
     objects, order, inventory, _ = art.validate(
@@ -879,6 +882,8 @@ def publish(job, data, jwt, journal, client, authorize):
                 "digest": art.digest(payload),
             }
         )
+        if before_effect is not None and not cleanup:
+            before_effect()
         value = fn()
         journal.append(
             {
@@ -1086,6 +1091,12 @@ def main(argv=None):
     finally:
         if journal is not None:
             journal.close()
+
+
+def recovery_main(*, transport_factory=None):
+    from .worker_publish_recovery_paths import run_publisher_handoff
+
+    return run_publisher_handoff(transport_factory=transport_factory)
 
 
 if __name__ == "__main__":

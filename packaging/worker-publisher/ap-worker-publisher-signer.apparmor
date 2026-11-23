@@ -30,6 +30,7 @@ profile ap-worker-publisher-signer /usr/libexec/ap-worker-publisher-signer flags
   /etc/{passwd,group,nsswitch.conf} r,
   /etc/ap-publisher/{job,receipts}.json r,
   /var/lib/ap-publisher-signer/journal rwk,
+  /run/ap-publisher-signer/ r,
   /run/ap-publisher-signer/app-jwt rw,
   /run/credentials/ap-worker-publisher-signer.service/app-key r,
   /proc/[0-9]*/{status,attr/current} r,

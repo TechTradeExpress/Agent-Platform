@@ -33,9 +33,17 @@ P1_DEPENDENCIES = (
     "python3-cryptography (<< 51), git, ca-certificates, systemd (>= 257), "
     "apparmor (>= 4.1), apparmor-utils, acl, passwd"
 )
+PUBLISHER_UNITS = (
+    "ap-worker-publisher",
+    "ap-worker-publisher-signer",
+    "ap-worker-publisher-recovery",
+    "ap-worker-publisher-recovery-signer",
+)
 PUBLISHER_MODULES = frozenset(
     """worker_publisher worker_publish_artifact worker_publish_io
-    worker_publish_signer worker_publish_export worker_publish_operator""".split()
+    worker_publish_signer worker_publish_export worker_publish_operator
+    worker_publish_reconciliation worker_publish_case worker_publish_observer
+    worker_publish_recovery_paths worker_publish_generation""".split()
 )
 
 PYTHON_DEPENDENCIES = ["cryptography>=43.0.0,<51"]
@@ -60,7 +68,9 @@ native_canary native_codex native_security
 notification_outbox notifications publisher_handoff telegram_console telegram_fake
 tool_dispatch_probe worker_publisher worker_publish_artifact worker_publish_io
 worker_publish_signer worker_publish_export worker_publish_operator
-worker_publish_reconciliation""".split()
+worker_publish_reconciliation worker_publish_case worker_publish_observer
+worker_publish_generation worker_publish_pre_spend
+worker_publish_recovery_paths""".split()
 )
 ENTRY_POINTS = {
     "control": {"agent-platform-control": "agent_platform.cli:main"},
@@ -458,17 +468,16 @@ Display command help.
                         publisher_root + name + ".py",
                     )
                 for name in (
-                    "ap-worker-publisher",
+                    *PUBLISHER_UNITS,
                     "ap-worker-publisher-export",
                     "ap-worker-publisher-operator",
-                    "ap-worker-publisher-signer",
                 ):
                     copy(
                         "packaging/worker-publisher/" + name,
                         "usr/libexec/" + name,
                         0o755,
                     )
-                for name in ("ap-worker-publisher", "ap-worker-publisher-signer"):
+                for name in PUBLISHER_UNITS:
                     copy(
                         "packaging/worker-publisher/" + name + ".service",
                         "usr/lib/systemd/system/" + name + ".service",

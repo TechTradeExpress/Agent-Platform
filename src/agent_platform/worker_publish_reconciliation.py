@@ -220,14 +220,16 @@ def inspect(snapshot: Snapshot, *, expected_snapshot: str, object_id: str, now: 
     return _report("HISTORY_VERIFIED", "original_effect_unresolved")
 
 
-def _proposed(snapshot, old, raw, artifact, now):
+def _proposed(snapshot, old, raw, artifact, now, *, fresh_generation=False):
     new = pub.validate_job(_canonical(raw), now)
     art.need(pub.homelab(new))
     art.need(all(new[k] == old[k] for k in SUBJECT + APP + ACCOUNTS))
     for key in ("id", "ref", "head", "artifact_sha256", "parent"):
         art.need(new[key] != old[key])
-    art.need(new["journal_sha256"] == art.digest(snapshot.publisher_journal))
-    art.need(new["signer_journal_sha256"] == art.digest(snapshot.signer_journal))
+    publisher_log = b"" if fresh_generation else snapshot.publisher_journal
+    signer_log = b"" if fresh_generation else snapshot.signer_journal
+    art.need(new["journal_sha256"] == art.digest(publisher_log))
+    art.need(new["signer_journal_sha256"] == art.digest(signer_log))
     digest = art.digest(_bounded(artifact, art.MAX_WIRE))
     art.need(new["artifact_sha256"] == digest)
     art.validate(artifact, new["head"], new["tree"], new["parent"])

@@ -9,6 +9,7 @@ import selectors
 import socket
 import stat
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -441,6 +442,14 @@ def report(status, **fields):
 
 
 def main(argv):
+    if argv and argv[:1] == ["recovery-handoff"]:
+        from . import worker_publish_generation as generation
+
+        return generation.operator_main(argv[1:], sys.modules[__name__])
+    if argv and argv[:1] == ["reconcile-v4"]:
+        from . import worker_publish_case
+
+        return worker_publish_case.main(argv[1:], sys.modules[__name__])
     parser = argparse.ArgumentParser(description="Root-only worker01 Draft Publisher")
     commands = parser.add_subparsers(dest="action", required=True)
     commands.add_parser("readiness")

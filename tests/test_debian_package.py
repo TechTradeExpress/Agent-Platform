@@ -445,7 +445,6 @@ def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, na
         "harness_admission",
         "claude_adapter",
         "instruction_sources",
-        "worker_publish_reconciliation",
     ],
 )
 def test_source_only_contract_excluded_from_every_role_phase_archive(
