@@ -14,6 +14,8 @@ from agent_platform import worker_publish_case as case
 from agent_platform import worker_publish_generation as generation
 from agent_platform import worker_publish_observer as observer
 from agent_platform import worker_publish_operator as operator
+from agent_platform import worker_publish_pre_spend as pre_spend
+from agent_platform import worker_publish_recovery_paths as recovery
 
 
 @pytest.fixture
@@ -56,6 +58,7 @@ def scenario(store, inputs, sample, evidence_case, monkeypatch):  # noqa: F811
         )
 
     fresh = art.decode(original)
+    fresh["ref"] = recovery.REF
     fresh["journal_sha256"] = fresh["signer_journal_sha256"] = art.digest(b"")
     proposed = packets(art.encoded(fresh))
     approval = {
@@ -300,3 +303,52 @@ def test_spent_continuity_must_remain_intact_at_signer_claim(scenario, witness):
         with pytest.raises(art.Blocked):
             lease.signer_claim(art.digest(args["job"]))
     assert not (root / generation.SIGNER).exists()
+
+
+def test_lost_local_spent_cannot_reuse_operator_approval(scenario, monkeypatch):
+    fd, root, args, _, fs, path = scenario
+    outside = path / "external-fixture"
+    outside.mkdir(mode=0o700)
+    operator_key = Ed25519PrivateKey.generate()
+    args["approval_key"] = operator_key.public_key().public_bytes_raw()
+    args["approval_pin"] = art.digest(args["approval_key"])
+    args["approval_signature"] = observer.sign(
+        operator_key, "create-draft", art.decode(args["approval"])
+    )
+    receipts = []
+
+    def reserve(raw):
+        descriptor = os.open(outside, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            signature = pre_spend.reserve(
+                descriptor, raw, operator_key, args["clock"]()
+            )
+            receipts.append(signature)
+            return signature
+        finally:
+            os.close(descriptor)
+
+    def fail_after_creating_spent(descriptor):
+        if (root / generation.SPENT).exists():
+            raise OSError("synthetic uncertain local SPENT")
+        os.fsync(descriptor)
+
+    with monkeypatch.context() as m:
+        m.setattr(fs, "fsync", fail_after_creating_spent)
+        with pytest.raises(OSError, match="uncertain local SPENT"):
+            with generation.consume(fd, **args, reserve_outside_worker=reserve):
+                pytest.fail("an uncertain local write yielded a lease")
+    assert len(receipts) == 1
+    assert (outside / pre_spend.RECORD).exists()
+    # Model loss of only fixture-owned local state before restart.
+    (root / generation.PRE_SPEND).unlink()
+    (root / generation.SPENT).unlink()
+    with pytest.raises(FileExistsError):
+        with generation.consume(fd, **args, reserve_outside_worker=reserve):
+            pytest.fail("the external ledger reissued a receipt")
+    with pytest.raises(art.Blocked):
+        with generation.consume(
+            fd, **args, reserve_outside_worker=lambda _: receipts[0]
+        ):
+            pytest.fail("a saved receipt matched the new live challenge")
+    assert not list(root.iterdir())

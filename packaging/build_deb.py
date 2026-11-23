@@ -69,7 +69,8 @@ notification_outbox notifications publisher_handoff telegram_console telegram_fa
 tool_dispatch_probe worker_publisher worker_publish_artifact worker_publish_io
 worker_publish_signer worker_publish_export worker_publish_operator
 worker_publish_reconciliation worker_publish_case worker_publish_observer
-worker_publish_generation worker_publish_recovery_paths""".split()
+worker_publish_generation worker_publish_pre_spend
+worker_publish_recovery_paths""".split()
 )
 ENTRY_POINTS = {
     "control": {"agent-platform-control": "agent_platform.cli:main"},

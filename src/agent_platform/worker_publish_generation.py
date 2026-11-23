@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from . import worker_publish_artifact as art
 from . import worker_publish_case as case
 from . import worker_publish_observer as observer
+from . import worker_publish_pre_spend as pre_spend
 from . import worker_publish_reconciliation as reconciliation
 from . import worker_publish_recovery_paths as recovery
 
@@ -24,6 +25,7 @@ HANDOFF = "signer-handoff.json"
 JOB = "generation-job.json"
 ARTIFACT = "generation-candidate.json"
 CONTINUITY = "spent-continuity.json"
+PRE_SPEND = "pre-spend-receipt.json"
 
 
 class _Lease:
@@ -36,6 +38,7 @@ class _Lease:
         expires,
         clock,
         continuity,
+        pre_spend_receipt,
     ):
         self._directory = directory
         self._approval = approval
@@ -46,6 +49,7 @@ class _Lease:
         self._phase = "spent"
         self._continuity = continuity
         self._receipt = None
+        self._pre_spend_receipt = pre_spend_receipt
 
     def continuity_challenge(self):
         """Return the exact record an independent witness may acknowledge."""
@@ -85,6 +89,12 @@ class _Lease:
             art.digest(case._read(self._directory, ARTIFACT, art.MAX_WIRE))
             == self._artifact_sha256
         )
+
+        if self._pre_spend_receipt is not None:
+            art.need(
+                case._read(self._directory, PRE_SPEND, reconciliation.RECORD_LIMIT)
+                == self._pre_spend_receipt
+            )
 
     def _claim(self, expected, name, record):
         phase = self._phase
@@ -158,6 +168,7 @@ def consume(
     clock,
     witness_key=None,
     witness_pin=None,
+    reserve_outside_worker=None,
 ):
     """Consume in a caller-pinned private directory while holding its exclusive lock.
 
@@ -179,7 +190,16 @@ def consume(
     lease = None
     try:
         fcntl.flock(locked, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        for filename in (SPENT, SIGNER, PUBLISHER, HANDOFF, JOB, ARTIFACT, CONTINUITY):
+        for filename in (
+            SPENT,
+            SIGNER,
+            PUBLISHER,
+            HANDOFF,
+            JOB,
+            ARTIFACT,
+            CONTINUITY,
+            PRE_SPEND,
+        ):
             case._absent(locked, filename)
         case._confirm(archive_directory, archive_pin)
         intent = art.decode(
@@ -249,6 +269,28 @@ def consume(
                 witness_key,
                 witness_pin,
             )
+        pre_spend_receipt = None
+        if reserve_outside_worker is not None:
+            art.need(new["ref"] == recovery.REF)
+            art.need(continuity is None)
+            request = pre_spend.challenge(
+                art.digest(approval), secrets.token_hex(32), expires
+            )
+            raw = art.encoded(request)
+            signature = reserve_outside_worker(raw)
+            art.need(
+                observer.verify(
+                    approval_key, approval_pin, pre_spend.PURPOSE, raw, signature
+                )
+                == request
+            )
+            art.need(clock() < expires)
+            # Archive continuity is independent of the external approval ledger.
+            case._confirm(archive_directory, archive_pin)
+            pre_spend_receipt = art.encoded(
+                {"record": request, "signature": signature.hex()}
+            )
+            case._create(locked, PRE_SPEND, pre_spend_receipt)
         # Any partial write or lost acknowledgment leaves a blocker. Nothing
         # is handed to a role until all three writes have returned durably.
         case._create(locked, SPENT, approval)
@@ -263,6 +305,7 @@ def consume(
             expires,
             clock,
             continuity,
+            pre_spend_receipt,
         )
         yield lease
     finally:
