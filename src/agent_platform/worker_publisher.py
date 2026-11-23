@@ -863,7 +863,7 @@ class Client:
         return b"revoked"
 
 
-def publish(job, data, jwt, journal, client, authorize):
+def publish(job, data, jwt, journal, client, authorize, *, before_effect=None):
     validate_job(job, int(time.time()))
     art.need(art.digest(data) == job["artifact_sha256"])
     objects, order, inventory, _ = art.validate(
@@ -882,6 +882,8 @@ def publish(job, data, jwt, journal, client, authorize):
                 "digest": art.digest(payload),
             }
         )
+        if before_effect is not None and not cleanup:
+            before_effect()
         value = fn()
         journal.append(
             {
@@ -1091,10 +1093,10 @@ def main(argv=None):
             journal.close()
 
 
-def recovery_main():
+def recovery_main(*, transport_factory=None):
     from .worker_publish_recovery_paths import run_publisher_handoff
 
-    return run_publisher_handoff()
+    return run_publisher_handoff(transport_factory=transport_factory)
 
 
 if __name__ == "__main__":

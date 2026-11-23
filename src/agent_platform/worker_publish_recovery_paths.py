@@ -424,24 +424,42 @@ def receive(role, now):
     return job, launch_id, parts
 
 
-def run_publisher_handoff():
-
+def run_publisher_handoff(*, transport_factory=None):
+    """Installed entrypoint remains offline; an embedded caller can supply I/O."""
     journal = None
     try:
-        job, launch_id, _ = receive("publisher", int(time.time()))
+        job, launch_id, parts = receive("publisher", int(time.time()))
         journal = Journal(str(PUBLISHER_JOURNAL), job["journal_sha256"])
         art.need(not journal.events)
-        journal.claim(job)
-        journal.append(
-            {
-                "phase": "HANDOFF_VERIFIED",
-                "job": job["id"],
-                "launch_id": launch_id,
-            }
-        )
-        print('{"status":"HANDOFF_VERIFIED","publication":"DISABLED"}')
+        if transport_factory is None:
+            journal.claim(job)
+            journal.append(
+                {"phase": "HANDOFF_VERIFIED", "job": job["id"], "launch_id": launch_id}
+            )
+            print('{"status":"HANDOFF_VERIFIED","publication":"DISABLED"}')
+        else:
+            expires = reconciliation._canonical(parts["grant"])["expires"]
+
+            def authorize():
+                art.need(int(time.time()) < expires)
+                require_live_controller(launch_id)
+
+            authorize()
+            artifact = parts["artifact"]
+            objects, _, _, _ = art.validate(
+                artifact, job["head"], job["tree"], job["parent"]
+            )
+            jwt = verify_handoff(parts["job"], parts["jwt"], parts["result"])
+            client = pub.Client(job, objects, transport_factory(journal, job, jwt))
+            result = pub.publish(
+                job, artifact, jwt, journal, client, authorize, before_effect=authorize
+            )
+            print(art.encoded(result).decode())
         return 0
     except Exception:
+        if journal is not None and (journal.poisoned or journal.events):
+            print('{"status":"UNKNOWN_NEEDS_HUMAN"}')
+            return 1
         return stop("publisher")
     finally:
         if journal is not None:

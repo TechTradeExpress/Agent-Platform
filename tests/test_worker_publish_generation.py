@@ -354,7 +354,19 @@ def test_lost_local_spent_cannot_reuse_operator_approval(scenario, monkeypatch):
     assert not list(root.iterdir())
 
 
-def test_dispatch_real_role_processes(scenario, monkeypatch):
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "offline",
+        "published",
+        "object",
+        "ref",
+        "draft",
+        "death_before_mint",
+        "death_after_object",
+    ],
+)
+def test_recovery_handoff_cli_processes(scenario, monkeypatch, mode):
     import fcntl
     import subprocess
     import sys
@@ -469,7 +481,7 @@ from agent_platform import worker_publish_io as io
 from agent_platform import worker_publish_signer as s
 from agent_platform import worker_publisher as p
 
-role, base, credentials, raw_time = sys.argv[1:]
+role, base, credentials, raw_time, mode, test_dir = sys.argv[1:]
 base, credentials = Path(base), Path(credentials)
 r.time.time = lambda: int(raw_time)
 p.confinement = lambda job, actual, recovery: None
@@ -488,6 +500,12 @@ def read_credential(file_path, owner, limit, *, credential=False, **kwargs):
     return Path(file_path).read_bytes()
 
 def live(launch):
+    if mode == 'death_before_mint' and role == 'publisher':
+        journal = (base / 'publisher-journal').read_bytes()
+        if b'"operation":"mint"' in journal:
+            r.art.need(False)
+    if role == 'publisher':
+        r.art.need(not (base / 'lost-controller').exists())
     with (base / 'live').open('rb') as stream:
         assert stream.read() == launch.encode('ascii')
         request = r._FLOCK.pack(fcntl.F_WRLCK, os.SEEK_SET, 0, 0, 0)
@@ -501,7 +519,44 @@ r.SIGNER_JOURNAL = base / 'signer-journal'
 r.PUBLISHER_JOURNAL = base / 'publisher-journal'
 r.SIGNER_OUTPUT = base / 'runtime' / 'app-jwt'
 r.SIGNER_RESULT = base / 'runtime' / 'result.json'
-raise SystemExit(s.recovery_main() if role == 'signer' else p.recovery_main())
+if role == 'signer':
+    raise SystemExit(s.recovery_main())
+if mode == 'offline':
+    raise SystemExit(p.recovery_main())
+
+sys.path.insert(0, test_dir)
+from test_worker_publisher import Wire
+
+def wire(journal, job, jwt):
+    wire = Wire(journal, job)
+    original = wire.exchange
+
+    def exchange(method, path, body, secret, limit=256*1024):
+        auth = 'JWT_FAKE' if secret == jwt else secret
+        response = original(method, path, body, auth, limit)
+        effect = (
+            'object' if method == 'POST' and path.startswith(p.ROOT + '/git/')
+            else 'ref' if path == '/graphql' and body['query'] == p.CAS
+            else 'draft' if method == 'POST' and path == p.ROOT + '/pulls'
+            else ''
+        )
+        if effect == 'object' and mode == 'death_after_object':
+            (base / 'lost-controller').touch()
+        if effect == mode:
+            raise TimeoutError('synthetic reply loss after mutation')
+        return response
+
+    wire.exchange = exchange
+    def save(code):
+        (base / 'wire-result.json').write_bytes(r.art.encoded({
+            'token': wire.token, 'tip': wire.tip, 'pr': wire.pr_number,
+            'calls': wire.calls, 'objects': len(wire.objects),
+        }))
+    import atexit
+    atexit.register(save, 0)
+    return wire
+
+raise SystemExit(p.recovery_main(transport_factory=wire))
 """
     seen = []
 
@@ -534,14 +589,20 @@ raise SystemExit(s.recovery_main() if role == 'signer' else p.recovery_main())
                 str(path),
                 str(copies),
                 str(args["clock"]()),
+                mode,
+                str(Path(__file__).parent),
             ],
             env={"CREDENTIALS_DIRECTORY": "/run/credentials/" + unit},
             capture_output=True,
             timeout=10,
         )
+        if role == "publisher" and mode not in ("offline", "published"):
+            assert result.returncode == 1 and b"UNKNOWN_NEEDS_HUMAN" in result.stdout
+            raise art.Blocked()
         assert result.returncode == 0, (result.stdout, result.stderr)
         if role == "publisher":
-            assert b'"publication":"DISABLED"' in result.stdout
+            expected = b'"publication":"DISABLED"' if mode == "offline" else b'"pr":111'
+            assert expected in result.stdout
         seen.append(unit)
 
     def sign(role, raw):
@@ -551,25 +612,132 @@ raise SystemExit(s.recovery_main() if role == 'signer' else p.recovery_main())
         finally:
             os.close(ledger)
 
-    stage = os.open(staging, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        with generation.consume(fd, **args, reserve_outside_worker=reserve) as lease:
-            generation.dispatch(
-                lease,
-                directory=stage,
-                job=args["job"],
-                artifact=args["artifact"],
-                observation=args["report"],
-                approval_key=args["approval_key"],
-                approval_pin=args["approval_pin"],
-                start=start,
-                sign=sign,
+    for filename, field in (
+        ("proposed-job.json", "job"),
+        ("proposed-candidate.json", "artifact"),
+        ("observer-report.json", "report"),
+        ("observer-report.sig", "report_signature"),
+        ("observer-selection.json", "selection"),
+        ("observer-selection.sig", "selection_signature"),
+        ("observer-public-key", "observer_key"),
+        ("approval-public-key", "approval_key"),
+        ("create-draft-approval.json", "approval"),
+        ("create-draft-approval.sig", "approval_signature"),
+    ):
+        leaf = path / filename
+        leaf.write_bytes(args[field])
+        leaf.chmod(0o600)
+
+    from agent_platform import worker_publish_io as io
+
+    @contextmanager
+    def archive():
+        yield args["archive_directory"]
+
+    def trust_pin(filename, *_a, **_kw):
+        if filename.endswith("/challenge"):
+            return args["challenge"].encode()
+        return args[
+            "approval_pin" if filename.endswith("approval-pin") else "observer_pin"
+        ].encode()
+
+    def systemctl(command, *options, **kwargs):
+        unit = options[-1]
+        if command == "show":
+            return (
+                "FragmentPath=/usr/lib/systemd/system/"
+                + unit
+                + "\nDropInPaths=\nNeedDaemonReload=no"
             )
-    finally:
-        os.close(stage)
-    assert seen == [recovery.role_unit("signer"), recovery.role_unit("publisher")]
+        assert command == "start"
+        start(unit)
+
+    monkeypatch.setattr(case, "case_directory", archive)
+    monkeypatch.setattr(case, "frozen_snapshot", lambda *_: args["snapshot"])
+    monkeypatch.setattr(case, "OBJECT", args["object_id"])
+    monkeypatch.setattr(
+        operator,
+        "exclusive_config",
+        lambda: os.open(path, os.O_RDONLY | os.O_DIRECTORY),
+    )
+    monkeypatch.setattr(operator, "systemctl", systemctl)
+    monkeypatch.setattr(io, "read_file", trust_pin)
+    monkeypatch.setattr(recovery.time, "time", args["clock"])
+
+    inbox, to_operator = os.pipe()
+    from_operator, outbox = os.pipe()
+    child = os.fork()
+    if child == 0:
+        try:
+            os.close(to_operator)
+            os.close(from_operator)
+            os.dup2(inbox, 0)
+            os.dup2(outbox, 1)
+            os.close(inbox)
+            os.close(outbox)
+            with os.fdopen(os.dup(1), "w", buffering=1) as stream:
+                sys.stdout = stream
+                result = operator.main(
+                    [
+                        "recovery-handoff",
+                        "--snapshot-sha256",
+                        args["snapshot_pin"],
+                        "--continuity-sha256",
+                        args["archive_pin"],
+                    ]
+                )
+                stream.flush()
+        except BaseException:
+            os._exit(99)
+        os._exit(result)
+    os.close(inbox)
+    os.close(outbox)
+    purposes = []
+    with (
+        os.fdopen(to_operator, "wb", buffering=0) as tx,
+        os.fdopen(from_operator, "rb") as rx,
+    ):
+        for line in rx:
+            response = art.decode(line)
+            if "purpose" not in response:
+                ending = response
+                continue
+            purpose = response["purpose"]
+            purposes.append(purpose)
+            request = art.encoded(response["request"])
+            signature = (
+                reserve(request)
+                if purpose == "pre-spend"
+                else sign(purpose.removeprefix("recovery-"), request)
+            )
+            tx.write(signature.hex().encode("ascii") + b"\n")
+    _, status = os.waitpid(child, 0)
+    success = mode in ("offline", "published")
+    assert os.waitstatus_to_exitcode(status) == (0 if success else 1)
+    assert purposes == ["pre-spend", "recovery-signer", "recovery-publisher"]
+    assert ending["status"] == ("HANDOFF_VERIFIED" if success else "STOP")
     evidence = publisher_journal.read_bytes()
-    assert b"HANDOFF_VERIFIED" in evidence
+    if mode == "offline":
+        assert b"HANDOFF_VERIFIED" in evidence
+    else:
+        wire = art.decode((path / "wire-result.json").read_bytes())
+        assert wire["token"] is False
+        if mode == "published":
+            assert b'"phase":"COMPLETE"' in evidence
+            assert wire["pr"] == 111
+        else:
+            assert b'"phase":"COMPLETE"' not in evidence
+            assert b'"phase":"UNKNOWN"' in evidence
+            if mode == "death_before_mint":
+                assert not any(
+                    url.endswith("/access_tokens") for _, url in wire["calls"]
+                )
+            elif mode == "draft":
+                assert wire["pr"] == 111
+            elif mode == "ref":
+                assert wire["tip"] == role_job["head"]
+            else:
+                assert wire["objects"] > 0 and wire["tip"] is None
     result = subprocess.run(
         [
             sys.executable,
@@ -581,6 +749,8 @@ raise SystemExit(s.recovery_main() if role == 'signer' else p.recovery_main())
             str(path),
             str(path / "publisher-credentials"),
             str(args["clock"]()),
+            "offline",
+            str(Path(__file__).parent),
         ],
         env={
             "CREDENTIALS_DIRECTORY": "/run/credentials/"

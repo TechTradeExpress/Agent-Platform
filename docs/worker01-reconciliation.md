@@ -414,3 +414,47 @@ archive continuity pin before creating local SPENT. No production command
 currently supplies the callback to the source controller or passes a grant
 to either unit. The ledger and source-controller tests do not enable service
 activation.
+
+### Publisher engine integration and host gates
+
+The installed recovery entrypoint verifies the handoff and ends with
+`HANDOFF_VERIFIED`. The one-shot unit denies IP traffic. The source
+integration exercises the same entrypoint with an injected fixture
+transport. This transport is supplied as a Python callable by the test
+process. The installed wrapper takes no transport configuration, environment
+switch or command-line mode for publishing.
+
+The recovery engine checks expiry and controller liveness before preflight,
+before reserving each effect and immediately after the durable UNKNOWN
+record. A failed liveness check at the last step leaves UNKNOWN and sends
+no new operation. Liveness is a point-in-time check. Controller death
+after the final check can coincide with an in-flight remote write, and a
+confirmed response or readback may still be recorded. A subsequent forward
+write needs a fresh liveness check. Cleanup of an already obtained token
+retains the existing journaled revoke behavior. A missing mint response
+may leave an unknown token issuance. A restart cannot resume this journal
+or reconstruct the live grant. Lost response or incomplete custody requires
+human reconciliation, preserving all records.
+
+Before LIVE GO, independently review and verify these on the intended
+worker, under separate authorization:
+
+1. Confirm Worker P1 package provenance, effective unit definitions,
+   pinned paths, UID/GID and supplementary groups. Check actual PID 1
+   credential copies, their ownership and ACLs, and the denial of cross-role
+   credential and historical state access.
+2. Parse and enforce the exact AppArmor profiles. Test descriptor traversal,
+   journal and runtime writes, and negative access to other roles and
+   credential paths. Test recovery units under their actual cgroups.
+3. Separately review any change enabling Publisher transport. Verify effective
+   cgroup BPF denial except for the exact approved GitHub IPv4 peer, a
+   networkless Signer, IPv6 and proxy denial, and strict TLS hostname and
+   certificate verification. Current packaged recovery units retain deny-all.
+4. Exercise controller death with the real process manager before a claim
+   and after an UNKNOWN record, with no public endpoint. Verify storage
+   fsync semantics, retained journal identity, refusal of restart, and
+   credential isolation on both sides of the handoff.
+5. Revalidate independently retained pre-spend and custody pins, fresh
+   observer evidence, current main, approved exact artifact/ref and App
+   permissions for the proposed single attempt. Require separate
+   authorization before live credentials or external publication.
