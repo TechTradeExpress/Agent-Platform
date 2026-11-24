@@ -1,0 +1,19 @@
+# Operator-reviewed template. Substitute the exact admitted peer before loading.
+# Apply only inside the dedicated publisher network namespace.
+define peer = 192.0.2.1
+
+table inet ap_recovery_publisher {
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ip daddr $peer tcp dport 443 ct state { new, established } accept
+    }
+
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ip saddr $peer tcp sport 443 ct state established accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+}

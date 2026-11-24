@@ -185,6 +185,11 @@ def verify_unit(role, allow):
         "BindPaths": ("a(ssbt)", []),
         "BindReadOnlyPaths": ("a(ssbt)", []),
     }
+    verify_exec(service, executable, argv, typed)
+
+
+def verify_exec(service, executable, argv, typed):
+    typed = dict(typed)
     for hook in (
         "ExecConditionEx",
         "ExecStartPreEx",

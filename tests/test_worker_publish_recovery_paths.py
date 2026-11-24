@@ -1,5 +1,6 @@
 """Stage A process, fixed-path and handoff contracts. No online credentials."""
 
+import base64
 import os
 import shutil
 import subprocess
@@ -8,7 +9,7 @@ import sysconfig
 from pathlib import Path
 
 import pytest
-from test_worker_publisher import artifact, homelab_job, job_for
+from test_worker_publisher import Wire, artifact, homelab_job, job_for
 
 from agent_platform import worker_publish_artifact as art
 from agent_platform import worker_publish_case as case
@@ -263,6 +264,21 @@ def test_recovery_units_pin_credentials_and_deny_network(role):
 @pytest.mark.parametrize(
     ("role", "fault"),
     [
+        ("live", None),
+        ("live", "unsigned"),
+        ("live", "offline_domain"),
+        ("live", "same_actor"),
+        ("live", "peer"),
+        ("live", "policy_expired"),
+        ("live", "old_generation"),
+        ("live", "ref"),
+        ("live", "app"),
+        ("live", "install"),
+        ("live", "wrong_policy_namespace"),
+        ("live", "controller_lost"),
+        ("live", "expired_at_write"),
+        ("live", "wrong_author"),
+        ("live", "wrong_head"),
         ("signer", None),
         ("publisher", None),
         ("signer", "role"),
@@ -278,12 +294,16 @@ def test_recovery_units_pin_credentials_and_deny_network(role):
         ("publisher", "receipt"),
     ],
 )
-def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
+def test_recovery_grant_binds_exact_terminal_handoff(
+    pair, role, fault, tmp_path, monkeypatch, capsys
+):
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     from agent_platform import worker_publish_observer as observer
     from agent_platform import worker_publish_pre_spend as pre_spend
 
+    live = role == "live"
+    role = "publisher" if live else role
     job, _ = pair
     job_bytes = art.encoded(job)
     launch = "2" * 64
@@ -312,7 +332,9 @@ def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
             "signature": observer.sign(key, "pre-spend", request).hex(),
         }
     )
-    jwt, result = recovery.signer_payload(job_bytes, "synthetic.jwt")
+    jwt, result = recovery.signer_payload(
+        job_bytes, "JWT_FAKE" if live else "synthetic.jwt"
+    )
     identity = {"job": job["id"], "ref": job["ref"], "head": job["head"], "issue": 169}
     operation = {"job": job["id"], "operation": "sign", "launch_id": launch}
     previous = art.digest(b"")
@@ -358,7 +380,52 @@ def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
         value["role"] = "publisher"
     if fault == "audience":
         value["audience"] = "other.service"
-    signature = observer.sign(key, "recovery-" + role, value)
+    purpose = "recovery-" + role
+    policy = None
+    if live:
+        observer_key = key if fault == "same_actor" else Ed25519PrivateKey.generate()
+        observer_public = observer_key.public_key().public_bytes_raw()
+        policy_value = {
+            "schema": "AP-worker01-recovery-egress/1",
+            "unit": recovery.LIVE_UNIT,
+            "generation": recovery.GENERATION,
+            "job_sha256": art.digest(job_bytes),
+            "observation_sha256": art.digest(observation),
+            "github_ipv4": "140.82.112.7" if fault == "peer" else job["github_ipv4"],
+            "port": 443,
+            "transport": "tcp/ipv4",
+            "signer_network": "denied",
+            "boot_id": "12345678-0000-0000-0000-000000000000",
+            "netns_device": 100,
+            "netns_inode": 183,
+            "pid1_sha256": "4" * 64,
+            "kernel_evidence_sha256": "5" * 64,
+            "at": now,
+            "expires": now if fault == "policy_expired" else job["expires"],
+        }
+        policy_raw = art.encoded(policy_value)
+        policy_signature = observer.sign(
+            observer_key, recovery.POLICY_PURPOSE, policy_value
+        )
+        policy = (
+            observer_public,
+            art.digest(observer_public),
+            policy_raw,
+            policy_signature,
+        )
+        value.update(
+            audience=recovery.LIVE_UNIT, live=recovery.live_binding(job, policy_raw)
+        )
+        if fault == "old_generation":
+            value["generation"] = "worker01/169/v4"
+        for name in ("ref", "app", "install"):
+            if fault == name:
+                value["live"]["installation" if name == "install" else name] = "other"
+        if fault != "offline_domain":
+            purpose = recovery.LIVE_PURPOSE
+    signature = observer.sign(key, purpose, value)
+    if fault == "unsigned":
+        signature = b"0" * 64
     kwargs = dict(
         public_key=public,
         key_pin="a" * 64 if fault == "pin" else pin,
@@ -376,8 +443,16 @@ def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
         )
         if role == "publisher"
         else None,
+        policy=policy,
     )
-    if fault:
+    runtime_faults = {
+        "wrong_policy_namespace",
+        "controller_lost",
+        "expired_at_write",
+        "wrong_author",
+        "wrong_head",
+    }
+    if fault and fault not in runtime_faults:
         with pytest.raises(art.Blocked):
             recovery.verify_grant(
                 role,
@@ -389,6 +464,127 @@ def test_recovery_grant_binds_exact_terminal_handoff(pair, role, fault):
         assert (
             recovery.verify_grant(role, art.encoded(value), signature, **kwargs) == job
         )
+        if not live:
+            return
+
+        from agent_platform import worker_publish_io as io
+
+        evidence = {
+            "grant": art.encoded(value),
+            "signature": signature,
+            "public_key": public,
+            "job": job_bytes,
+            "artifact": artifact_bytes,
+            "spent": decision,
+            "pre_spend_receipt": receipt,
+            "observation": observation,
+            "jwt": jwt,
+            "result": result,
+            "signer_journal": journal,
+            "observer_key": observer_public,
+            "policy": policy_raw,
+            "policy_signature": policy_signature,
+        }
+        leaves = {
+            "handoff": art.encoded(
+                dict(
+                    {
+                        name: base64.b64encode(raw).decode()
+                        for name, raw in evidence.items()
+                    },
+                    launch_id=launch,
+                )
+            ),
+            "approval-pin": pin.encode(),
+            "observer-pin": policy[1].encode(),
+            "boot-id": policy_value["boot_id"].encode() + b"\n",
+        }
+        destination = tmp_path / "journal"
+        destination.touch(mode=0o600)
+        monkeypatch.setattr(recovery, "PUBLISHER_JOURNAL", destination)
+        monkeypatch.setattr(io, "read_file", lambda *a, **kw: b"")
+        monkeypatch.setattr(
+            recovery,
+            "read_role_credential",
+            lambda role, leaf, limit, *, live: leaves[leaf],
+        )
+        monkeypatch.setattr(recovery.pub, "confinement", lambda *a, **kw: None)
+        monkeypatch.setattr(recovery.time, "time", lambda: now)
+
+        def namespace(evidence, path, current_boot):
+            assert path == "/proc/self/ns/net" and current_boot == evidence["boot_id"]
+            art.need(fault != "wrong_policy_namespace")
+
+        def liveness(actual_launch):
+            assert actual_launch == launch
+            art.need(fault != "controller_lost")
+
+        monkeypatch.setattr(recovery, "check_live_namespace", namespace)
+        monkeypatch.setattr(recovery, "require_live_controller", liveness)
+        observed = []
+
+        class TestWire(Wire):
+            def exchange(self, method, path, body, secret, limit=256 * 1024):
+                response = super().exchange(method, path, body, secret, limit)
+                if fault == "expired_at_write" and path.endswith("/access_tokens"):
+                    # Mint has an UNKNOWN and a known token. Expiry at the next
+                    # effect must suppress writes other than cleanup.
+                    monkeypatch.setattr(recovery.time, "time", lambda: job["expires"])
+                return response
+
+        def transport(actual_job, *, before_request=None):
+            if before_request is None:
+                return
+            assert actual_job == job
+            # Keep the production flow and real publisher journal, but no socket.
+            wire = TestWire(current_journal[0], job)
+            if fault == "wrong_author":
+                wire.mutate = lambda path, payload: (
+                    dict(payload, user={"id": -1}) if "/pulls/" in path else payload
+                )
+            if fault == "wrong_head":
+                wire.mutate = lambda path, payload: (
+                    dict(payload, head={"sha": "0" * 40})
+                    if "/pulls/" in path
+                    else payload
+                )
+            observed.append(wire)
+            return wire
+
+        opened = recovery.Journal
+        current_journal = []
+
+        def open_journal(*args, **kwargs):
+            opened_journal = opened(*args, **kwargs)
+            current_journal.append(opened_journal)
+            return opened_journal
+
+        monkeypatch.setattr(recovery, "Journal", open_journal)
+        monkeypatch.setattr(recovery.pub, "transport", transport)
+        code = recovery.run_publisher_handoff(live=True)
+        output = art.decode(capsys.readouterr().out.encode())
+        if fault in {"wrong_policy_namespace", "controller_lost"}:
+            assert (code, output) == (2, {"status": "STOP"})
+            assert not observed and not destination.read_bytes()
+            return
+        wire = observed[0]
+        assert not wire.token
+        assert ("DELETE", "/installation/token") in wire.calls
+        events = [art.decode(line) for line in destination.read_bytes().splitlines()]
+        if fault:
+            assert (code, output) == (1, {"status": "UNKNOWN"})
+            with pytest.raises(art.Blocked):
+                recovery.live_outcome(job, events, 0)
+        else:
+            assert code == 0 and output["status"] == "DRAFT_VERIFIED"
+            assert recovery.live_outcome(job, events, code) == {
+                "status": "DRAFT_VERIFIED",
+                "head": job["head"],
+                "pr": wire.pr_number,
+            }
+            assert wire.tip == job["head"]
+        recovery.run_publisher_handoff(live=True)
+        assert observed == [wire]
 
 
 def test_root_inspects_signer_handoff_under_original_journal_lock(
@@ -456,3 +652,132 @@ def test_root_inspects_signer_handoff_under_original_journal_lock(
     jwt_path.chmod(0o440)
     with pytest.raises(art.Blocked):
         recovery.inspect_signer_handoff(job_bytes, launch, identity)
+
+
+def test_external_live_signature_is_single_use(tmp_path):
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from agent_platform import worker_publish_observer as observer
+    from agent_platform import worker_publish_pre_spend as pre_spend
+
+    outside = tmp_path / "outside"
+    outside.mkdir(mode=0o700)
+    key = Ed25519PrivateKey.generate()
+    now = 20000
+    reservation = recovery.pre_spend_challenge("a" * 64, "b" * 64, now + 10)
+    grant = art.encoded(
+        {
+            **reservation,
+            "schema": "AP-worker01-recovery-grant/1",
+            "role": "publisher",
+            "audience": recovery.LIVE_UNIT,
+            "live": {"purpose": "create-draft-live"},
+        }
+    )
+    directory = os.open(outside, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        pre_spend.reserve(directory, art.encoded(reservation), key, now)
+        with pytest.raises(art.Blocked):
+            pre_spend.sign_grant(directory, "publisher", grant, key, now)
+        signature = pre_spend.sign_grant(directory, "publisher-live", grant, key, now)
+        public = key.public_key().public_bytes_raw()
+        assert observer.verify(
+            public, art.digest(public), recovery.LIVE_PURPOSE, grant, signature
+        ) == art.decode(grant)
+        assert (outside / pre_spend.LIVE_RECORD).read_bytes() == grant
+        with pytest.raises(FileExistsError):
+            pre_spend.sign_grant(directory, "publisher-live", grant, key, now)
+    finally:
+        os.close(directory)
+
+
+@pytest.mark.parametrize("fault", [None, "peer", "signer", "pid1_digest", "busy"])
+def test_live_preflight_matches_effective_unit(pair, fault, monkeypatch):
+    from types import SimpleNamespace
+
+    job, _ = pair
+    policy = {"netns_device": 4, "netns_inode": 200}
+    publisher = {
+        "Id": recovery.LIVE_UNIT,
+        "LoadState": "loaded",
+        "UnitFileState": "static",
+        "FragmentPath": "/etc/systemd/system/" + recovery.LIVE_UNIT,
+        "DropInPaths": "",
+        "NeedDaemonReload": "no",
+        "PrivateNetwork": "no",
+        "NetworkNamespacePath": recovery.LIVE_NAMESPACE,
+        "RestrictAddressFamilies": "AF_INET",
+        "IPAddressAllow": job["github_ipv4"] + "/32",
+        "IPAddressDeny": "::/0 0.0.0.0/0",
+        "AppArmorProfile": "ap-worker-publisher-recovery-live",
+        "User": "ap-publisher",
+        "Group": "ap-publisher",
+        "Restart": "no",
+        "Type": "oneshot",
+        "NoNewPrivileges": "yes",
+        "JoinsNamespaceOf": "",
+        "CapabilityBoundingSet": "",
+        "AmbientCapabilities": "",
+        "ProtectSystem": "strict",
+        "ProtectHome": "yes",
+        "PrivateDevices": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "SocketBindDeny": "any",
+    }
+    signer = recovery.role_unit("signer")
+    signer_values = {
+        **publisher,
+        "Id": signer,
+        "FragmentPath": "/usr/lib/systemd/system/" + signer,
+        "PrivateNetwork": "no" if fault == "signer" else "yes",
+        "NetworkNamespacePath": "",
+        "RestrictAddressFamilies": "AF_UNIX",
+        "IPAddressAllow": "",
+        "AppArmorProfile": "ap-worker-publisher-recovery-signer",
+    }
+    policy["pid1_sha256"] = (
+        "a" * 64 if fault == "pid1_digest" else art.digest(art.encoded(publisher))
+    )
+    if fault == "peer":
+        publisher["IPAddressAllow"] = "140.82.112.7/32"
+    state = {
+        "ActiveState": "inactive",
+        "SubState": "dead",
+        "Job": "1" if fault == "busy" else "",
+    }
+
+    def show(operation, all_properties, properties, unit):
+        assert (operation, all_properties) == ("show", "--all")
+        fields = properties.removeprefix("--property=").split(",")
+        values = signer_values if unit == signer else {**publisher, **state}
+        return "\n".join(f"{field}={values[field]}" for field in fields)
+
+    def namespace(actual, path, current_boot):
+        assert (actual, path, current_boot) == (policy, recovery.LIVE_NAMESPACE, "boot")
+
+    def verify_exec(unit, path, argv, properties):
+        assert unit == recovery.LIVE_UNIT and argv == [path]
+        credentials = properties["LoadCredential"][1]
+        assert [entry[0] for entry in credentials] == [
+            "handoff",
+            "approval-pin",
+            "observer-pin",
+            "boot-id",
+        ]
+
+    # Patch the module's binding, leaving the process-wide os module untouched.
+    monkeypatch.setattr(
+        recovery,
+        "os",
+        SimpleNamespace(stat=lambda path: SimpleNamespace(st_dev=4, st_ino=100)),
+    )
+    monkeypatch.setattr(recovery, "check_live_namespace", namespace)
+    monkeypatch.setattr(recovery, "boot_id", lambda: "boot")
+    operator = SimpleNamespace(systemctl=show, verify_exec=verify_exec)
+    if fault is None:
+        recovery.check_live_unit(operator, policy, job)
+    else:
+        with pytest.raises(art.Blocked):
+            recovery.check_live_unit(operator, policy, job)

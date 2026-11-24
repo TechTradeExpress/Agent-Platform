@@ -30,6 +30,8 @@ PURPOSES = (
     "pre-spend",
     "recovery-signer",
     "recovery-publisher",
+    "recovery-publisher-live",
+    "recovery-egress-policy",
 )
 DOMAIN = b"AP-worker01-observer/1\0"
 

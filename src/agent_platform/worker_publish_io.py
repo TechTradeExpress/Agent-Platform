@@ -296,7 +296,7 @@ class HTTPS:
     The operation facade supplies the only allowed routes and payloads.
     """
 
-    def __init__(self, ipv4, certificate):
+    def __init__(self, ipv4, certificate, *, before_request=None):
         ip = ipaddress.ip_address(ipv4)
         need(
             ip.version == 4
@@ -307,11 +307,12 @@ class HTTPS:
             and len(certificate) == 64
         )
         self.ip, self.certificate = str(ip), certificate
+        self.before_request = before_request
 
     @classmethod
-    def homelab(cls, ipv4):
+    def homelab(cls, ipv4, *, before_request=None):
         """Keep the selected egress IP for this job; authenticate via system CA/SNI."""
-        wire = cls(ipv4, "0" * 64)
+        wire = cls(ipv4, "0" * 64, before_request=before_request)
         wire.certificate = None
         return wire
 
@@ -335,9 +336,11 @@ class HTTPS:
         response = None
         reason = FailureReason.TRANSPORT
         try:
-            raw = socket.create_connection((self.ip, 443), timeout=remaining())
+            raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             try:
-                need(raw.getpeername()[0] == self.ip)
+                raw.settimeout(remaining())
+                raw.connect((self.ip, 443))
+                need(raw.getpeername() == (self.ip, 443))
                 # getresponse() can close the TLS socket while its response file
                 # still reads from it. A separate descriptor keeps shutdown
                 # usable through that handoff without touching the response file.
@@ -380,6 +383,9 @@ class HTTPS:
                 headers["Authorization"] = "Bearer " + secret
             if body is not None:
                 headers["Content-Type"] = "application/json"
+            # Cleanup must remain possible after expiry or controller loss.
+            if self.before_request is not None and method != "DELETE":
+                self.before_request()
             connection.sock.settimeout(remaining())
             connection.request(method, path, body=body, headers=headers)
             connection.sock.settimeout(remaining())

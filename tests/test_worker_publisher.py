@@ -672,6 +672,9 @@ def test_fixed_tls_peer_cert_headers_and_bounded_no_retry_transport(monkeypatch)
     requests = []
 
     class Sock:
+        def connect(self, address):
+            assert address == ("140.82.112.6", 443)
+
         def getpeername(self):
             return ("140.82.112.6", 443)
 
@@ -733,7 +736,16 @@ def test_fixed_tls_peer_cert_headers_and_bounded_no_retry_transport(monkeypatch)
             pass
 
     monkeypatch.setattr(io.ssl, "SSLContext", lambda *args: Context())
-    monkeypatch.setattr(io.socket, "create_connection", lambda *args, **kwargs: Sock())
+
+    def socket_factory(family, kind, protocol):
+        assert (family, kind, protocol) == (
+            io.socket.AF_INET,
+            io.socket.SOCK_STREAM,
+            io.socket.IPPROTO_TCP,
+        )
+        return Sock()
+
+    monkeypatch.setattr(io.socket, "socket", socket_factory)
     monkeypatch.setattr(io.http.client, "HTTPSConnection", Connection)
     transport = io.HTTPS("140.82.112.6", a.digest(cert))
     assert transport.exchange("GET", "/app", None, "JWT_FAKE") == (200, {"ok": True})

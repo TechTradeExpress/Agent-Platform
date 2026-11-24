@@ -32,8 +32,11 @@ def wire(monkeypatch):
             state.watchdog_closed = True
 
     class Channel:
+        def connect(self, address):
+            assert address == state.peer
+
         def getpeername(self):
-            return "140.82.112.6", 443
+            return state.peername
 
         def settimeout(self, seconds):
             if state.detached:
@@ -75,12 +78,18 @@ def wire(monkeypatch):
         def join(self, timeout):
             assert timeout == 1
 
-    def connect(address, timeout):
-        assert address == ("140.82.112.6", 443) and 0 < timeout <= 5
+    def socket_factory(family, kind, protocol):
+        assert (family, kind, protocol) == (
+            transport.socket.AF_INET,
+            transport.socket.SOCK_STREAM,
+            transport.socket.IPPROTO_TCP,
+        )
         return Channel()
 
     state = SimpleNamespace(
         now=0,
+        peer=("140.82.112.6", 443),
+        peername=("140.82.112.6", 443),
         slow=False,
         interrupted=False,
         detached=False,
@@ -91,7 +100,7 @@ def wire(monkeypatch):
         ca_loaded=False,
     )
     monkeypatch.setattr(transport.ssl, "SSLContext", lambda protocol: Context())
-    monkeypatch.setattr(transport.socket, "create_connection", connect)
+    monkeypatch.setattr(transport.socket, "socket", socket_factory)
     monkeypatch.setattr(transport.threading, "Timer", Timer)
     monkeypatch.setattr(transport.time, "monotonic", lambda: state.now)
     return state
@@ -171,3 +180,21 @@ def test_invalid_responses_fail_closed(wire, response, limit):
         else transport.FailureReason.RESPONSE
     )
     assert wire.timer_cancelled and wire.watchdog_closed and wire.requests == 1
+
+
+def test_wrong_connected_peer_is_rejected_before_tls_or_http(wire):
+    wire.peername = ("140.82.112.7", 443)
+    with pytest.raises(transport.Blocked):
+        exchange()
+    assert not wire.requests
+
+
+def test_request_guard_runs_after_tls_and_before_sending(wire):
+    def expired():
+        assert wire.ca_loaded
+        raise transport.Blocked()
+
+    client = transport.HTTPS.homelab("140.82.112.6", before_request=expired)
+    with pytest.raises(transport.Blocked):
+        client.exchange("POST", "/test", {"test": True}, None)
+    assert not wire.requests
