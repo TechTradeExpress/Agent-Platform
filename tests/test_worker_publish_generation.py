@@ -364,6 +364,13 @@ def test_lost_local_spent_cannot_reuse_operator_approval(scenario, monkeypatch):
         "draft",
         "death_before_mint",
         "death_after_object",
+        "signer_preclaim_exit",
+        "signer_unknown_exit",
+        "signer_return_loss",
+        "bad_grant",
+        "bad_mode",
+        "publisher_partial_write",
+        "revoke_reply_loss",
     ],
 )
 def test_recovery_handoff_cli_processes(scenario, monkeypatch, mode):
@@ -491,6 +498,8 @@ def read_credential(file_path, owner, limit, *, credential=False, **kwargs):
         exact = '/run/credentials/' + r.role_unit(role)
         assert file_path.startswith(exact + '/')
         target = credentials / Path(file_path).name
+        if target.name == 'app-key' and mode == 'signer_unknown_exit':
+            os._exit(73)
         with target.open('rb') as stream:
             io.systemd_credential(stream.fileno(), os.fstat(stream.fileno()),
                                   owner, directory=False)
@@ -520,8 +529,21 @@ r.PUBLISHER_JOURNAL = base / 'publisher-journal'
 r.SIGNER_OUTPUT = base / 'runtime' / 'app-jwt'
 r.SIGNER_RESULT = base / 'runtime' / 'result.json'
 if role == 'signer':
+    if mode == 'signer_preclaim_exit':
+        receive = r.receive
+        def preclaim(*args):
+            receive(*args)
+            os._exit(73)
+        r.receive = preclaim
     raise SystemExit(s.recovery_main())
-if mode == 'offline':
+if mode in ('offline', 'publisher_partial_write'):
+    if mode == 'publisher_partial_write':
+        write = os.write
+        def partial(fd, data):
+            if b'"phase":"HANDOFF_VERIFIED"' in data:
+                return write(fd, data[:8])
+            return write(fd, data)
+        os.write = partial
     raise SystemExit(p.recovery_main())
 
 sys.path.insert(0, test_dir)
@@ -542,7 +564,7 @@ def wire(journal, job, jwt):
         )
         if effect == 'object' and mode == 'death_after_object':
             (base / 'lost-controller').touch()
-        if effect == mode:
+        if effect == mode or (mode == 'revoke_reply_loss' and path.endswith('/token')):
             raise TimeoutError('synthetic reply loss after mutation')
         return response
 
@@ -559,6 +581,13 @@ def wire(journal, job, jwt):
 raise SystemExit(p.recovery_main(transport_factory=wire))
 """
     seen = []
+    signer_stops = {
+        "signer_preclaim_exit",
+        "signer_unknown_exit",
+        "signer_return_loss",
+        "bad_grant",
+        "bad_mode",
+    }
 
     def start(unit):
         role = "signer" if unit == recovery.role_unit("signer") else "publisher"
@@ -574,28 +603,50 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             # Signer-controlled bytes change only after the operator has copied them.
             recovery.SIGNER_OUTPUT.chmod(0o600)
             recovery.SIGNER_OUTPUT.write_bytes(b"changed")
+        if mode == "bad_grant" and role == "signer":
+            packet = art.decode(entries["handoff"])
+            packet["signature"] = "AAAA"
+            entries["handoff"] = art.encoded(packet)
         for name, value in entries.items():
             target = copies / name
             target.write_bytes(value)
-            target.chmod(0o400)
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-I",
-                "-B",
-                "-c",
-                program,
-                role,
-                str(path),
-                str(copies),
-                str(args["clock"]()),
-                mode,
-                str(Path(__file__).parent),
-            ],
-            env={"CREDENTIALS_DIRECTORY": "/run/credentials/" + unit},
-            capture_output=True,
-            timeout=10,
-        )
+            target.chmod(
+                0o444
+                if mode == "bad_mode" and role == "signer" and name == "handoff"
+                else 0o400
+            )
+
+        def invoke():
+            return subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    "-B",
+                    "-c",
+                    program,
+                    role,
+                    str(path),
+                    str(copies),
+                    str(args["clock"]()),
+                    mode,
+                    str(Path(__file__).parent),
+                ],
+                env={"CREDENTIALS_DIRECTORY": "/run/credentials/" + unit},
+                capture_output=True,
+                timeout=10,
+            )
+
+        result = invoke()
+        if role == "signer" and mode in signer_stops:
+            expected = (
+                73
+                if mode.endswith("_exit")
+                else 0
+                if mode == "signer_return_loss"
+                else 1
+            )
+            assert result.returncode == expected, (result.stdout, result.stderr)
+            raise art.Blocked()
         if role == "publisher" and mode not in ("offline", "published"):
             assert result.returncode == 1 and b"UNKNOWN_NEEDS_HUMAN" in result.stdout
             raise art.Blocked()
@@ -603,6 +654,11 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
         if role == "publisher":
             expected = b'"publication":"DISABLED"' if mode == "offline" else b'"pr":111'
             assert expected in result.stdout
+        if role == "signer" and mode == "offline":
+            evidence = signer_journal.read_bytes()
+            duplicate = invoke()
+            assert duplicate.returncode == 1 and b"BLOCKED" in duplicate.stdout
+            assert signer_journal.read_bytes() == evidence
         seen.append(unit)
 
     def sign(role, raw):
@@ -714,11 +770,30 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
     _, status = os.waitpid(child, 0)
     success = mode in ("offline", "published")
     assert os.waitstatus_to_exitcode(status) == (0 if success else 1)
-    assert purposes == ["pre-spend", "recovery-signer", "recovery-publisher"]
+    expected_purposes = ["pre-spend", "recovery-signer"]
+    if mode not in signer_stops:
+        expected_purposes.append("recovery-publisher")
+    assert purposes == expected_purposes
     assert ending["status"] == ("HANDOFF_VERIFIED" if success else "STOP")
     evidence = publisher_journal.read_bytes()
+    if mode in signer_stops:
+        assert evidence == b""
+        retention = signer_journal.read_bytes()
+        if mode in {"signer_preclaim_exit", "bad_grant", "bad_mode"}:
+            assert retention == b""
+        elif mode == "signer_unknown_exit":
+            assert b'"phase":"UNKNOWN"' in retention
+            assert b'"phase":"COMPLETE"' not in retention
+        else:
+            assert b'"phase":"COMPLETE"' in retention
+        assert not (staging / "publisher.json").exists()
+        assert (path / generation.GENERATION / generation.SPENT).exists()
+        return
     if mode == "offline":
         assert b"HANDOFF_VERIFIED" in evidence
+    elif mode == "publisher_partial_write":
+        assert b'"phase":"CLAIM"' in evidence
+        assert not evidence.endswith(b"\n")
     else:
         wire = art.decode((path / "wire-result.json").read_bytes())
         assert wire["token"] is False
@@ -732,7 +807,7 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
                 assert not any(
                     url.endswith("/access_tokens") for _, url in wire["calls"]
                 )
-            elif mode == "draft":
+            elif mode in ("draft", "revoke_reply_loss"):
                 assert wire["pr"] == 111
             elif mode == "ref":
                 assert wire["tip"] == role_job["head"]

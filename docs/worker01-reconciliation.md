@@ -458,3 +458,6 @@ worker, under separate authorization:
    observer evidence, current main, approved exact artifact/ref and App
    permissions for the proposed single attempt. Require separate
    authorization before live credentials or external publication.
+
+The [PUB-09 recovery rehearsal and Worker P1 upgrade plan](worker01-recovery-host-rehearsal.md)
+records the exact-unit VM gate and the separate maintenance procedure.
