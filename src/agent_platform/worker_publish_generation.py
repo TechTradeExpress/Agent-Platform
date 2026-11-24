@@ -168,6 +168,7 @@ def consume(
     witness_key=None,
     witness_pin=None,
     reserve_outside_worker=None,
+    prepare_delivery=None,
 ):
     """Consume in a caller-pinned private directory while holding its exclusive lock.
 
@@ -276,6 +277,9 @@ def consume(
                 art.digest(approval), secrets.token_hex(32), expires
             )
             raw = art.encoded(request)
+            if prepare_delivery is not None:
+                prepare_delivery(new)
+            art.need(clock() < expires)
             signature = reserve_outside_worker(raw)
             art.need(
                 observer.verify(
@@ -330,14 +334,13 @@ def dispatch(
     start,
     policy=None,
     preflight=None,
+    artifact_identity,
 ):
     """Use the live lease for two create-only systemd credential sources.
 
     Sign is an operator-controlled exchange with the pinned approval key.
     Start synchronously starts the exact unit and returns only on success.
     """
-    import base64
-
     art.need(os.getuid() == os.geteuid() == 0)
     art.need(lease._pre_spend_receipt is not None)
     info = os.fstat(directory)
@@ -350,6 +353,10 @@ def dispatch(
     launch_id = receipt["record"]["launch_id"]
     job_sha256 = art.digest(job)
     task = reconciliation._canonical(job)
+    recovery.check_delivery_bounds(
+        job, artifact, observation, approval_key, lease._approval, policy
+    )
+    art.need(recovery.read_role_artifact(task, artifact_identity) == artifact)
     if policy is not None:
         observer_key, observer_pin, policy_raw, policy_signature = policy
         art.need(observer_pin != approval_pin)
@@ -391,7 +398,8 @@ def dispatch(
             "audience": unit,
             "launch_id": launch_id,
             "job_sha256": job_sha256,
-            "artifact_sha256": art.digest(artifact),
+            "artifact_sha256": task["artifact_sha256"],
+            "artifact_identity": artifact_identity,
             "approval_sha256": art.digest(lease._approval),
             "pre_spend_sha256": art.digest(lease._pre_spend_receipt),
             "observation_sha256": art.digest(observation),
@@ -431,25 +439,19 @@ def dispatch(
             now=lease._clock(),
             handoff=handoff,
             policy=policy if live else None,
+            artifact_identity=artifact_identity,
         )
         evidence = dict(
             grant=grant,
             signature=signature,
             public_key=approval_key,
             job=job,
-            artifact=artifact,
             spent=lease._approval,
             pre_spend_receipt=lease._pre_spend_receipt,
             observation=observation,
             **copies,
         )
-        packet = {
-            name: base64.b64encode(value).decode("ascii")
-            for name, value in evidence.items()
-        }
-        packet["launch_id"] = launch_id
-        payload = art.encoded(packet)
-        art.need(len(payload) <= recovery.CREDENTIAL_LIMIT)
+        payload = recovery.credential_packet(launch_id, evidence)
         case._create(directory, role + ".json", payload)
         art.need(lease._clock() < lease._expires)
         if not live:
@@ -615,6 +617,15 @@ def operator_main(argv, operator):
                     recovery.check_live_unit(operator, verified_policy, task)
 
                 preflight()
+            recovery.check_delivery_bounds(
+                job, artifact, observation, approval_key, approval, policy
+            )
+            artifact_identity = None
+
+            def prepare_delivery(task):
+                nonlocal artifact_identity
+                artifact_identity = recovery.stage_artifact(task, artifact)
+
             with consume(
                 generation,
                 snapshot=snapshot,
@@ -637,6 +648,7 @@ def operator_main(argv, operator):
                 approval_signature=record("create-draft-approval.sig", 64),
                 clock=lambda: int(time.time()),
                 reserve_outside_worker=lambda raw: exchange("pre-spend", raw),
+                prepare_delivery=prepare_delivery,
             ) as lease:
                 outcome = dispatch(
                     lease,
@@ -650,6 +662,7 @@ def operator_main(argv, operator):
                     sign=lambda role, raw: exchange("recovery-" + role, raw),
                     policy=policy,
                     preflight=preflight,
+                    artifact_identity=artifact_identity,
                 )
         if outcome is None:
             operator.report(

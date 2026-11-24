@@ -8,6 +8,7 @@ import os
 import socket
 import ssl
 import stat
+import struct
 import threading
 import time
 from enum import StrEnum
@@ -86,6 +87,19 @@ def systemd_credential(fd, m, owner, *, directory):
             need(perm == 0)
 
 
+def readonly_acl(readers):
+    need(len(readers) == 2 and tuple(sorted(set(readers))) == readers)
+    need(all(type(uid) is int and 0 < uid < 2**32 - 1 for uid in readers))
+    tags = [
+        (ACL_USER_OBJ, 4, 2**32 - 1),
+        *((ACL_USER, 4, uid) for uid in readers),
+        (ACL_GROUP_OBJ, 0, 2**32 - 1),
+        (ACL_MASK, 4, 2**32 - 1),
+        (ACL_OTHER, 0, 2**32 - 1),
+    ]
+    return b"\x02\x00\x00\x00" + b"".join(struct.pack("<HHI", *entry) for entry in tags)
+
+
 def read_file(
     path,
     owner,
@@ -95,6 +109,8 @@ def read_file(
     allow_empty=False,
     private=False,
     credential=False,
+    artifact_acl=None,
+    artifact_identity=None,
 ):
     """Descriptor-walk every component; no symlinks/hardlinks/writable ancestors.
 
@@ -103,6 +119,10 @@ def read_file(
     remain root-owned and not group/other writable.
     """
     need(not credential or not (writable_parent or allow_empty or private))
+    if artifact_acl is not None:
+        need(
+            owner == 0 and not (credential or writable_parent or allow_empty or private)
+        )
     p = Path(path)
     need(p.is_absolute() and ".." not in p.parts)
     need(not credential or len(p.parts) >= 3)
@@ -118,6 +138,8 @@ def read_file(
                 continue
             need(m.st_uid == 0 or writable_parent and m.st_uid == owner)
             need(not m.st_mode & 0o022)
+            if artifact_acl is not None and i == len(p.parts[1:-1]) - 1:
+                need(m.st_uid == m.st_gid == 0 and stat.S_IMODE(m.st_mode) == 0o755)
             if private and i == len(p.parts[1:-1]) - 1:
                 need(not m.st_mode & 0o077)
         leaf = os.open(p.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
@@ -130,6 +152,11 @@ def read_file(
                 need(before.st_uid == owner and not before.st_mode & 0o6022)
             if private:
                 need(not before.st_mode & 0o077)
+            if artifact_acl is not None:
+                need(before.st_uid == before.st_gid == 0)
+                need(stat.S_IMODE(before.st_mode) == 0o440)
+                need(os.getxattr(leaf, ACL_XATTR) == artifact_acl)
+                need([before.st_dev, before.st_ino] == artifact_identity)
             need((0 if allow_empty else 1) <= before.st_size <= limit)
             data = bytearray()
             while len(data) <= limit:
@@ -153,6 +180,10 @@ def read_file(
                 )
 
             need(len(data) == before.st_size and pin(after) == pin(before))
+            if artifact_acl is not None:
+                named = os.stat(p.name, dir_fd=fd, follow_symlinks=False)
+                need(pin(named) == pin(before))
+                need(os.getxattr(leaf, ACL_XATTR) == artifact_acl)
             return bytes(data)
         finally:
             os.close(leaf)

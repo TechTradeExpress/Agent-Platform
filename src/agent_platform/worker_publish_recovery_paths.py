@@ -1,5 +1,6 @@
 """Pinned filesystem and handoff contract for worker01/#169 recovery stage A."""
 
+import base64
 import fcntl
 import os
 import re
@@ -12,7 +13,7 @@ from . import worker_publish_artifact as art
 from . import worker_publish_case as case
 from . import worker_publish_reconciliation as reconciliation
 from . import worker_publisher as pub
-from .worker_publish_io import Journal, read_file
+from .worker_publish_io import ACL_XATTR, Journal, read_file, readonly_acl
 
 GENERATION = "worker01/169/v4/recovery-1"
 REF = "refs/heads/feature/issue-169-worker01-draft-pilot-recovery"
@@ -161,30 +162,7 @@ def check_live_unit(operator, policy, job):
         )
     )
     art.need(art.digest(art.encoded(values)) == policy["pid1_sha256"])
-    executable = "/usr/libexec/" + LIVE_UNIT.removesuffix(".service")
-    operator.verify_exec(
-        LIVE_UNIT,
-        executable,
-        [executable],
-        {
-            "LoadCredential": (
-                "a(ss)",
-                [
-                    ["handoff", GRANT_DIRECTORY + "/publisher.json"],
-                    ["approval-pin", str(INPUT / "approval-pin")],
-                    ["observer-pin", POLICY_PIN],
-                    ["boot-id", BOOT_ID_PATH],
-                ],
-            ),
-            "LoadCredentialEncrypted": ("a(ss)", []),
-            "ImportCredentialEx": ("a(ss)", []),
-            "SocketBindAllow": ("a(iiqq)", []),
-            "SupplementaryGroups": ("as", []),
-            "ReadWritePaths": ("as", [str(PUBLISHER_JOURNAL)]),
-            "BindPaths": ("a(ssbt)", []),
-            "BindReadOnlyPaths": ("a(ssbt)", []),
-        },
-    )
+    check_role_exec(operator, "publisher", live=True)
     signer = role_unit("signer")
     signer_expected = {
         "Id": signer,
@@ -199,13 +177,68 @@ def check_live_unit(operator, policy, job):
         "NetworkNamespacePath": "",
         "AppArmorProfile": "ap-worker-publisher-recovery-signer",
         "Restart": "no",
+        "Type": "oneshot",
+        "User": "ap-publisher-signer",
+        "Group": "ap-publisher-signer",
+        "NoNewPrivileges": "yes",
+        "CapabilityBoundingSet": "",
+        "AmbientCapabilities": "",
+        "ProtectSystem": "strict",
+        "ProtectHome": "yes",
+        "PrivateDevices": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "SocketBindDeny": "any",
+        "JoinsNamespaceOf": "",
     }
     signer_values = _show(systemctl, signer, signer_expected)
     art.need(set(signer_values.pop("IPAddressDeny").split()) == {"0.0.0.0/0", "::/0"})
     del signer_expected["IPAddressDeny"]
     art.need(signer_values == signer_expected)
+    check_role_exec(operator, "signer")
     state = _show(systemctl, LIVE_UNIT, ("ActiveState", "SubState", "Job"))
     art.need(state == {"ActiveState": "inactive", "SubState": "dead", "Job": ""})
+
+
+def check_role_exec(operator, role, *, live=False):
+    unit = LIVE_UNIT if live else role_unit(role)
+    executable = "/usr/libexec/" + unit.removesuffix(".service")
+    credentials = [
+        ["handoff", f"{GRANT_DIRECTORY}/{role}.json"],
+        ["approval-pin", str(INPUT / "approval-pin")],
+    ]
+    if live:
+        credentials.extend([["observer-pin", POLICY_PIN], ["boot-id", BOOT_ID_PATH]])
+    if role == "signer":
+        credentials.append(["app-key", "/etc/ap-publisher-keys/worker.pem"])
+    journal = SIGNER_JOURNAL if role == "signer" else PUBLISHER_JOURNAL
+    operator.verify_exec(
+        unit,
+        executable,
+        [executable],
+        {
+            "LoadCredential": ("a(ss)", credentials),
+            "LoadCredentialEncrypted": ("a(ss)", []),
+            "ImportCredentialEx": ("a(ss)", []),
+            "SocketBindAllow": ("a(iiqq)", []),
+            "SupplementaryGroups": ("as", []),
+            "ReadWritePaths": ("as", [str(journal)]),
+            "ReadOnlyPaths": (
+                "as",
+                [
+                    str(ARTIFACT_CHANNEL),
+                    "-" + str(INPUT),
+                    "/usr/lib/ap-worker-publisher",
+                ],
+            ),
+            "BindPaths": ("a(ssbt)", []),
+            "BindReadOnlyPaths": ("a(ssbt)", []),
+            "Environment": ("as", []),
+            "EnvironmentFiles": ("a(sb)", []),
+            "PassEnvironment": ("as", []),
+        },
+    )
 
 
 def live_exit_status(systemctl):
@@ -452,6 +485,7 @@ def verify_grant(
     now,
     handoff=None,
     policy=None,
+    artifact_identity=None,
 ):
     """Verify bound role authority against independently obtained exact inputs.
 
@@ -545,19 +579,119 @@ def verify_grant(
         )
         art.need(expires <= evidence["expires"])
         expected.update(audience=LIVE_UNIT, live=live_binding(job, policy_raw))
+    if artifact_identity is not None:
+        art.need(
+            type(artifact_identity) is list
+            and len(artifact_identity) == 2
+            and all(
+                type(part) is int and 0 < part < 2**64 for part in artifact_identity
+            )
+        )
+        expected["artifact_identity"] = artifact_identity
     art.need(value == expected)
     if role == "publisher":
         verify_signer_journal(job_bytes, launch_id, jwt, result, journal)
     return job
 
 
-# One bounded credential from the root operator. The artifact is embedded for
-# this pilot so the unit never opens a separately writable input path.
+# Only small signed envelopes enter the systemd credential store.
+ARTIFACT_CHANNEL = Path("/run/ap-publisher-recovery-169-artifact/candidate.json")
 CREDENTIAL_LIMIT = 512 * 1024
 GRANT_DIRECTORY = "/run/ap-publisher-recovery-169-grants"
 LIVE_PATH = "/run/ap-publisher-recovery-169-live"
 # Linux amd64 struct flock. The Debian package and this pilot are amd64.
 _FLOCK = struct.Struct("@hhqqi4x")
+
+
+def artifact_acl(job):
+    return readonly_acl(tuple(sorted((job["signer_uid"], job["publisher_uid"]))))
+
+
+def read_role_artifact(job, identity):
+    return read_file(
+        str(ARTIFACT_CHANNEL),
+        0,
+        art.MAX_WIRE,
+        artifact_acl=artifact_acl(job),
+        artifact_identity=identity,
+    )
+
+
+def stage_artifact(job, data):
+    """Create the only artifact leaf and confirm exact bytes before pre-spend."""
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    parent_path = ARTIFACT_CHANNEL.parent
+    art.need(parent_path.parent == Path("/run"))
+    runtime = os.open("/run", flags)
+    try:
+        parent = os.fstat(runtime)
+        art.need(parent.st_uid == parent.st_gid == 0 and not parent.st_mode & 0o022)
+        directory = os.open(parent_path.name, flags, dir_fd=runtime)
+    finally:
+        os.close(runtime)
+    try:
+        info = os.fstat(directory)
+        art.need(stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o755)
+        art.need(info.st_uid == info.st_gid == 0)
+        leaf = os.open(
+            ARTIFACT_CHANNEL.name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=directory,
+        )
+        try:
+            pending = memoryview(data)
+            while pending:
+                written = os.write(leaf, pending)
+                art.need(written > 0)
+                pending = pending[written:]
+            os.fsync(leaf)
+            os.setxattr(leaf, ACL_XATTR, artifact_acl(job))
+            metadata = os.fstat(leaf)
+            identity = [metadata.st_dev, metadata.st_ino]
+            os.fsync(leaf)
+        finally:
+            os.close(leaf)
+        # The ACL includes a read-only owner, two named readers, and no other access.
+        art.need(read_role_artifact(job, identity) == data)
+        os.fsync(directory)
+        return identity
+    finally:
+        os.close(directory)
+
+
+def credential_packet(launch_id, evidence):
+    packet = {
+        name: base64.b64encode(raw).decode("ascii") for name, raw in evidence.items()
+    }
+    packet["launch_id"] = launch_id
+    payload = art.encoded(packet)
+    art.need(len(payload) <= CREDENTIAL_LIMIT)
+    return payload
+
+
+def check_delivery_bounds(job, artifact, observation, approval_key, approval, policy):
+    """Budget the largest legal envelopes before any operator signature is spent."""
+    limit = reconciliation.RECORD_LIMIT
+    art.need(all(0 < len(value) <= limit for value in (job, observation, approval)))
+    art.need(len(approval_key) == 32 and 0 < len(artifact) <= art.MAX_WIRE)
+    worst_case = dict(
+        grant=bytes(limit),
+        signature=bytes(64),
+        public_key=approval_key,
+        job=job,
+        spent=approval,
+        pre_spend_receipt=bytes(limit),
+        observation=observation,
+        jwt=bytes(limit),
+        result=bytes(limit),
+        signer_journal=bytes(limit),
+    )
+    if policy is not None:
+        key, _, raw, signature = policy
+        art.need(len(key) == 32 and len(signature) == 64 and 0 < len(raw) <= limit)
+        worst_case.update(observer_key=key, policy=raw, policy_signature=signature)
+    credential_packet("0" * 64, worst_case)
 
 
 def require_live_controller(launch_id):
@@ -622,7 +756,6 @@ def read_role_credential(role, leaf, limit, *, live=False):
 
 
 def receive(role, now, *, live=False):
-    import base64
 
     def credential(leaf, limit):
         if live:
@@ -637,7 +770,6 @@ def receive(role, now, *, live=False):
         "signature",
         "public_key",
         "job",
-        "artifact",
         "spent",
         "pre_spend_receipt",
         "observation",
@@ -665,6 +797,9 @@ def receive(role, now, *, live=False):
             parts["policy"],
             parts["policy_signature"],
         )
+    identity = reconciliation._canonical(parts["grant"])["artifact_identity"]
+    candidate = reconciliation._canonical(parts["job"])
+    parts["artifact"] = read_role_artifact(candidate, identity)
     job = verify_grant(
         role,
         parts["grant"],
@@ -680,6 +815,7 @@ def receive(role, now, *, live=False):
         now=now,
         handoff=handoff,
         policy=policy,
+        artifact_identity=identity,
     )
     art.validate(parts["artifact"], job["head"], job["tree"], job["parent"])
     decision = reconciliation._canonical(parts["grant"])

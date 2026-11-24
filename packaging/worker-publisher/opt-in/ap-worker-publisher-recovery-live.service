@@ -52,5 +52,6 @@ PrivateNetwork=no
 NetworkNamespacePath=/run/netns/ap-worker-publisher-recovery-live
 RuntimeDirectory=ap-publisher-recovery-169-publisher
 RuntimeDirectoryMode=0700
+ReadOnlyPaths=/run/ap-publisher-recovery-169-artifact/candidate.json
 ReadOnlyPaths=-/etc/ap-publisher-recovery-169 /usr/lib/ap-worker-publisher
 InaccessiblePaths=-/etc/ap-publisher -/etc/ap-publisher-keys -/var/lib/ap-publisher -/var/lib/ap-publisher-signer -/var/lib/ap-publisher-recovery -/run/ap-publisher-signer -/var/lib/ap-publisher-recovery-169-signer -/run/ap-publisher-recovery-169-signer

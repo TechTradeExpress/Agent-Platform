@@ -84,6 +84,7 @@ def scenario(store, inputs, sample, evidence_case, monkeypatch):  # noqa: F811
         **proposed,
     )
     try:
+        fs.policy_signer = key
         yield fd, root, parameters, packets(original), fs, path
     finally:
         os.close(fd)
@@ -359,6 +360,9 @@ def test_lost_local_spent_cannot_reuse_operator_approval(scenario, monkeypatch):
     [
         "offline",
         "published",
+        "live_published",
+        "live_credentials",
+        "live_size",
         "object",
         "ref",
         "draft",
@@ -383,8 +387,10 @@ def test_recovery_handoff_cli_processes(scenario, monkeypatch, mode):
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    fd, _, args, _, _, path = scenario
+    fd, _, args, _, fs, path = scenario
+    request_live = mode.startswith("live_")
     key = Ed25519PrivateKey.generate()
+    policy_key = fs.policy_signer
     args["approval_key"] = key.public_key().public_bytes_raw()
     args["approval_pin"] = art.digest(args["approval_key"])
     args["approval_signature"] = observer.sign(
@@ -403,9 +409,25 @@ def test_recovery_handoff_cli_processes(scenario, monkeypatch, mode):
     monkeypatch.setattr(recovery, "LIVE_PATH", str(live))
     monkeypatch.setattr(recovery, "GRANT_DIRECTORY", str(staging))
     monkeypatch.setattr(recovery, "SIGNER_JOURNAL", signer_journal)
+    monkeypatch.setattr(recovery, "PUBLISHER_JOURNAL", publisher_journal)
+
+    def stage_artifact(job, data):
+        assert art.digest(data) == job["artifact_sha256"]
+        with (path / "candidate.json").open("xb") as stream:
+            stream.write(data)
+        return [1, 183]
+
+    def read_artifact(job, identity):
+        assert identity == [1, 183]
+        return (path / "candidate.json").read_bytes()
+
+    monkeypatch.setattr(recovery, "stage_artifact", stage_artifact)
+    monkeypatch.setattr(recovery, "read_role_artifact", read_artifact)
+    if mode == "live_size":
+        monkeypatch.setattr(recovery, "CREDENTIAL_LIMIT", 100)
 
     def root_journal(location, previous, *, inspect_owner):
-        assert location == str(signer_journal)
+        assert location in (str(signer_journal), str(publisher_journal))
         target = Path(location)
         stream = target.open("rb")
         fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -415,6 +437,7 @@ def test_recovery_handoff_cli_processes(scenario, monkeypatch, mode):
         return SimpleNamespace(
             identity=(metadata.st_dev, metadata.st_ino),
             size=len(data),
+            events=[art.decode(line) for line in data.splitlines()],
             sha256=art.digest(data),
             fd=stream.fileno(),
             close=stream.close,
@@ -491,11 +514,19 @@ from agent_platform import worker_publisher as p
 role, base, credentials, raw_time, mode, test_dir = sys.argv[1:]
 base, credentials = Path(base), Path(credentials)
 r.time.time = lambda: int(raw_time)
-p.confinement = lambda job, actual, recovery: None
+p.confinement = lambda job, actual, recovery, **kwargs: None
+r.check_live_namespace = lambda *args: None
+def read_artifact(job, identity):
+    assert identity == [1, 183]
+    return (base / 'candidate.json').read_bytes()
+r.read_role_artifact = read_artifact
 
 def read_credential(file_path, owner, limit, *, credential=False, **kwargs):
     if credential:
-        exact = '/run/credentials/' + r.role_unit(role)
+        unit = r.role_unit(role)
+        if role == 'publisher' and mode.startswith('live_'):
+            unit = r.LIVE_UNIT
+        exact = '/run/credentials/' + unit
         assert file_path.startswith(exact + '/')
         target = credentials / Path(file_path).name
         if target.name == 'app-key' and mode == 'signer_unknown_exit':
@@ -578,6 +609,27 @@ def wire(journal, job, jwt):
     atexit.register(save, 0)
     return wire
 
+if mode.startswith('live_'):
+    original_transport = p.transport
+    def production_transport(job, *, before_request=None):
+        if before_request is None:
+            return original_transport(job)
+        # Intercept the actual live factory at the network boundary only.
+        journal = opened[-1]
+        return wire(journal, job, r.verify_handoff(
+            (base / 'proposed-job.json').read_bytes(),
+            (base / 'runtime' / 'original-jwt').read_bytes(),
+            (base / 'runtime' / 'result.json').read_bytes(),
+        ))
+    opened = []
+    original_journal = r.Journal
+    def open_journal(*args):
+        journal = original_journal(*args)
+        opened.append(journal)
+        return journal
+    p.transport = production_transport
+    r.Journal = open_journal
+    raise SystemExit(r.run_publisher_handoff(live=True))
 raise SystemExit(p.recovery_main(transport_factory=wire))
 """
     seen = []
@@ -587,6 +639,7 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
         "signer_return_loss",
         "bad_grant",
         "bad_mode",
+        "live_credentials",
     }
 
     def start(unit):
@@ -597,9 +650,18 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             "handoff": (staging / (role + ".json")).read_bytes(),
             "approval-pin": args["approval_pin"].encode("ascii"),
         }
+        packet = art.decode(entries["handoff"])
+        assert "artifact" not in packet
+        assert len(entries["handoff"]) < recovery.CREDENTIAL_LIMIT
         if role == "signer":
             entries["app-key"] = private_key
         else:
+            if request_live:
+                entries["boot-id"] = b"12345678-0000-0000-0000-000000000000"
+                entries["observer-pin"] = args["observer_pin"].encode("ascii")
+                (runtime / "original-jwt").write_bytes(
+                    recovery.SIGNER_OUTPUT.read_bytes()
+                )
             # Signer-controlled bytes change only after the operator has copied them.
             recovery.SIGNER_OUTPUT.chmod(0o600)
             recovery.SIGNER_OUTPUT.write_bytes(b"changed")
@@ -612,7 +674,9 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             target.write_bytes(value)
             target.chmod(
                 0o444
-                if mode == "bad_mode" and role == "signer" and name == "handoff"
+                if mode in ("bad_mode", "live_credentials")
+                and role == "signer"
+                and name == "handoff"
                 else 0o400
             )
 
@@ -647,7 +711,11 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             )
             assert result.returncode == expected, (result.stdout, result.stderr)
             raise art.Blocked()
-        if role == "publisher" and mode not in ("offline", "published"):
+        if role == "publisher" and mode not in (
+            "offline",
+            "published",
+            "live_published",
+        ):
             assert result.returncode == 1 and b"UNKNOWN_NEEDS_HUMAN" in result.stdout
             raise art.Blocked()
         assert result.returncode == 0, (result.stdout, result.stderr)
@@ -660,6 +728,8 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             assert duplicate.returncode == 1 and b"BLOCKED" in duplicate.stdout
             assert signer_journal.read_bytes() == evidence
         seen.append(unit)
+        with (path / "started-units").open("a") as stream:
+            stream.write(unit + "\n")
 
     def sign(role, raw):
         ledger = os.open(outside, os.O_RDONLY | os.O_DIRECTORY)
@@ -697,9 +767,45 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             "approval_pin" if filename.endswith("approval-pin") else "observer_pin"
         ].encode()
 
+    if request_live:
+        policy = {
+            "schema": "AP-worker01-recovery-egress/1",
+            "unit": recovery.LIVE_UNIT,
+            "generation": recovery.GENERATION,
+            "job_sha256": art.digest(args["job"]),
+            "observation_sha256": art.digest(args["report"]),
+            "github_ipv4": role_job["github_ipv4"],
+            "port": 443,
+            "transport": "tcp/ipv4",
+            "signer_network": "denied",
+            "boot_id": "12345678-0000-0000-0000-000000000000",
+            "netns_device": 4,
+            "netns_inode": 183,
+            "pid1_sha256": "4" * 64,
+            "kernel_evidence_sha256": "5" * 64,
+            "at": args["clock"](),
+            "expires": args["clock"]() + 10,
+        }
+        for name, data in (
+            ("live-egress-policy.json", art.encoded(policy)),
+            (
+                "live-egress-policy.sig",
+                observer.sign(policy_key, recovery.POLICY_PURPOSE, policy),
+            ),
+        ):
+            leaf = path / name
+            leaf.write_bytes(data)
+            leaf.chmod(0o600)
+        monkeypatch.setattr(recovery, "check_live_unit", lambda *a: None)
+
     def systemctl(command, *options, **kwargs):
         unit = options[-1]
         if command == "show":
+            if unit == recovery.LIVE_UNIT:
+                return (
+                    "ActiveState=inactive\nSubState=dead\n"
+                    "Result=success\nExecMainStatus=0"
+                )
             return (
                 "FragmentPath=/usr/lib/systemd/system/"
                 + unit
@@ -740,6 +846,7 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
                         args["snapshot_pin"],
                         "--continuity-sha256",
                         args["archive_pin"],
+                        *(["--request-live"] if request_live else []),
                     ]
                 )
                 stream.flush()
@@ -768,18 +875,44 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
             )
             tx.write(signature.hex().encode("ascii") + b"\n")
     _, status = os.waitpid(child, 0)
-    success = mode in ("offline", "published")
+    success = mode in ("offline", "published", "live_published")
     assert os.waitstatus_to_exitcode(status) == (0 if success else 1)
+    if mode == "live_size":
+        assert purposes == []
+        assert ending["status"] == "STOP"
+        assert not (path / generation.GENERATION / generation.SPENT).exists()
+        assert not (path / "candidate.json").exists()
+        return
     expected_purposes = ["pre-spend", "recovery-signer"]
     if mode not in signer_stops:
-        expected_purposes.append("recovery-publisher")
+        expected_purposes.append(
+            recovery.LIVE_PURPOSE if request_live else "recovery-publisher"
+        )
     assert purposes == expected_purposes
-    assert ending["status"] == ("HANDOFF_VERIFIED" if success else "STOP")
+    assert ending["status"] == (
+        "DRAFT_VERIFIED"
+        if mode == "live_published"
+        else "HANDOFF_VERIFIED"
+        if success
+        else "STOP"
+    )
+    if mode == "live_published":
+        assert ending["head"] == role_job["head"] and ending["pr"] == 111
+        assert (outside / pre_spend.LIVE_RECORD).exists()
+        assert (path / "started-units").read_text().splitlines() == [
+            recovery.role_unit("signer"),
+            recovery.LIVE_UNIT,
+        ]
     evidence = publisher_journal.read_bytes()
     if mode in signer_stops:
         assert evidence == b""
         retention = signer_journal.read_bytes()
-        if mode in {"signer_preclaim_exit", "bad_grant", "bad_mode"}:
+        if mode in {
+            "signer_preclaim_exit",
+            "bad_grant",
+            "bad_mode",
+            "live_credentials",
+        }:
             assert retention == b""
         elif mode == "signer_unknown_exit":
             assert b'"phase":"UNKNOWN"' in retention
@@ -797,7 +930,7 @@ raise SystemExit(p.recovery_main(transport_factory=wire))
     else:
         wire = art.decode((path / "wire-result.json").read_bytes())
         assert wire["token"] is False
-        if mode == "published":
+        if mode in ("published", "live_published"):
             assert b'"phase":"COMPLETE"' in evidence
             assert wire["pr"] == 111
         else:

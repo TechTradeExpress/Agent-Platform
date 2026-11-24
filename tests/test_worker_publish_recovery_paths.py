@@ -469,12 +469,14 @@ def test_recovery_grant_binds_exact_terminal_handoff(
 
         from agent_platform import worker_publish_io as io
 
+        identity = [1, 183]
+        value["artifact_identity"] = identity
+        signature = observer.sign(key, purpose, value)
         evidence = {
             "grant": art.encoded(value),
             "signature": signature,
             "public_key": public,
             "job": job_bytes,
-            "artifact": artifact_bytes,
             "spent": decision,
             "pre_spend_receipt": receipt,
             "observation": observation,
@@ -502,6 +504,12 @@ def test_recovery_grant_binds_exact_terminal_handoff(
         destination = tmp_path / "journal"
         destination.touch(mode=0o600)
         monkeypatch.setattr(recovery, "PUBLISHER_JOURNAL", destination)
+
+        def staged_artifact(actual, pin):
+            assert (actual, pin) == (job, identity)
+            return artifact_bytes
+
+        monkeypatch.setattr(recovery, "read_role_artifact", staged_artifact)
         monkeypatch.setattr(io, "read_file", lambda *a, **kw: b"")
         monkeypatch.setattr(
             recovery,
@@ -691,7 +699,10 @@ def test_external_live_signature_is_single_use(tmp_path):
         os.close(directory)
 
 
-@pytest.mark.parametrize("fault", [None, "peer", "signer", "pid1_digest", "busy"])
+@pytest.mark.parametrize(
+    "fault",
+    [None, "peer", "signer", "pid1_digest", "busy", "sandbox", "credentials", "bind"],
+)
 def test_live_preflight_matches_effective_unit(pair, fault, monkeypatch):
     from types import SimpleNamespace
 
@@ -736,12 +747,17 @@ def test_live_preflight_matches_effective_unit(pair, fault, monkeypatch):
         "RestrictAddressFamilies": "AF_UNIX",
         "IPAddressAllow": "",
         "AppArmorProfile": "ap-worker-publisher-recovery-signer",
+        "User": "ap-publisher-signer",
+        "Group": "ap-publisher-signer",
     }
     policy["pid1_sha256"] = (
         "a" * 64 if fault == "pid1_digest" else art.digest(art.encoded(publisher))
     )
     if fault == "peer":
         publisher["IPAddressAllow"] = "140.82.112.7/32"
+    if fault == "sandbox":
+        publisher["ProtectSystem"] = "no"
+        policy["pid1_sha256"] = art.digest(art.encoded(publisher))
     state = {
         "ActiveState": "inactive",
         "SubState": "dead",
@@ -757,15 +773,64 @@ def test_live_preflight_matches_effective_unit(pair, fault, monkeypatch):
     def namespace(actual, path, current_boot):
         assert (actual, path, current_boot) == (policy, recovery.LIVE_NAMESPACE, "boot")
 
-    def verify_exec(unit, path, argv, properties):
-        assert unit == recovery.LIVE_UNIT and argv == [path]
-        credentials = properties["LoadCredential"][1]
-        assert [entry[0] for entry in credentials] == [
-            "handoff",
-            "approval-pin",
-            "observer-pin",
-            "boot-id",
+    from agent_platform import worker_publish_operator as operator_module
+
+    def busctl(argv):
+        path = "/usr/libexec/" + (
+            signer if "_2dsigner" in argv[6] else recovery.LIVE_UNIT
+        ).removesuffix(".service")
+        start = {
+            "type": "a(sasasttttuii)",
+            "data": [[path, [path], [], 0, 0, 0, 0, 0, 0, 0]],
+        }
+        role = "signer" if path.endswith("-signer") else "publisher"
+        credentials = [
+            ["handoff", f"{recovery.GRANT_DIRECTORY}/{role}.json"],
+            ["approval-pin", str(recovery.INPUT / "approval-pin")],
         ]
+        if role == "signer":
+            credentials.append(["app-key", "/etc/ap-publisher-keys/worker.pem"])
+            journal = recovery.SIGNER_JOURNAL
+        else:
+            credentials.extend(
+                [
+                    ["observer-pin", recovery.POLICY_PIN],
+                    ["boot-id", recovery.BOOT_ID_PATH],
+                ]
+            )
+            journal = recovery.PUBLISHER_JOURNAL
+        if fault == "credentials":
+            credentials[0][1] += ".wrong"
+        properties = {
+            "LoadCredential": ("a(ss)", credentials),
+            "LoadCredentialEncrypted": ("a(ss)", []),
+            "ImportCredentialEx": ("a(ss)", []),
+            "SocketBindAllow": ("a(iiqq)", []),
+            "SupplementaryGroups": ("as", []),
+            "ReadWritePaths": ("as", [str(journal)]),
+            "ReadOnlyPaths": (
+                "as",
+                [
+                    str(recovery.ARTIFACT_CHANNEL),
+                    "-" + str(recovery.INPUT),
+                    "/usr/lib/ap-worker-publisher",
+                ],
+            ),
+            "BindPaths": ("a(ssbt)", []),
+            "BindReadOnlyPaths": ("a(ssbt)", []),
+            "Environment": ("as", []),
+            "EnvironmentFiles": ("a(sb)", []),
+            "PassEnvironment": ("as", []),
+        }
+        if fault == "bind":
+            properties["BindPaths"] = ("a(ssbt)", [["/tmp", "/run", False, 0]])
+        rows = [start]
+        for name in argv[9:]:
+            signature, data = properties.get(name, ("a(sasasttttuii)", []))
+            rows.append({"type": signature, "data": data})
+        return "\n".join(art.encoded(row).decode() for row in rows)
+
+    monkeypatch.setattr(operator_module, "command", busctl)
 
     # Patch the module's binding, leaving the process-wide os module untouched.
     monkeypatch.setattr(
@@ -775,9 +840,133 @@ def test_live_preflight_matches_effective_unit(pair, fault, monkeypatch):
     )
     monkeypatch.setattr(recovery, "check_live_namespace", namespace)
     monkeypatch.setattr(recovery, "boot_id", lambda: "boot")
-    operator = SimpleNamespace(systemctl=show, verify_exec=verify_exec)
+    operator = SimpleNamespace(systemctl=show, verify_exec=operator_module.verify_exec)
     if fault is None:
         recovery.check_live_unit(operator, policy, job)
     else:
         with pytest.raises(art.Blocked):
             recovery.check_live_unit(operator, policy, job)
+
+
+def test_repository_scale_artifact_is_outside_credentials(pair):
+    job, _ = pair
+    count, total = 358, 4_843_889
+    size, extra = divmod(total, count)
+    entries = []
+    objects = {}
+
+    def include(kind, payload):
+        oid = art.oid(kind, payload)
+        objects[oid] = {
+            "oid": oid,
+            "kind": kind,
+            "data": base64.b64encode(payload).decode(),
+        }
+        return oid
+
+    for index in range(count):
+        width = size + (index < extra)
+        blob = include("blob", index.to_bytes(4, "little") + bytes(width - 4))
+        entries.append(f"100644 file-{index:04}.txt\0".encode() + bytes.fromhex(blob))
+    assert len(objects) == count
+    tree = include("tree", b"".join(entries))
+    commit = (
+        f"tree {tree}\nparent {job['parent']}\n"
+        "author Fixture <a@example.test> 1 +0000\n"
+        "committer Fixture <a@example.test> 1 +0000\n\nRepository-size fixture\n"
+    ).encode()
+    head = include("commit", commit)
+    artifact_bytes = art.encoded(
+        {
+            "version": art.VERSION,
+            "head": head,
+            "objects": list(objects.values()),
+        }
+    )
+    job.update(head=head, tree=tree, artifact_sha256=art.digest(artifact_bytes))
+    decoded, *_ = art.validate(artifact_bytes, head, tree, job["parent"])
+    blobs = [value for kind, value in decoded.values() if kind == "blob"]
+    assert len(blobs) == count and sum(map(len, blobs)) == total
+    job_bytes = art.encoded(job)
+    recovery.check_delivery_bounds(
+        job_bytes, artifact_bytes, b"report", bytes(32), b"approval", None
+    )
+    with pytest.raises(art.Blocked):
+        recovery.credential_packet(
+            "a" * 64, {"job": job_bytes, "artifact": artifact_bytes}
+        )
+    packet = recovery.credential_packet("a" * 64, {"job": job_bytes})
+    assert len(packet) < recovery.CREDENTIAL_LIMIT < len(artifact_bytes)
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "acl", "pin", "mode", "hardlink", "symlink", "replace"]
+)
+def test_artifact_reader_uses_one_pinned_root_owned_leaf(
+    tmp_path, pair, monkeypatch, fault
+):
+    import stat
+    from types import SimpleNamespace
+
+    from agent_platform import worker_publish_io as io
+
+    job, _ = pair
+    parent = tmp_path / "channel"
+    parent.mkdir(mode=0o755)
+    leaf = parent / "candidate.json"
+    leaf.write_bytes(b"artifact")
+    leaf.chmod(0o440 if fault != "mode" else 0o640)
+    info = leaf.stat()
+    identity = [info.st_dev, info.st_ino + (fault == "pin")]
+    if fault == "hardlink":
+        os.link(leaf, tmp_path / "hardlink")
+    if fault == "symlink":
+        leaf.rename(parent / "real")
+        leaf.symlink_to(parent / "real")
+
+    def metadata(info):
+        names = (
+            "st_dev",
+            "st_ino",
+            "st_size",
+            "st_nlink",
+            "st_mode",
+            "st_mtime_ns",
+            "st_ctime_ns",
+        )
+        fields = {name: getattr(info, name) for name in names}
+        # Simulate root ancestry in this non-root sandbox. File links, mode,
+        # inode and read use the real descriptor and filesystem.
+        if stat.S_ISDIR(info.st_mode):
+            fields["st_mode"] = stat.S_IFDIR | 0o755
+        return SimpleNamespace(st_uid=0, st_gid=0, **fields)
+
+    def named(*args, **kwargs):
+        info = metadata(os.stat(*args, **kwargs))
+        if fault == "replace":
+            info.st_ino += 1
+        return info
+
+    acl = recovery.artifact_acl(job)
+
+    class FileSystem:
+        def __getattr__(self, name):
+            return getattr(os, name)
+
+        def fstat(self, fd):
+            return metadata(os.fstat(fd))
+
+        def stat(self, *args, **kwargs):
+            return named(*args, **kwargs)
+
+        def getxattr(self, fd, name):
+            assert name == io.ACL_XATTR
+            return b"wrong" if fault == "acl" else acl
+
+    monkeypatch.setattr(io, "os", FileSystem())
+    monkeypatch.setattr(recovery, "ARTIFACT_CHANNEL", leaf)
+    if fault is None:
+        assert recovery.read_role_artifact(job, identity) == b"artifact"
+    else:
+        with pytest.raises((art.Blocked, OSError)):
+            recovery.read_role_artifact(job, identity)

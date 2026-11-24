@@ -56,6 +56,28 @@ before any host action or real credential use.
    device/inode and boot ID. Require exact live-unit proof and confirm the
    kernel rules remain fenced through the attempt.
 
+## Artifact delivery
+
+Provision the dedicated directory `/run/ap-publisher-recovery-169-artifact`
+as root:root, mode `0755`, under the protected root-owned runtime hierarchy.
+Require the fixed `candidate.json` leaf to be absent. The controller creates
+it exclusively after validating the AP-WP/1 object limits and both credential
+envelope budgets, before external pre-spend. The leaf is root:root, mode
+`0440`, with read-only ACL entries for exactly the two dedicated role UIDs.
+It has no ordinary group or other access. Reserve those UIDs for the approved
+services. Each service has the exact leaf in its systemd read-only paths and
+its AppArmor read rules. The role credential contains the signed file
+device/inode and SHA256 along with the existing job evidence. The AP-WP/1
+bytes travel separately and are bounded by the existing format limits.
+
+Both roles reopen that fixed path with descriptor-relative traversal, refuse
+links and mismatched metadata or ACLs, and revalidate SHA256 and the complete
+object graph against HEAD, tree and parent. Keep the staged leaf, credentials,
+namespace and journals fenced through the attempt. A collision or interrupted
+staging operation requires operator reconciliation. No staged artifact is
+automatically replaced or removed, and an ordinary unit restart grants no
+new allowance.
+
 ## Authorize one attempt
 
 1. Independently obtain the fresh GitHub observer report and selected
