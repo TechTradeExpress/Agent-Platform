@@ -115,7 +115,10 @@ def homelab(job):
     return job.get("contract") == HOMELAB
 
 
-def transport(job):
+def transport(job, *, before_request=None):
+    if before_request is not None:
+        art.need(homelab(job))
+        return HTTPS.homelab(job["github_ipv4"], before_request=before_request)
     if homelab(job):
         return HTTPS.homelab(job["github_ipv4"])
     return HTTPS(job["github_ipv4"], job["peer_cert_sha256"])
@@ -218,7 +221,7 @@ def validate_job(job, now):
     return job
 
 
-def confinement(job, role, *, recovery=False):
+def confinement(job, role, *, recovery=False, live=False):
     art.need(role in ("publisher", "signer"))
     art.need(
         not any(
@@ -262,6 +265,9 @@ def confinement(job, role, *, recovery=False):
     if recovery:
         expected += "-recovery"
     expected += "-signer" if role == "signer" else ""
+    if live:
+        art.need(recovery and role == "publisher")
+        expected += "-live"
     # Only own process metadata, never another principal or a credential store.
     with open("/proc/self/attr/current", "rb") as f:
         art.need(f.read(256).strip(b"\0\n") == (expected + " (enforce)").encode())

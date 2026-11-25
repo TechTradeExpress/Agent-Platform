@@ -1,7 +1,9 @@
 """Pinned filesystem and handoff contract for worker01/#169 recovery stage A."""
 
+import base64
 import fcntl
 import os
+import re
 import stat
 import struct
 import time
@@ -11,7 +13,7 @@ from . import worker_publish_artifact as art
 from . import worker_publish_case as case
 from . import worker_publish_reconciliation as reconciliation
 from . import worker_publisher as pub
-from .worker_publish_io import Journal, read_file
+from .worker_publish_io import ACL_XATTR, Journal, read_file, readonly_acl
 
 GENERATION = "worker01/169/v4/recovery-1"
 REF = "refs/heads/feature/issue-169-worker01-draft-pilot-recovery"
@@ -26,6 +28,264 @@ PUBLISHER_RUNTIME = Path("/run/ap-publisher-recovery-169-publisher")
 PUBLISHER_CREDENTIALS = Path("/run/credentials/ap-worker-publisher-recovery.service")
 PUBLISHER_JWT = PUBLISHER_CREDENTIALS / "app-jwt"
 PUBLISHER_RESULT = PUBLISHER_CREDENTIALS / "signer-result"
+LIVE_UNIT = "ap-worker-publisher-recovery-live.service"
+LIVE_NAMESPACE = "/run/netns/ap-worker-publisher-recovery-live"
+LIVE_PURPOSE = "recovery-publisher-live"
+POLICY_PURPOSE = "recovery-egress-policy"
+POLICY_PIN = "/etc/ap-publisher/observer-trust/key-pin"
+BOOT_ID_PATH = "/proc/sys/kernel/random/boot_id"
+
+
+def verify_policy(job_bytes, observation, key, pin, raw, signature, now):
+    """Verify an independent, short-lived observation of kernel and PID 1 policy."""
+    from . import worker_publish_observer as observer
+
+    job = reconciliation._canonical(job_bytes)
+    value = observer.verify(key, pin, POLICY_PURPOSE, raw, signature)
+    at, expires = value["at"], value["expires"]
+    art.need(type(at) is type(expires) is int)
+    art.need(0 <= now - at < observer.WINDOW and now < expires <= at + observer.WINDOW)
+    for field in ("netns_device", "netns_inode"):
+        art.need(type(value[field]) is int and 0 < value[field] < 2**64)
+    art.need(pub.homelab(job) and job["ref"] == REF and job["operation"] == "create")
+    for field in ("pid1_sha256", "kernel_evidence_sha256"):
+        art.need(observer._sha256(value[field]))
+    art.need(
+        type(value["boot_id"]) is str
+        and re.fullmatch(
+            r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", value["boot_id"]
+        )
+    )
+    art.need(
+        value
+        == {
+            "schema": "AP-worker01-recovery-egress/1",
+            "unit": LIVE_UNIT,
+            "generation": GENERATION,
+            "job_sha256": art.digest(job_bytes),
+            "observation_sha256": art.digest(observation),
+            "github_ipv4": job["github_ipv4"],
+            "port": 443,
+            "transport": "tcp/ipv4",
+            "signer_network": "denied",
+            "boot_id": value["boot_id"],
+            "netns_device": value["netns_device"],
+            "netns_inode": value["netns_inode"],
+            "pid1_sha256": value["pid1_sha256"],
+            "kernel_evidence_sha256": value["kernel_evidence_sha256"],
+            "at": at,
+            "expires": expires,
+        }
+    )
+    return value
+
+
+def live_binding(job, policy_raw):
+    art.need(job["operation"] == "create" and job["old"] == "ABSENT")
+    return {
+        "purpose": "create-draft-live",
+        "policy_sha256": art.digest(policy_raw),
+        "head": job["head"],
+        "ref": job["ref"],
+        "app": job["app_id"],
+        "installation": job["installation_id"],
+        "github_ipv4": job["github_ipv4"],
+    }
+
+
+def boot_id():
+    with open(BOOT_ID_PATH, encoding="ascii") as stream:
+        return stream.read(64).strip()
+
+
+def check_live_namespace(policy, path, current_boot):
+    art.need(current_boot == policy["boot_id"])
+    namespace = os.stat(path)
+    art.need(
+        (namespace.st_dev, namespace.st_ino)
+        == (policy["netns_device"], policy["netns_inode"])
+    )
+
+
+def _show(systemctl, unit, fields):
+    output = systemctl("show", "--all", "--property=" + ",".join(fields), unit)
+    rows = [line.split("=", 1) for line in output.splitlines()]
+    art.need(len(rows) == len(fields) and all(len(row) == 2 for row in rows))
+    values = dict(rows)
+    art.need(set(values) == set(fields))
+    return values
+
+
+def check_live_unit(operator, policy, job):
+    """Check PID 1's loaded values; the port restriction requires kernel evidence."""
+    systemctl = operator.systemctl
+    check_live_namespace(policy, LIVE_NAMESPACE, boot_id())
+    host_namespace = os.stat("/proc/self/ns/net")
+    art.need(host_namespace.st_dev == policy["netns_device"])
+    art.need(host_namespace.st_ino != policy["netns_inode"])
+    expected = {
+        "Id": LIVE_UNIT,
+        "LoadState": "loaded",
+        "UnitFileState": "static",
+        "FragmentPath": "/etc/systemd/system/" + LIVE_UNIT,
+        "DropInPaths": "",
+        "NeedDaemonReload": "no",
+        "PrivateNetwork": "no",
+        "NetworkNamespacePath": LIVE_NAMESPACE,
+        "RestrictAddressFamilies": "AF_INET",
+        "IPAddressAllow": job["github_ipv4"] + "/32",
+        "IPAddressDeny": "0.0.0.0/0 ::/0",
+        "AppArmorProfile": "ap-worker-publisher-recovery-live",
+        "User": "ap-publisher",
+        "Group": "ap-publisher",
+        "Restart": "no",
+        "Type": "oneshot",
+        "NoNewPrivileges": "yes",
+        "JoinsNamespaceOf": "",
+        "CapabilityBoundingSet": "",
+        "AmbientCapabilities": "",
+        "ProtectSystem": "strict",
+        "ProtectHome": "yes",
+        "PrivateDevices": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "SocketBindDeny": "any",
+    }
+    values = _show(systemctl, LIVE_UNIT, expected)
+    art.need(set(values["IPAddressDeny"].split()) == {"0.0.0.0/0", "::/0"})
+    art.need(
+        all(
+            values[key] == value
+            for key, value in expected.items()
+            if key != "IPAddressDeny"
+        )
+    )
+    art.need(art.digest(art.encoded(values)) == policy["pid1_sha256"])
+    check_role_exec(operator, "publisher", live=True)
+    signer = role_unit("signer")
+    signer_expected = {
+        "Id": signer,
+        "LoadState": "loaded",
+        "FragmentPath": "/usr/lib/systemd/system/" + signer,
+        "DropInPaths": "",
+        "NeedDaemonReload": "no",
+        "PrivateNetwork": "yes",
+        "RestrictAddressFamilies": "AF_UNIX",
+        "IPAddressDeny": "0.0.0.0/0 ::/0",
+        "IPAddressAllow": "",
+        "NetworkNamespacePath": "",
+        "AppArmorProfile": "ap-worker-publisher-recovery-signer",
+        "Restart": "no",
+        "Type": "oneshot",
+        "User": "ap-publisher-signer",
+        "Group": "ap-publisher-signer",
+        "NoNewPrivileges": "yes",
+        "CapabilityBoundingSet": "",
+        "AmbientCapabilities": "",
+        "ProtectSystem": "strict",
+        "ProtectHome": "yes",
+        "PrivateDevices": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "SocketBindDeny": "any",
+        "JoinsNamespaceOf": "",
+    }
+    signer_values = _show(systemctl, signer, signer_expected)
+    art.need(set(signer_values.pop("IPAddressDeny").split()) == {"0.0.0.0/0", "::/0"})
+    del signer_expected["IPAddressDeny"]
+    art.need(signer_values == signer_expected)
+    check_role_exec(operator, "signer")
+    state = _show(systemctl, LIVE_UNIT, ("ActiveState", "SubState", "Job"))
+    art.need(state == {"ActiveState": "inactive", "SubState": "dead", "Job": ""})
+
+
+def check_role_exec(operator, role, *, live=False):
+    unit = LIVE_UNIT if live else role_unit(role)
+    executable = "/usr/libexec/" + unit.removesuffix(".service")
+    credentials = [
+        ["handoff", f"{GRANT_DIRECTORY}/{role}.json"],
+        ["approval-pin", str(INPUT / "approval-pin")],
+    ]
+    if live:
+        credentials.extend([["observer-pin", POLICY_PIN], ["boot-id", BOOT_ID_PATH]])
+    if role == "signer":
+        credentials.append(["app-key", "/etc/ap-publisher-keys/worker.pem"])
+    journal = SIGNER_JOURNAL if role == "signer" else PUBLISHER_JOURNAL
+    operator.verify_exec(
+        unit,
+        executable,
+        [executable],
+        {
+            "LoadCredential": ("a(ss)", credentials),
+            "LoadCredentialEncrypted": ("a(ss)", []),
+            "ImportCredentialEx": ("a(ss)", []),
+            "SocketBindAllow": ("a(iiqq)", []),
+            "SupplementaryGroups": ("as", []),
+            "ReadWritePaths": ("as", [str(journal)]),
+            "ReadOnlyPaths": (
+                "as",
+                [
+                    str(ARTIFACT_CHANNEL),
+                    "-" + str(INPUT),
+                    "/usr/lib/ap-worker-publisher",
+                ],
+            ),
+            "BindPaths": ("a(ssbt)", []),
+            "BindReadOnlyPaths": ("a(ssbt)", []),
+            "Environment": ("as", []),
+            "EnvironmentFiles": ("a(sb)", []),
+            "PassEnvironment": ("as", []),
+        },
+    )
+
+
+def live_exit_status(systemctl):
+    values = _show(
+        systemctl, LIVE_UNIT, ("ActiveState", "SubState", "Result", "ExecMainStatus")
+    )
+    code = values.pop("ExecMainStatus")
+    art.need(
+        values == {"ActiveState": "inactive", "SubState": "dead", "Result": "success"}
+    )
+    art.need(code in ("0", "2"))
+    return int(code)
+
+
+def live_outcome(job, events, exit_status):
+    if exit_status == 2 and not events:
+        return {"status": "STOP"}
+    art.need(exit_status == 0 and len(events) >= 8)
+    records = [event["record"] for event in events]
+    subject = {key: job[key] for key in ("ref", "issue", "head")}
+    art.need(records[0] == {"phase": "CLAIM", "job": job["id"], **subject})
+    terminal = records[-1]
+    pr = terminal.get("pr")
+    art.need(type(pr) is int and 0 < pr < 2**31)
+    art.need(terminal == {"phase": "COMPLETE", "job": job["id"], "pr": pr, **subject})
+    effects = records[1:-1]
+    art.need(len(effects) % 2 == 0)
+    operations = []
+    for unknown, confirmed in zip(effects[::2], effects[1::2], strict=True):
+        operation = unknown["operation"]
+        operations.append(operation)
+        for expected_phase, record in (("UNKNOWN", unknown), ("CONFIRMED", confirmed)):
+            art.need(
+                record
+                == {
+                    "phase": expected_phase,
+                    "job": job["id"],
+                    "operation": operation,
+                    "digest": record["digest"],
+                }
+            )
+    art.need(
+        operations
+        == ["mint", *(["object"] * (len(operations) - 4)), "ref", "draft", "revoke"]
+    )
+    art.need(effects[-3]["digest"] == art.digest(art.encoded(pr)))
+    return {"status": "DRAFT_VERIFIED", "pr": pr, "head": job["head"]}
 
 
 def check_job(job, old_job, now):
@@ -224,6 +484,8 @@ def verify_grant(
     launch_id,
     now,
     handoff=None,
+    policy=None,
+    artifact_identity=None,
 ):
     """Verify bound role authority against independently obtained exact inputs.
 
@@ -233,7 +495,10 @@ def verify_grant(
     from . import worker_publish_observer as observer
 
     art.need(role in ("signer", "publisher"))
-    value = observer.verify(public_key, key_pin, "recovery-" + role, raw, signature)
+    if policy is not None:
+        art.need(role == "publisher")
+    purpose = LIVE_PURPOSE if policy is not None else "recovery-" + role
+    value = observer.verify(public_key, key_pin, purpose, raw, signature)
     job = reconciliation._canonical(job_bytes)
     pub.validate_job(job, now)
     art.need(pub.homelab(job) and job["issue"] == 169 and job["ref"] == REF)
@@ -300,19 +565,133 @@ def verify_grant(
         expected["signer_journal_sha256"] = art.digest(journal)
     else:
         art.need(handoff is None)
+    if policy is not None:
+        observer_key, observer_pin, policy_raw, policy_signature = policy
+        art.need(observer_pin != key_pin)
+        evidence = verify_policy(
+            job_bytes,
+            observation,
+            observer_key,
+            observer_pin,
+            policy_raw,
+            policy_signature,
+            now,
+        )
+        art.need(expires <= evidence["expires"])
+        expected.update(audience=LIVE_UNIT, live=live_binding(job, policy_raw))
+    if artifact_identity is not None:
+        art.need(
+            type(artifact_identity) is list
+            and len(artifact_identity) == 2
+            and all(
+                type(part) is int and 0 < part < 2**64 for part in artifact_identity
+            )
+        )
+        expected["artifact_identity"] = artifact_identity
     art.need(value == expected)
     if role == "publisher":
         verify_signer_journal(job_bytes, launch_id, jwt, result, journal)
     return job
 
 
-# One bounded credential from the root operator. The artifact is embedded for
-# this pilot so the unit never opens a separately writable input path.
+# Only small signed envelopes enter the systemd credential store.
+ARTIFACT_CHANNEL = Path("/run/ap-publisher-recovery-169-artifact/candidate.json")
 CREDENTIAL_LIMIT = 512 * 1024
 GRANT_DIRECTORY = "/run/ap-publisher-recovery-169-grants"
 LIVE_PATH = "/run/ap-publisher-recovery-169-live"
 # Linux amd64 struct flock. The Debian package and this pilot are amd64.
 _FLOCK = struct.Struct("@hhqqi4x")
+
+
+def artifact_acl(job):
+    return readonly_acl(tuple(sorted((job["signer_uid"], job["publisher_uid"]))))
+
+
+def read_role_artifact(job, identity):
+    return read_file(
+        str(ARTIFACT_CHANNEL),
+        0,
+        art.MAX_WIRE,
+        artifact_acl=artifact_acl(job),
+        artifact_identity=identity,
+    )
+
+
+def stage_artifact(job, data):
+    """Create the only artifact leaf and confirm exact bytes before pre-spend."""
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    parent_path = ARTIFACT_CHANNEL.parent
+    art.need(parent_path.parent == Path("/run"))
+    runtime = os.open("/run", flags)
+    try:
+        parent = os.fstat(runtime)
+        art.need(parent.st_uid == parent.st_gid == 0 and not parent.st_mode & 0o022)
+        directory = os.open(parent_path.name, flags, dir_fd=runtime)
+    finally:
+        os.close(runtime)
+    try:
+        info = os.fstat(directory)
+        art.need(stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o755)
+        art.need(info.st_uid == info.st_gid == 0)
+        leaf = os.open(
+            ARTIFACT_CHANNEL.name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=directory,
+        )
+        try:
+            pending = memoryview(data)
+            while pending:
+                written = os.write(leaf, pending)
+                art.need(written > 0)
+                pending = pending[written:]
+            os.fsync(leaf)
+            os.setxattr(leaf, ACL_XATTR, artifact_acl(job))
+            metadata = os.fstat(leaf)
+            identity = [metadata.st_dev, metadata.st_ino]
+            os.fsync(leaf)
+        finally:
+            os.close(leaf)
+        # The ACL includes a read-only owner, two named readers, and no other access.
+        art.need(read_role_artifact(job, identity) == data)
+        os.fsync(directory)
+        return identity
+    finally:
+        os.close(directory)
+
+
+def credential_packet(launch_id, evidence):
+    packet = {
+        name: base64.b64encode(raw).decode("ascii") for name, raw in evidence.items()
+    }
+    packet["launch_id"] = launch_id
+    payload = art.encoded(packet)
+    art.need(len(payload) <= CREDENTIAL_LIMIT)
+    return payload
+
+
+def check_delivery_bounds(job, artifact, observation, approval_key, approval, policy):
+    """Budget the largest legal envelopes before any operator signature is spent."""
+    limit = reconciliation.RECORD_LIMIT
+    art.need(all(0 < len(value) <= limit for value in (job, observation, approval)))
+    art.need(len(approval_key) == 32 and 0 < len(artifact) <= art.MAX_WIRE)
+    worst_case = dict(
+        grant=bytes(limit),
+        signature=bytes(64),
+        public_key=approval_key,
+        job=job,
+        spent=approval,
+        pre_spend_receipt=bytes(limit),
+        observation=observation,
+        jwt=bytes(limit),
+        result=bytes(limit),
+        signer_journal=bytes(limit),
+    )
+    if policy is not None:
+        key, _, raw, signature = policy
+        art.need(len(key) == 32 and len(signature) == 64 and 0 < len(raw) <= limit)
+        worst_case.update(observer_key=key, policy=raw, policy_signature=signature)
+    credential_packet("0" * 64, worst_case)
 
 
 def require_live_controller(launch_id):
@@ -362,21 +741,28 @@ def role_unit(role):
     )
 
 
-def read_role_credential(role, leaf, limit):
+def read_role_credential(role, leaf, limit, *, live=False):
     art.need(role in ("signer", "publisher"))
     allowed = {"handoff", "approval-pin"}
     if role == "signer":
         allowed.add("app-key")
+    if live:
+        art.need(role == "publisher")
+        allowed.update(("observer-pin", "boot-id"))
     art.need(leaf in allowed)
-    directory = f"/run/credentials/{role_unit(role)}"
+    directory = f"/run/credentials/{LIVE_UNIT if live else role_unit(role)}"
     art.need(os.environ.get("CREDENTIALS_DIRECTORY") == directory)
     return read_file(directory + "/" + leaf, os.getuid(), limit, credential=True)
 
 
-def receive(role, now):
-    import base64
+def receive(role, now, *, live=False):
 
-    raw = read_role_credential(role, "handoff", CREDENTIAL_LIMIT)
+    def credential(leaf, limit):
+        if live:
+            return read_role_credential(role, leaf, limit, live=True)
+        return read_role_credential(role, leaf, limit)
+
+    raw = credential("handoff", CREDENTIAL_LIMIT)
     data = art.decode(raw)
     art.need(type(data) is dict and art.encoded(data) == raw)
     fields = {
@@ -384,7 +770,6 @@ def receive(role, now):
         "signature",
         "public_key",
         "job",
-        "artifact",
         "spent",
         "pre_spend_receipt",
         "observation",
@@ -392,6 +777,9 @@ def receive(role, now):
     }
     if role == "publisher":
         fields |= {"jwt", "result", "signer_journal"}
+    if live:
+        art.need(role == "publisher")
+        fields |= {"observer_key", "policy", "policy_signature"}
     art.need(set(data) == fields)
     launch_id = data.pop("launch_id")
     parts = {
@@ -400,7 +788,18 @@ def receive(role, now):
     handoff = None
     if role == "publisher":
         handoff = tuple(parts[name] for name in ("jwt", "result", "signer_journal"))
-    pin = read_role_credential(role, "approval-pin", 64).decode("ascii")
+    pin = credential("approval-pin", 64).decode("ascii")
+    policy = None
+    if live:
+        policy = (
+            parts["observer_key"],
+            credential("observer-pin", 64).decode("ascii"),
+            parts["policy"],
+            parts["policy_signature"],
+        )
+    identity = reconciliation._canonical(parts["grant"])["artifact_identity"]
+    candidate = reconciliation._canonical(parts["job"])
+    parts["artifact"] = read_role_artifact(candidate, identity)
     job = verify_grant(
         role,
         parts["grant"],
@@ -415,23 +814,37 @@ def receive(role, now):
         launch_id=launch_id,
         now=now,
         handoff=handoff,
+        policy=policy,
+        artifact_identity=identity,
     )
     art.validate(parts["artifact"], job["head"], job["tree"], job["parent"])
     decision = reconciliation._canonical(parts["grant"])
     art.need(int(time.time()) < decision["expires"])
-    pub.confinement(job, role, recovery=True)
+    if live:
+        pub.confinement(job, role, recovery=True, live=True)
+        check_live_namespace(
+            art.decode(parts["policy"]),
+            "/proc/self/ns/net",
+            credential("boot-id", 64).decode("ascii").strip(),
+        )
+    else:
+        pub.confinement(job, role, recovery=True)
     require_live_controller(launch_id)
     return job, launch_id, parts
 
 
-def run_publisher_handoff(*, transport_factory=None):
-    """Installed entrypoint remains offline; an embedded caller can supply I/O."""
+def run_publisher_handoff(*, transport_factory=None, live=False):
+    """Keep injected fixture I/O disjoint from the authenticated live role."""
+    art.need(not live or transport_factory is None)
     journal = None
     try:
-        job, launch_id, parts = receive("publisher", int(time.time()))
+        if live:
+            job, launch_id, parts = receive("publisher", int(time.time()), live=True)
+        else:
+            job, launch_id, parts = receive("publisher", int(time.time()))
         journal = Journal(str(PUBLISHER_JOURNAL), job["journal_sha256"])
         art.need(not journal.events)
-        if transport_factory is None:
+        if not live and transport_factory is None:
             journal.claim(job)
             journal.append(
                 {"phase": "HANDOFF_VERIFIED", "job": job["id"], "launch_id": launch_id}
@@ -450,16 +863,29 @@ def run_publisher_handoff(*, transport_factory=None):
                 artifact, job["head"], job["tree"], job["parent"]
             )
             jwt = verify_handoff(parts["job"], parts["jwt"], parts["result"])
-            client = pub.Client(job, objects, transport_factory(journal, job, jwt))
+            if live:
+                wire = pub.transport(job, before_request=authorize)
+            else:
+                wire = transport_factory(journal, job, jwt)
+            client = pub.Client(job, objects, wire)
             result = pub.publish(
                 job, artifact, jwt, journal, client, authorize, before_effect=authorize
             )
+            if live:
+                art.need(result["status"] == "PUBLISHED")
+                result["status"] = "DRAFT_VERIFIED"
             print(art.encoded(result).decode())
         return 0
     except Exception:
         if journal is not None and (journal.poisoned or journal.events):
-            print('{"status":"UNKNOWN_NEEDS_HUMAN"}')
+            if live:
+                print('{"status":"UNKNOWN"}')
+            else:
+                print('{"status":"UNKNOWN_NEEDS_HUMAN"}')
             return 1
+        if live:
+            print('{"status":"STOP"}')
+            return 2
         return stop("publisher")
     finally:
         if journal is not None:

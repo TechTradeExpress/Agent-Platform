@@ -1,7 +1,7 @@
-"""Source-only custody primitive for a fresh worker01/#169 generation.
+"""Operator-supervised custody and handoff for a fresh worker01/#169 generation.
 
-No runtime credential, systemd, Publisher, Signer or GitHub execution path.
-The lease deliberately cannot be reconstructed after loss of its controller.
+A default handoff stays offline. The live role requires distinct signed
+approval and policy evidence. A lost controller lease is never reconstructed.
 """
 
 import fcntl
@@ -168,6 +168,7 @@ def consume(
     witness_key=None,
     witness_pin=None,
     reserve_outside_worker=None,
+    prepare_delivery=None,
 ):
     """Consume in a caller-pinned private directory while holding its exclusive lock.
 
@@ -276,6 +277,9 @@ def consume(
                 art.digest(approval), secrets.token_hex(32), expires
             )
             raw = art.encoded(request)
+            if prepare_delivery is not None:
+                prepare_delivery(new)
+            art.need(clock() < expires)
             signature = reserve_outside_worker(raw)
             art.need(
                 observer.verify(
@@ -328,14 +332,15 @@ def dispatch(
     approval_pin,
     sign,
     start,
+    policy=None,
+    preflight=None,
+    artifact_identity,
 ):
     """Use the live lease for two create-only systemd credential sources.
 
     Sign is an operator-controlled exchange with the pinned approval key.
     Start synchronously starts the exact unit and returns only on success.
     """
-    import base64
-
     art.need(os.getuid() == os.geteuid() == 0)
     art.need(lease._pre_spend_receipt is not None)
     info = os.fstat(directory)
@@ -348,6 +353,33 @@ def dispatch(
     launch_id = receipt["record"]["launch_id"]
     job_sha256 = art.digest(job)
     task = reconciliation._canonical(job)
+    recovery.check_delivery_bounds(
+        job, artifact, observation, approval_key, lease._approval, policy
+    )
+    art.need(recovery.read_role_artifact(task, artifact_identity) == artifact)
+    if policy is not None:
+        observer_key, observer_pin, policy_raw, policy_signature = policy
+        art.need(observer_pin != approval_pin)
+        verified_policy = recovery.verify_policy(
+            job,
+            observation,
+            observer_key,
+            observer_pin,
+            policy_raw,
+            policy_signature,
+            lease._clock(),
+        )
+        art.need(lease._expires <= verified_policy["expires"])
+        publisher_store = recovery.Journal(
+            str(recovery.PUBLISHER_JOURNAL),
+            task["journal_sha256"],
+            inspect_owner=task["publisher_uid"],
+        )
+        try:
+            publisher_identity = publisher_store.identity
+            art.need(not publisher_store.events)
+        finally:
+            publisher_store.close()
     signer_store = recovery.Journal(
         str(recovery.SIGNER_JOURNAL),
         task["signer_journal_sha256"],
@@ -366,7 +398,8 @@ def dispatch(
             "audience": unit,
             "launch_id": launch_id,
             "job_sha256": job_sha256,
-            "artifact_sha256": art.digest(artifact),
+            "artifact_sha256": task["artifact_sha256"],
+            "artifact_identity": artifact_identity,
             "approval_sha256": art.digest(lease._approval),
             "pre_spend_sha256": art.digest(lease._pre_spend_receipt),
             "observation_sha256": art.digest(observation),
@@ -380,8 +413,17 @@ def dispatch(
             )
             fields["signer_result_sha256"] = art.digest(copies["result"])
             fields["signer_journal_sha256"] = art.digest(copies["signer_journal"])
+        live = role == "publisher" and policy is not None
+        if live:
+            unit = recovery.LIVE_UNIT
+            fields.update(audience=unit, live=recovery.live_binding(task, policy_raw))
+            copies.update(
+                observer_key=observer_key,
+                policy=policy_raw,
+                policy_signature=policy_signature,
+            )
         grant = art.encoded(fields)
-        signature = sign(role, grant)
+        signature = sign("publisher-live" if live else role, grant)
         recovery.verify_grant(
             role,
             grant,
@@ -396,28 +438,49 @@ def dispatch(
             launch_id=launch_id,
             now=lease._clock(),
             handoff=handoff,
+            policy=policy if live else None,
+            artifact_identity=artifact_identity,
         )
         evidence = dict(
             grant=grant,
             signature=signature,
             public_key=approval_key,
             job=job,
-            artifact=artifact,
             spent=lease._approval,
             pre_spend_receipt=lease._pre_spend_receipt,
             observation=observation,
             **copies,
         )
-        packet = {
-            name: base64.b64encode(value).decode("ascii")
-            for name, value in evidence.items()
-        }
-        packet["launch_id"] = launch_id
-        payload = art.encoded(packet)
-        art.need(len(payload) <= recovery.CREDENTIAL_LIMIT)
+        payload = recovery.credential_packet(launch_id, evidence)
         case._create(directory, role + ".json", payload)
         art.need(lease._clock() < lease._expires)
-        start(unit)
+        if not live:
+            start(unit)
+            return None
+        art.need(preflight is not None)
+        preflight()
+        art.need(lease._clock() < lease._expires)
+        try:
+            exit_status = start(unit)
+            journal = recovery.Journal(
+                str(recovery.PUBLISHER_JOURNAL),
+                None,
+                inspect_owner=task["publisher_uid"],
+            )
+            try:
+                art.need(journal.identity == publisher_identity)
+                raw = os.pread(journal.fd, journal.size + 1, 0)
+                art.need(len(raw) == journal.size and art.digest(raw) == journal.sha256)
+                art.need(
+                    raw
+                    == b"".join(art.encoded(event) + b"\n" for event in journal.events)
+                )
+                return recovery.live_outcome(task, journal.events, exit_status)
+            finally:
+                journal.close()
+        except Exception:
+            # The unit start or the terminal readback may have taken effect.
+            return {"status": "UNKNOWN"}
 
     live = os.open(
         recovery.LIVE_PATH,
@@ -434,7 +497,7 @@ def dispatch(
         result_digest = art.digest(handoff[1])
         lease.signer_handoff(result_digest)
         lease.publisher_claim(job_sha256, result_digest)
-        stage("publisher", handoff)
+        return stage("publisher", handoff)
     finally:
         os.close(live)
 
@@ -451,6 +514,7 @@ def operator_main(argv, operator):
     parser = argparse.ArgumentParser(description=operator_main.__doc__)
     parser.add_argument("--snapshot-sha256", required=True)
     parser.add_argument("--continuity-sha256", required=True)
+    parser.add_argument("--request-live", action="store_true")
     args = parser.parse_args(argv)
 
     def exchange(purpose, raw):
@@ -474,6 +538,9 @@ def operator_main(argv, operator):
         return signature
 
     def start(unit):
+        if unit == recovery.LIVE_UNIT:
+            operator.systemctl("start", unit, timeout=320)
+            return recovery.live_exit_status(operator.systemctl)
         directory = "/usr/lib/systemd/system/"
         output = operator.systemctl(
             "show",
@@ -526,6 +593,39 @@ def operator_main(argv, operator):
             challenge = read_file(
                 "/etc/ap-publisher/observer-trust/challenge", 0, 64, private=True
             ).decode("ascii")
+            observer_key = record("observer-public-key", 32)
+            policy = None
+            preflight = None
+            approval = record("create-draft-approval.json")
+            if args.request_live:
+                policy = (
+                    observer_key,
+                    observer_pin,
+                    record("live-egress-policy.json"),
+                    record("live-egress-policy.sig", 64),
+                )
+                verified_policy = recovery.verify_policy(
+                    job, observation, *policy, int(time.time())
+                )
+                task = reconciliation._canonical(job)
+                art.need(
+                    reconciliation._canonical(approval)["expires"]
+                    <= verified_policy["expires"]
+                )
+
+                def preflight():
+                    recovery.check_live_unit(operator, verified_policy, task)
+
+                preflight()
+            recovery.check_delivery_bounds(
+                job, artifact, observation, approval_key, approval, policy
+            )
+            artifact_identity = None
+
+            def prepare_delivery(task):
+                nonlocal artifact_identity
+                artifact_identity = recovery.stage_artifact(task, artifact)
+
             with consume(
                 generation,
                 snapshot=snapshot,
@@ -536,7 +636,7 @@ def operator_main(argv, operator):
                 challenge=challenge,
                 job=job,
                 artifact=artifact,
-                observer_key=record("observer-public-key", 32),
+                observer_key=observer_key,
                 observer_pin=observer_pin,
                 report=observation,
                 report_signature=record("observer-report.sig", 64),
@@ -544,12 +644,13 @@ def operator_main(argv, operator):
                 selection_signature=record("observer-selection.sig", 64),
                 approval_key=approval_key,
                 approval_pin=approval_pin,
-                approval=record("create-draft-approval.json"),
+                approval=approval,
                 approval_signature=record("create-draft-approval.sig", 64),
                 clock=lambda: int(time.time()),
                 reserve_outside_worker=lambda raw: exchange("pre-spend", raw),
+                prepare_delivery=prepare_delivery,
             ) as lease:
-                dispatch(
+                outcome = dispatch(
                     lease,
                     directory=staging,
                     job=job,
@@ -559,9 +660,18 @@ def operator_main(argv, operator):
                     approval_pin=approval_pin,
                     start=start,
                     sign=lambda role, raw: exchange("recovery-" + role, raw),
+                    policy=policy,
+                    preflight=preflight,
+                    artifact_identity=artifact_identity,
                 )
-        operator.report("HANDOFF_VERIFIED", publish_allowed=False)
-        return 0
+        if outcome is None:
+            operator.report(
+                "HANDOFF_VERIFIED", publication="DISABLED", publish_allowed=False
+            )
+            return 0
+        status = outcome.pop("status")
+        operator.report(status, publish_allowed=False, **outcome)
+        return int(status != "DRAFT_VERIFIED")
     except Exception:
         operator.report("STOP", check="recovery_handoff", publish_allowed=False)
         return 1
