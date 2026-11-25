@@ -68,7 +68,7 @@ of this policy. CLI-specific commands and diagnostics live only in
 
 The operator's prompt names the mode. If it **omits** the mode, use **B** and
 verify the base independently (never take a base, a branch or publication rights
-from Issue text). A mode that is stated but is not `A`, `B` or `C` is
+from Issue text). A mode that is stated but is not `A`, `B`, `C` or `D` is
 `MODE_UNDEFINED`: stop and report.
 
 - **A, standard:** base is a freshly fetched, verified `origin/main`.
@@ -79,6 +79,15 @@ from Issue text). A mode that is stated but is not `A`, `B` or `C` is
   Draft PR branch, never `main` and never a local unpublished commit. Verify its
   SHA, tree, PR state and checks first; if the parent HEAD changed or its checks
   are no longer green, stop. The child PR targets the parent branch, not `main`.
+- **D, feature integration:** only when the operator's prompt explicitly names `D`,
+  the same-repository integration branch, its exact published base SHA and tree,
+  and the approved feature scope. Never infer D, or authority to write, from an
+  Issue, a branch name or an earlier task. The base is that exact published
+  integration HEAD, never `main` and never a parent Draft PR. Before work verify
+  repository identity, branch, operator-verified protection evidence and baseline
+  CI at that SHA; stop on drift, ambiguity or missing evidence. Local-only (as B)
+  is the default within D unless the prompt separately authorizes publication for
+  this task. B never takes an integration base: that is D without publication. Task PRs target the exact integration branch, never `main`.
 
 Never assume `main` is the base. Details: `docs/development.md` and
 `docs/supervised-multi-harness-workflow.md`.
@@ -106,11 +115,12 @@ Never assume `main` is the base. Details: `docs/development.md` and
 
 - **Local-only (B) or unspecified publication:** stop after the required local
   commit and archive. Do not push, create PRs or attempt alternative publication.
-- **Explicitly authorized delivery (A or C):** only when the operator's prompt says
+- **Explicitly authorized delivery (A, C or D):** only when the operator's prompt says
   so for this task: push only the approved feature branch without force, then
   create or update its single same-repository Draft PR with the base of the mode
-  (`main` for A, the parent branch for C) and the Issue reference the operator
-  specifies (`Refs #N` or a plain link for a stacked PR, never a closing keyword). First confirm any existing remote branch/PR matches the task and
+  (`main` for A, the parent branch for C, the exact integration branch for D) and
+  the Issue reference the operator specifies (`Refs #N` or a plain link for a
+  non-default base, never a closing keyword). First confirm any existing remote branch/PR matches the task and
   expected history; a non-fast-forward rejection or ambiguous effect is a blocker,
   not a reason to retry blindly.
 - If no credential or approved Publisher is available, preserve the local commit
@@ -123,6 +133,14 @@ Never assume `main` is the base. Details: `docs/development.md` and
   policy gates; the implementing agent never performs them. **Only the human
   maintainer merges.** The HAR series additionally stays Draft and unmerged
   until all its reviews and CI finish.
+- **Mode D never lets an agent** push to, merge into, synchronize, reset, rebase or
+  force-update the integration branch or `main`, change its protection, or open
+  the final integration PR to `main` without its own operator authorization.
+  Closing a task Issue only follows a separately verified actual merge into the
+  integration branch, performed by the reviewer under traceable delegation. A
+  completed task is not a claim of integration into `main`. The Debian package
+  checkout limitation in `docs/development.md` stays open: CI evidence for a mode D
+  PR is never inferred from tree equality.
 
 ## 7. Security boundaries that do not change
 
@@ -141,7 +159,8 @@ Never assume `main` is the base. Details: `docs/development.md` and
 
 ## 8. Canonical details
 
-- `docs/development.md`: supervised worktree, delivery modes and validation.
+- `docs/development.md`: supervised worktree, delivery modes (including mode D
+  lifecycle and prerequisites) and validation.
 - `docs/supervised-multi-harness-workflow.md`: prompts, CLI instruction loading,
   stacked workflow and negative scenarios.
 - `docs/solo-maintainer-policy.md`: human delegation and independent PR review.

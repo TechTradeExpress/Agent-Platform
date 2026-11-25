@@ -880,10 +880,10 @@ def test_single_instruction_policy_and_no_competing_files():
     assert [p for p in tracked if p.endswith("AGENTS.md")] == ["AGENTS.md"]
     assert not any(p.startswith(".claude/") for p in tracked)
     assert not (ROOT / "AGENTS.md").is_symlink()
-    assert (
-        hashlib.sha256((DOCS / "solo-maintainer-policy.md").read_bytes()).hexdigest()
-        == AP_SM2_SHA256
-    )
+    # The AP-SM/2 body is pinned; only the mode D supplement may follow it (#191).
+    policy = (DOCS / "solo-maintainer-policy.md").read_text()
+    core = policy.split("\n## C. Mode D supplement", 1)[0]
+    assert hashlib.sha256(core.encode()).hexdigest() == AP_SM2_SHA256
 
 
 def test_change_adds_no_runtime_code_or_product_reference():

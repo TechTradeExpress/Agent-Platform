@@ -38,6 +38,25 @@ cannot be bypassed by AP-SM/2. No settings, permission or token change is author
 Green CI/AI review alone is not production security assurance; additional live
 verification and Gate B/native/legacy barriers remain unchanged.
 
+### Mode D integration branches (Issue #191)
+
+The AP-SM/2 sequence above is the standard `main`-target behavior and is unchanged.
+Long-lived integration branches use the supervised mode D contract in
+[development.md](development.md#mode-d-feature-integration). Governance
+implications, none of which changes a setting: an integration branch needs
+operator-verified protection equivalent to `main` (PR-only, required `CI` and
+`Debian package`, resolved conversations, human-only authorized merge, no
+force/deletion/bypass) before work; unverified controls are recorded as UNVERIFIED.
+The public API reported `main` protected and `feature/repository-manager` not
+protected on 2026-11-24 (details not observable). Known limitation: the Debian
+package workflow checks out the PR feature HEAD, not the merge commit, so verified
+merge-result coverage is a separately scoped CI follow-up; the PR #188 exception was
+per-PR only and tree equality is never CI evidence.
+Merge strategy (target, not enabled here): squash for task PRs and the final PR,
+an ancestry-preserving merge commit only for synchronizing `main` into the
+integration branch. Enabling merge commits is a separate operator-gated settings
+change; this workflow changes no setting.
+
 ## Observed governance, not assumed enforcement
 
 The existing authenticated developer environment issued only GET requests for

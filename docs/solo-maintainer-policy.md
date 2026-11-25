@@ -155,3 +155,52 @@ an explicitly required independent security assessment. Gate B, deployment,
 credentials and pilot activation require separate approval and evidence. Native
 Codex and public legacy execution remain blocked at exit 13. No implementation,
 transport, secret access, background service or security setting changes follow.
+
+## C. Mode D supplement: non-default integration branches (Issue #191)
+
+This supplement leaves sections A and B and every `main`-target gate above
+unchanged; the text before this heading is pinned by test. It applies only when the
+operator has explicitly selected delivery mode D (see
+[development.md](development.md#mode-d-feature-integration)) for a task PR whose
+base is an operator-named same-repository integration branch, never `main`. Mode B
+never substitutes for it: a local-only task on an integration base is mode D.
+
+For such a PR the following standard requirements above are **explicitly replaced**;
+all other gates (exact HEAD and base, technical PASS without findings, both required
+CI checkout revisions with merge parents, traceable delegation, one Issue, no
+unresolved threads) continue to apply:
+
+| Standard `main`-target requirement | Mode D replacement |
+| --- | --- |
+| A sole unambiguous **closing reference** in the PR | `Refs #N` or a canonical link; any closing keyword is refused |
+| **Native closing association** agreeing with the reference | Not expected and never relied on; the single Issue is bound by pinned ID and the unambiguous reference only |
+| Expect an **open Ready PR** before Issue closure | Closure is verified against a **merged** PR (the PR is no longer open) |
+| Close the Issue as Completed **before** the human merge | Closure only **after** the human merge and a separately verified actual merge; closing earlier is premature |
+
+- Reviewer sequence for one task PR and one Issue: technical COMMENT -> Ready ->
+  **human-only merge into the integration branch** -> verified actual merge ->
+  close **only that Issue** as Completed under traceable delegation. The verified
+  merge is bound to the reviewed PR, the exact accepted HEAD and base, technical
+  PASS, required CI for both revisions, the expected merge-result tree and the
+  integration branch. A merged state alone, or a stale, absent or contradictory
+  acceptance record, never authorizes closure. Squash merges do not require the
+  original HEAD to be an ancestor. Failed, unverified or uncertain merges stop.
+- Merge strategy: task PRs into the integration branch and the final PR into `main`
+  use squash merge; synchronization of `main` into the integration branch needs an
+  ancestry-preserving merge commit, which is a separate operator-gated prerequisite
+  and not an existing or authorized settings change. Details and verification are in
+  development.md.
+- Operator-verified protection evidence for the integration branch is a
+  precondition. Unverified controls are recorded as UNVERIFIED and never replaced by
+  policy prose. No setting, permission or credential is changed.
+- A completed task is "merged into the integration branch", not integrated into
+  `main` or deployed. The final cumulative PR to `main` is created only with its
+  own operator authorization, bound to one dedicated final Issue; its **acceptance**
+  is a separate step under the unchanged strict `main`-target flow, requiring
+  exact-HEAD review and successful CI for both checkout revisions including the
+  merge result created after the PR is opened. It never closes constituent Issues
+  by keyword.
+- The Debian package workflow limitation (`pull_request` checks out the feature
+  HEAD, not the merge commit) is documented in development.md. The earlier PR #188
+  exception was per-PR only; tree equality or stale runs never substitute for the
+  strict two-revision gate. No transition, merge or automation is added.
