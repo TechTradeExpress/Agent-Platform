@@ -178,7 +178,11 @@ esac
     synthetic = workflow.split("      - name: Separate synthetic Codex", 1)[1].split(
         "      - name:", 1
     )[0]
-    assert "if: ${{ !cancelled() }}" in synthetic
+    # Still runs after an earlier P1 failure, but only for a verified checkout.
+    assert (
+        "if: ${{ !cancelled() && steps.verify_checkout.outcome == 'success' }}"
+        in synthetic
+    )
 
 
 def test_lifecycle_installed_assertion_is_not_weakened():

@@ -812,18 +812,13 @@ def test_mode_d_docs_agree_on_the_contract():
         "OBSERVED or UNVERIFIED",
         "protected: false",
         "debian-package.yml",
-        "not the synthetic merge commit",
         "exception for PR #188 applied to that PR only; it is not a precedent",
-        "Tree equality",
-        "separately scoped CI follow-up",
-        "no workflow is changed here",
     ):
         assert needle in dev, needle
     for needle in (
         "MODE_D_NOT_AUTHORIZED",
         "Modes A, B and C are unchanged",
         "Never push to, merge, sync, rebase or force the integration branch or main",
-        "OPEN; separately scoped CI follow-up",
         "not generalized",
     ):
         assert needle in wf, needle
@@ -857,13 +852,141 @@ def test_mode_d_docs_agree_on_the_contract():
         assert "MODE_UNDEFINED" in text
 
 
-def test_documented_debian_checkout_limitation_matches_the_workflows():
+def test_documented_ci_checkout_contract_matches_the_workflows():
+    """CI-01 resolved the former Debian checkout limitation; docs follow the code."""
     deb = (ROOT / ".github/workflows/debian-package.yml").read_text()
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
-    # The limitation is real today: the Debian workflow pins the feature HEAD.
-    assert "ref: ${{ github.event.pull_request.head.sha || github.sha }}" in deb
-    assert "ref:" not in ci  # CI uses the default (merge-result) pull_request ref
-    assert "no workflow is changed here" in FLAT["dev"]
+    verifier = (ROOT / "ci/verify_checkout_identity.py").read_text()
+    # Neither workflow overrides the checkout ref: push tests the exact HEAD and
+    # pull_request GitHub's current synthetic merge result.
+    assert "ref:" not in ci
+    steps = deb.split("\n    steps:\n", 1)[1].split("\n      - ")
+    checkout, verify, later = steps[0], steps[1], steps[2:]
+    assert "uses: actions/checkout@" in checkout and "ref:" not in checkout
+    assert "head.sha" not in deb
+    assert "id: verify_checkout" in verify
+    assert "python3 -I ci/verify_checkout_identity.py" in verify
+    gate = "steps.verify_checkout.outcome == 'success'"
+    assert later and all(gate in step for step in later)
+    assert deb.count('test "$source_sha" = "$AP_VERIFIED_CHECKOUT_SHA"') == 2
+    # The record binds the actual checkout and exact merge parents, nothing else.
+    for needle in (
+        'SCHEMA = "AP-CI-CHECKOUT-EVIDENCE/1"',
+        '"scope": "checkout_identity_only"',
+        '"status": "CI_ONLY"',
+        '"release": "NOT_RELEASED"',
+        'record["mode"] = "exact_head"',
+        '"mode": "synthetic_merge_result"',
+        "refs/pull/{event['number']}/merge",
+        "parents != [base_sha, head_sha]",
+    ):
+        assert needle in verifier, needle
+
+    dev, wf, solo, agents, gov = (
+        FLAT[k] for k in ("dev", "wf", "solo", "agents", "gov")
+    )
+    for needle in (
+        "CI-01 (Issue #194, PR #197) resolved the former Debian package checkout "
+        "limitation",
+        "on `push` it validates the exact pushed HEAD and on `pull_request` the "
+        "current synthetic merge result",
+        "verifies the actual checkout identity and the exact merge parents",
+        "this document changes no workflow",
+        "Mode D keeps the strict two-revision gate",
+        "for both the exact PR HEAD and the current base-bound merge result",
+        "parents are exactly the current base SHA (first) and the PR HEAD (second)",
+        "Checkout evidence alone does not establish lifecycle success",
+        "the successful `lifecycle` job conclusion of that same run",
+        "Check names, a run's `head_sha`, the event type, tree equality between a "
+        "base and a PR, and stale runs",
+        "A base move requires fresh runs",
+        "Head-only evidence (`head_checkout_only`) stays invalid",
+        "exception for PR #188 applied to that PR only; it is not a precedent",
+        "CI workflow evidence is not package provenance",
+        "`build_kind=candidate`, `ci_only=false`, `release_authorized=false`",
+        "Mode D is not operational until",
+        "MERGE_COMMIT_PREREQUISITE_MISSING",
+    ):
+        assert needle in dev, needle
+    for needle in (
+        "RESOLVED by CI-01",
+        "`head_checkout_only` evidence stays invalid",
+        "PR #188 exception was per-PR only and is not generalized",
+        "checkout evidence alone, check names, run `head_sha`, tree equality and "
+        "stale runs are insufficient",
+        "NOT operational",
+    ):
+        assert needle in wf, needle
+    for needle in (
+        "CI-01 resolved the former Debian package checkout limitation",
+        "Checkout evidence alone is not lifecycle success",
+        "check names, run `head_sha`, tree equality or stale runs never substitute",
+        "exception was per-PR only",
+        "CI workflow evidence is not package provenance",
+        "Mode D stays non-operational",
+    ):
+        assert needle in solo, needle
+    for needle in (
+        "CI-01 (#194) resolved the former Debian package checkout limitation",
+        "tree equality is never CI evidence, nor are checkout evidence alone",
+        "per-PR only",
+        "CI workflow evidence is not package provenance or release evidence",
+        "Mode D is not operational",
+    ):
+        assert needle in gov, needle
+    assert "CI-01 resolved the Debian package checkout limitation" in agents
+    assert "Mode D is not operational until" in agents
+    # The obsolete limitation is gone, not merely reworded around.
+    for text in (dev, wf, solo, agents, gov):
+        assert "github.event.pull_request.head.sha" not in text
+        assert "separately scoped CI follow-up" not in text
+        assert "no workflow is changed here" not in text
+        assert "stays open" not in text
+        assert "Mode D is operational" not in text
+
+
+def test_partial_or_stale_ci_evidence_stays_insufficient_for_mode_d():
+    """The accepted negative scenarios and evaluator semantics stay unchanged."""
+    scenarios = {s["id"]: s for s in FIXTURE["lifecycle_scenarios"]}
+    for sid in ("L-13", "L-34", "L-67"):
+        assert scenarios[sid]["facts"]["ci_merge"] == "head_checkout_only", sid
+    assert scenarios["L-35"]["facts"]["ci_merge"] == "tree_equality_only"
+    assert scenarios["L-68"]["facts"]["ci_merge_after_open"] == "pre_open_only"
+    base = FIXTURE["lifecycle_defaults"]
+    close = {**base, "action": "close_issue", "merge_state": "merged"}
+    final = {**base, "action": "accept_final_pr", "pr_base": "main"}
+    # Only verified success counts; any partial or stale substitute is missing.
+    for evidence in (
+        "head_checkout_only",
+        "checkout_record_only",
+        "check_name_only",
+        "run_head_sha_only",
+        "tree_equality_only",
+        "stale_run",
+    ):
+        for action in ("comment", "ready"):
+            facts = {**base, "action": action, "ci_merge": evidence}
+            assert decide_lifecycle(facts) == ("STOP", "CI_MERGE_EVIDENCE_MISSING")
+        assert decide_lifecycle({**final, "ci_merge": evidence}) == (
+            "STOP",
+            "CI_MERGE_EVIDENCE_MISSING",
+        )
+        assert decide_lifecycle({**close, "ci_merge": evidence}) == (
+            "STOP",
+            "ACCEPTANCE_EVIDENCE_INVALID",
+        )
+        # The exact-HEAD revision is required as well.
+        assert decide_lifecycle({**base, "action": "comment", "ci_head": evidence}) == (
+            "STOP",
+            "CI_NOT_GREEN",
+        )
+    for action in ("comment", "ready"):
+        assert decide_lifecycle({**base, "action": action}) == ("ALLOW", "OK")
+    # Protection is still a separate gate: CI evidence alone is not readiness.
+    assert decide_lifecycle({**base, "action": "comment", "protection": None}) == (
+        "BLOCKED",
+        "PROTECTION_UNVERIFIED",
+    )
 
 
 def test_mode_d_changes_stay_source_workflow_only():

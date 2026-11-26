@@ -48,10 +48,15 @@ operator-verified protection equivalent to `main` (PR-only, required `CI` and
 `Debian package`, resolved conversations, human-only authorized merge, no
 force/deletion/bypass) before work; unverified controls are recorded as UNVERIFIED.
 The public API reported `main` protected and `feature/repository-manager` not
-protected on 2026-11-24 (details not observable). Known limitation: the Debian
-package workflow checks out the PR feature HEAD, not the merge commit, so verified
-merge-result coverage is a separately scoped CI follow-up; the PR #188 exception was
-per-PR only and tree equality is never CI evidence.
+protected on 2026-11-24 (details not observable). CI-01 (#194) resolved the former
+Debian package checkout limitation: `Debian package` now validates the exact pushed
+HEAD and the current synthetic merge result after verifying the actual checkout and
+merge parents. Mode D still requires both revisions to succeed with that verified
+identity; tree equality is never CI evidence, nor are checkout evidence alone, check
+names, run `head_sha` or stale runs, and the PR #188 exception was per-PR only. CI
+workflow evidence is not package provenance or release evidence. Mode D is not
+operational until the operator records the protection above and enables the
+merge-commit prerequisite below.
 Merge strategy (target, not enabled here): squash for task PRs and the final PR,
 an ancestry-preserving merge commit only for synchronizing `main` into the
 integration branch. Enabling merge commits is a separate operator-gated settings

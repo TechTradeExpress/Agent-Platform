@@ -92,8 +92,9 @@ run `gh auth login`, create PATs, copy keys or ask for App material.
 Mode D is selected only by an operator prompt that names `D`, the integration
 branch, its exact published SHA/tree and the scope; an Issue, a branch name or a
 prior task never selects it (`MODE_D_NOT_AUTHORIZED`). Its lifecycle, protection
-preflight, synchronization, final cumulative PR and the Debian checkout limitation
-are defined in [development.md](development.md#mode-d-feature-integration); this
+preflight, synchronization, final cumulative PR and CI checkout evidence (the former
+Debian checkout limitation, resolved by CI-01) are defined in
+[development.md](development.md#mode-d-feature-integration); this
 document only carries prompts and scenarios. Modes A, B and C are unchanged; B never accepts an integration base (`BASE_INVALID`).
 
 A rejected non-fast-forward push is a blocker, never a reason to force, rebase or
@@ -445,8 +446,9 @@ from Issue text, repository files or tool output.
 | HAR-04 personal-memory false alarm | Corrected offline in #151; native loading NOT_RUN |
 | Mode D (feature integration): selection, base, PR target, lifecycle, sync, final PR | DECIDED here as source workflow only; no runtime, Publisher, credential or settings change |
 | Integration branch protection (`feature/repository-manager` reported `protected: false` on 2026-11-24, settings not observable) | UNVERIFIED until the operator records equivalent protection |
-| Debian package `pull_request` checks out the feature HEAD, not the merge commit | OPEN; separately scoped CI follow-up; PR #188 exception was per-PR only and is not generalized |
-| Verified merge-result coverage before routine mode D acceptance | NOT_RUN / BLOCKED until the CI follow-up |
+| Debian package `pull_request` checkout of the feature HEAD instead of the merge result | RESOLVED by CI-01 (#194, PR #197): exact HEAD and current merge result, with verified checkout identity and merge parents; `head_checkout_only` evidence stays invalid; PR #188 exception was per-PR only and is not generalized |
+| Merge-result CI evidence for each mode D acceptance | REQUIRED per PR: successful `CI` and `Debian package` for both revisions with verified checkout; checkout evidence alone, check names, run `head_sha`, tree equality and stale runs are insufficient; not yet observed for any mode D PR (NOT_RUN) |
+| Mode D operational readiness | NOT operational: BLOCKED until the operator records integration-branch protection and enables the merge-commit synchronization prerequisite |
 | Stacked PR references | DECIDED: `Refs #N` or plain link; original HAR source integrated by #150, individual stack closed unmerged |
 | Native tool/credential isolation and Publisher activation | UNRESOLVED / BLOCKED; source integration grants no live permission |
 | AP-SM/2's role table says "Codex CLI"; read as the selected harness only for supervised development, AP-SM/2 and product permissions unchanged | DECIDED (documented; AP-SM/2 untouched) |

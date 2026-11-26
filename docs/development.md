@@ -265,18 +265,51 @@ Read-only observation on 2026-11-24 (unauthenticated public API): `main` reports
 detailed protection settings were **not** observable. Treat the integration branch
 as **UNVERIFIED** until the operator records equivalent protection.
 
-### Known limitation: Debian package checkout
+### CI checkout evidence (CI-01; former Debian checkout limitation)
 
-`.github/workflows/debian-package.yml` checks out
-`github.event.pull_request.head.sha || github.sha`, so on `pull_request` it tests
-the feature HEAD, not the synthetic merge commit that `CI` tests. The operator's
-exception for PR #188 applied to that PR only; it is not a precedent. Tree equality
-between a base and a PR, or an old green run, is **not** CI evidence and never
-substitutes for the strict two-revision gate. A separately scoped CI follow-up
-Issue (not part of this change) must provide verified merge-result coverage while
-preserving package provenance and release constraints. Until it lands, routine
-mode D acceptance is BLOCKED for lack of that evidence unless the operator makes a
-new, explicit, per-PR decision recorded on that PR; no workflow is changed here.
+CI-01 (Issue #194, PR #197) resolved the former Debian package checkout
+limitation. Before it, the `pull_request` run of `Debian package` tested the
+feature HEAD rather than the merge result that `CI` tests. Now
+`.github/workflows/debian-package.yml` overrides no checkout ref: on `push` it
+validates the exact pushed HEAD and on `pull_request` the current synthetic merge
+result (`refs/pull/N/merge`) for the actual PR base, including a non-default
+integration branch. Its first step, `verify_checkout`
+(`ci/verify_checkout_identity.py`), verifies the actual checkout identity and the
+exact merge parents and writes `ci-checkout-evidence.json`; every later step
+requires that step's success. The workflow contract is normative in
+[debian-package.md](debian-package.md#ci-01-checkout-identity-gate-and-evidence-layers);
+this document changes no workflow.
+
+Mode D keeps the strict two-revision gate. Required `CI` and `Debian package` must
+succeed for **both** the exact PR HEAD and the **current** base-bound merge result,
+and each run must be bound to its revision:
+
+| Revision | Evidence the reviewer verifies |
+| --- | --- |
+| Exact PR HEAD | The run's actual checkout is that HEAD (`Debian package` record: `mode=exact_head`, `checkout_sha` equal to the HEAD) |
+| Current merge result | The run's actual checkout is the synthetic merge commit whose parents are exactly the current base SHA (first) and the PR HEAD (second) (`Debian package` record: `mode=synthetic_merge_result`) |
+
+- Checkout evidence alone does not establish lifecycle success. The record attests
+  checkout identity only (`scope=checkout_identity_only`); the validation result is
+  the successful `lifecycle` job conclusion of that same run. An uploaded artifact
+  is diagnostic and proves nothing by itself.
+- Check names, a run's `head_sha`, the event type, tree equality between a base
+  and a PR, and stale runs (for an older HEAD or base, or a merge result recorded
+  before the PR was opened) are insufficient. The `push` and `pull_request` runs
+  both attach to the PR HEAD, so only the verified actual checkout tells them
+  apart. A base move requires fresh runs. Head-only evidence (`head_checkout_only`)
+  stays invalid (`CI_MERGE_EVIDENCE_MISSING`).
+- The operator's exception for PR #188 applied to that PR only; it is not a
+  precedent and is available to no other PR.
+- CI workflow evidence is not package provenance. `CI_ONLY` and `NOT_RELEASED` in
+  the checkout record classify that workflow-level evidence. Ordinary candidate
+  packages built from a merge result keep their embedded provenance
+  (`build_kind=candidate`, `ci_only=false`, `release_authorized=false`) and are
+  never release, custody or installation evidence.
+- CI-01 closes only this evidence gap. Mode D is **not operational** until the
+  operator records equivalent protection for the integration branch (UNVERIFIED
+  above) and enables and records the merge-commit synchronization prerequisite
+  (`MERGE_COMMIT_PREREQUISITE_MISSING`).
 
 ## Delivery checklist
 

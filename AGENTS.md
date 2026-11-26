@@ -138,9 +138,13 @@ Never assume `main` is the base. Details: `docs/development.md` and
   the final integration PR to `main` without its own operator authorization.
   Closing a task Issue only follows a separately verified actual merge into the
   integration branch, performed by the reviewer under traceable delegation. A
-  completed task is not a claim of integration into `main`. The Debian package
-  checkout limitation in `docs/development.md` stays open: CI evidence for a mode D
-  PR is never inferred from tree equality.
+  completed task is not a claim of integration into `main`. CI-01 resolved the
+  Debian package checkout limitation, but CI evidence for a mode D PR still needs
+  successful runs on its exact HEAD and on its current base-bound merge result, with
+  verified checkout identity and merge parents (`docs/development.md`); it is never
+  inferred from tree equality. Mode D is not operational until the operator records
+  integration-branch protection and enables the merge-commit synchronization
+  prerequisite.
 
 ## 7. Security boundaries that do not change
 

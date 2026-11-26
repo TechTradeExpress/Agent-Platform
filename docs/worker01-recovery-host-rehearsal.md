@@ -1,8 +1,9 @@
-# PUB-09 recovery rehearsal and Worker P1 upgrade
+# PUB-09 recovery rehearsal and Worker P1 development installation
 
-**SOURCE_ONLY / LIVE NO-GO.** Exact-unit rehearsal and production upgrade
-are **NOT_EXECUTED / BLOCKED_BY_HOST_APPROVAL**. Review this procedure and
-authorize each host-changing operation separately. #183 is evidence for
+**SOURCE_ONLY / LIVE NO-GO.** Exact-unit rehearsal is **NOT_TESTED /
+BLOCKED_BY_HOST_APPROVAL**. The development candidate installation is
+**NOT_EXECUTED** and requires separately approved maintenance exclusion and a
+per-install operator decision under [PKG-20](debian-package.md#pkg-20-development-candidate-deployment-on-worker01). #183 is evidence for
 synthetic PID 1 credential delivery, ACL/cross-role denial, IPv4/IPv6 BPF
 denial and packaged AppArmor enforcement on worker01. Its combined probe
 used adapted unit and credential paths. Exact-unit recovery remains
@@ -62,25 +63,41 @@ used adapted unit and credential paths. Exact-unit recovery remains
    after approval. Unknown processes, unexpected paths or incomplete
    cleanup mean STOP. Preserve evidence and quarantine the VM.
 
-## Worker01 upgrade procedure
+The disposable VM procedure is for exact-unit synthetic rehearsal. Any alternate
+rehearsal environment requires separately reviewed evidence and operator
+authorization. Never replace the real PEM, expose real credentials or spend the
+real recovery generation in a test.
 
-1. Obtain separate approval for the exact source-qualified Worker P1
-   candidate and maintenance window. Build with `--revision 9` from the
-   approved clean commit. Pin HEAD/tree, manifest, package SHA-256, embedded
-   provenance, architecture and installed predecessor
-   `0.1.0-8~git73bb2d521347ec87fb2c584ada8ee86a0ab3eaba`. Inspect the Debian
-   control archive, maintainer scripts and conffile choices before touching
-   worker01. Verify `dpkg --compare-versions` with candidate `gt` installed.
-   PKG-18/#168 final release and artifact custody remain separate and blocked.
-2. Establish enforced maintenance exclusion before inspecting unit state.
-   Restrict privileged manager access to the upgrade operator, suspend
-   activation automation and other privileged sessions outside the units,
-   and confirm no activation socket, timer, path, dependency or queued job
-   can start any historical or recovery unit. Hold the existing operator
-   configuration exclusion across the package transaction to block cooperating
-   clients. A lock cannot block arbitrary PID 1 callers. If the access
-   fence cannot exclude every other start path, STOP. Do not mask or
-   reset-failed the legacy unit. Preserve its runtime allowlist and evidence.
+## Worker01 development candidate installation
+
+An ordinary PKG-20 development candidate installation on worker01 carries
+no additional VM requirement. Installation evidence and exact-unit rehearsal
+evidence have separate acceptance criteria.
+
+1. Obtain separate approval from the authenticated human operator for the
+   exact Worker P1 candidate, current predecessor and maintenance window on
+   worker01. Check independently reviewed and human-merged `main` source,
+   green hosted CI, exact commit/tree, version, architecture, manifest,
+   embedded provenance and independently reproduced package SHA256. Inspect
+   the Debian contents, control archive, maintainer scripts and conffile
+   choices. Verify the actual predecessor against the approved pin and
+   `dpkg --compare-versions` with candidate `gt` installed. Retain the
+   exact file in protected operator custody with a root-owned path and
+   regular, singly linked archive. Exclude symlinks and untrusted writes to
+   the file or its ancestors. Verify the approved digest against the actual
+   install input immediately before the transaction and protect those bytes
+   until it completes. PKG-18/#168 remains mandatory for final generation
+   and release and remains BLOCKED.
+2. Establish and record enforced maintenance exclusion before inspecting unit
+   state. Restrict privileged manager access to the upgrade operator. Exclude
+   other privileged sessions, automation and non-cooperating PID 1 callers.
+   Confirm no socket, timer, path, dependency or queued job can activate any
+   historical or recovery unit during the window. Hold the existing cooperative
+   configuration flock across the transaction and post-install verification.
+   Point-in-time sudo, session and dependency inventories and the flock do not
+   prove enforced exclusion. Require evidence that the access fence remains
+   effective through post-install review. STOP if any start path cannot be
+   excluded. Preserve failed state, the historical allowlist and its evidence.
 3. Under that exclusion, confirm the historical Publisher is failed and
    quiescent, Signer inactive, and all jobs, PIDs and service cgroups idle.
    Compare locally retained v4 identities and securely held integrity
@@ -135,5 +152,6 @@ dpkg --verify agent-platform-worker
 | Synthetic grant, journal, partial-write and lost-reply tests | See review validation |
 | Fixture writer fault and actual kernel crash or power-loss durability | Source checks only; real durability NOT_TESTED |
 | Exact PID 1 units, ACL/AppArmor/BPF combined | NOT_TESTED / BLOCKED_BY_HOST_APPROVAL |
-| Production Worker P1 upgrade and recovery | NOT_EXECUTED |
-| GitHub writes and final release | LIVE NO-GO |
+| Worker P1 development candidate installation on worker01 | NOT_EXECUTED / separate operator approval required |
+| Recovery run and publication | NOT_EXECUTED / LIVE NO-GO |
+| Final artifact generation and release under PKG-18/#168 | BLOCKED |

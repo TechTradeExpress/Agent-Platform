@@ -200,7 +200,12 @@ unresolved threads) continue to apply:
   exact-HEAD review and successful CI for both checkout revisions including the
   merge result created after the PR is opened. It never closes constituent Issues
   by keyword.
-- The Debian package workflow limitation (`pull_request` checks out the feature
-  HEAD, not the merge commit) is documented in development.md. The earlier PR #188
-  exception was per-PR only; tree equality or stale runs never substitute for the
-  strict two-revision gate. No transition, merge or automation is added.
+- CI-01 resolved the former Debian package checkout limitation (development.md):
+  both revisions still need successful required `CI` and `Debian package` runs
+  whose actual checkout identity and merge parents are verified. Checkout evidence
+  alone is not lifecycle success, and check names, run `head_sha`, tree equality or
+  stale runs never substitute for the strict two-revision gate. The earlier PR #188
+  exception was per-PR only. CI workflow evidence is not package provenance. Mode D
+  stays non-operational until the operator records integration-branch protection
+  and enables the merge-commit prerequisite. No transition, merge or automation is
+  added.

@@ -27,9 +27,53 @@ are quiescent only with zero process IDs, no queued job, no restart policy
 and no populated service cgroup. A failed historical Publisher can satisfy
 the same requirements. The guard leaves failed state and historical data
 untouched. Uncertain manager results block unpack. This is a point-in-time
-check and the separately authorized host upgrade must exclude concurrent
-operator activation. Release authorization under PKG-18, host checks in
-#183, and explicit permission to install are still required.
+check. A separately authorized installation must maintain enforced exclusion
+of concurrent activation throughout the transaction and its verification.
+
+## PKG-20 Development Candidate Deployment on worker01
+
+On 2026-11-25 the human maintainer approved this policy for experimental
+installation of the source-qualified `agent-platform-worker` development
+candidate on the homelab **worker01** only. The policy requires fresh, explicit
+approval from the authenticated human operator for each installation, binding
+the target host, exact archive digest, installed predecessor and maintenance
+window. A source flag, Issue comment, CI result or agent identity carries no
+installation authority.
+
+An eligible archive is `0.1.0-9~git<FULL_SHA>` for amd64 with **CANDIDATE /
+NOT_RELEASED** status. Require independently reviewed, human-merged `main`
+source, green hosted CI, exact full source and tree pins, and an independently
+reproduced archive retained in operator custody. Independently review the exact
+package contents, maintainer scripts and conffile decisions. The install input
+must be the reviewed bytes in protected operator custody, with a known
+predecessor, enforced maintenance exclusion and retained pre/post evidence.
+Follow the [worker01 procedure](worker01-recovery-host-rehearsal.md#worker01-development-candidate-installation)
+and STOP on any mismatch or uncertainty.
+
+The per-install authorization covers only that experimental package transaction.
+Final artifact generation, custody admission, promotion and distribution remain
+subject to [PKG-18 #168](https://github.com/TechTradeExpress/Agent-Platform/issues/168)
+and remain **BLOCKED**. Exact-unit synthetic rehearsal under #183 is separately
+gated. Gate #73, PUB-02 #108 and #169 remain independent and **LIVE NO-GO**.
+
+### First pinned candidate evidence
+
+PR #192 merged source `7b5f0506998341bd3b2bf8524d6240a78033fa23` with tree
+`fdb1218e0bc15fbfe0b63656c9bf42eaabeb0cc4` and green hosted CI. The independently
+reproduced Worker archive is amd64 version
+`0.1.0-9~git7b5f0506998341bd3b2bf8524d6240a78033fa23` with SHA256
+`13477bf9782aa4899440b9c98dedfbfda6f64f06b650315685c346d157e8f292`.
+The recorded installed predecessor is
+`0.1.0-8~git73bb2d521347ec87fb2c584ada8ee86a0ab3eaba`. Evidence for devops'
+independent reproduction on worker01 is retained in #183.
+[Source and build](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163515312),
+[reproduction](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163592150),
+[verification](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163622259),
+[handoff](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163648336).
+
+This evidence pins the candidate for a later approval decision. Verify the
+predecessor again before an installation. A documentation-only merge does not
+invalidate the pinned source or select a replacement binary.
 
 # Inert Debian role candidates (PKG-02)
 
@@ -157,8 +201,9 @@ Reinstall restores code; downgrade changes code only, never history. Restore a
 synthetic backup only into a new marked directory, never onto uncertain state.
 
 The existing [Debian CI workflow](../.github/workflows/debian-package.yml) retains
-read-only GitHub permissions and direct feature-HEAD provenance (separate from
-Python merge-result CI). It builds N/N+1/rebuilt archives, compares both roles,
+read-only GitHub permissions. Its checkout identity, step gate and evidence layers
+are defined in [CI-01](#ci-01-checkout-identity-gate-and-evidence-layers).
+It builds N/N+1/rebuilt archives, compares both roles,
 runs lintian with error failure, and autopkgtest in a separate disposable testbed.
 Lifecycle has no network or host home/socket mounts and uses fake activation
 tripwires. It checks each role alone, both roles, both peer removal orders,
@@ -174,6 +219,56 @@ Those remain NOT_RUN, as do real hosts, credentials, runtime and Publisher pilot
 No Docker installation, privileged fallback or host provisioning is authorized.
 
 See [local fixture evidence and limitations](debian-role-package-validation.md).
+
+## CI-01 checkout identity, gate and evidence layers
+
+The Debian CI checkout uses no `ref` override (Issue #194): on `push` it checks
+out the exact pushed HEAD, and on `pull_request` it checks out the synthetic
+merge result (`refs/pull/N/merge`) for the actual PR base, including non-default
+integration targets. The check name is the same for both, so evidence must cite
+the checkout record, not the display name. The first step after checkout,
+`verify_checkout`, runs `ci/verify_checkout_identity.py`: the commit equals the
+event SHA, and for a pull request the ref is `refs/pull/N/merge` and its two
+parents equal the event's base SHA (first) and head SHA (second). Missing,
+mismatched, stale or ambiguous facts fail the step; tree equality, the event
+name or a run `head_sha` never count.
+
+Every later step requires `steps.verify_checkout.outcome == 'success'`, joined
+with `&&` to its unchanged previous status check: builds, upgrades and lifecycle
+keep `success()`, the separate Codex lifecycle and the prior-manpage negative
+keep `!cancelled()`, and archive inspection and artifact upload keep `always()`. A
+rejected, skipped or cancelled verification therefore builds, inspects, runs and
+uploads nothing; its diagnostic is the failed step's
+`CHECKOUT_EVIDENCE_REJECTED: <reason>` line. After a verified checkout, a later
+failure or cancellation runs the same diagnostics and upload as before. The gate
+reads `outcome`, not `conclusion`, so a future `continue-on-error` cannot open
+it. Every package build also asserts that its `--source-commit` equals the
+verified checkout.
+
+| Layer | What it states | Classification |
+| --- | --- | --- |
+| `lifecycle` job conclusion | The validation result for the checkout in the record | Disposable CI result; never release, custody or installation authority |
+| `ci-checkout-evidence.json` | Checkout identity only: `scope=checkout_identity_only` | `status=CI_ONLY`, `release=NOT_RELEASED` classify this workflow-level evidence, not package provenance |
+| Uploaded Actions artifact | Packages, evidence and diagnostics, also after a later failure | Diagnostic CI evidence with 14-day retention; never proof of a successful validation by itself, never a release vault |
+| Embedded `build.json` and external provenance | Package provenance, unchanged by CI-01 | Ordinary candidates `build_kind=candidate`, `ci_only=false`, `release_authorized=false`; exact -8 fixture `ci-final-fixture`, `ci_only=true`; N/N+1 profiles `synthetic-fixture` |
+
+On `pull_request`, ordinary candidates are therefore `0.1.0-8~git<merge SHA>`
+with `source_commit` and `source_tree` of the verified synthetic merge commit
+and embedded `ci_only=false`. They are not embedded CI_ONLY packages; before
+CI-01 the same class was bound to the PR head instead. Their class and source
+identity, not a flag, keep them out of release and custody admission:
+[PKG-12](pkg12-release-readiness.md) admits only a future final archive rebuilt
+by a separately admitted recipe from a newly observed post-merge commit,
+`release_readiness.assess` rejects `candidate` and `ci-final-fixture` kinds
+(`artifact_not_future_final`), and relabelling or rewriting embedded fields is
+forbidden. A synthetic merge commit exists only under `refs/pull/N/merge`, in no
+branch history, and is not the commit that a GitHub merge, squash or rebase
+creates, so it cannot satisfy that re-pin. [Host Gate 0](pkg12-host-upgrade-runbook.md)
+requires a frozen release bundle and separate human decisions; green CI
+authorizes nothing. Release custody (`ProtectedCustody`) is NOT_CONFIGURED, no
+repository code consumes Actions artifacts, and the worker doctor only reads an
+installed record. A merge-result candidate may become unrebuildable once GitHub
+drops that commit; it is review evidence for its run only.
 
 ## P1 Worker candidates (PKG-04)
 
