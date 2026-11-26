@@ -8,6 +8,7 @@ import os
 import socket
 import ssl
 import stat
+import struct
 import threading
 import time
 from enum import StrEnum
@@ -86,6 +87,19 @@ def systemd_credential(fd, m, owner, *, directory):
             need(perm == 0)
 
 
+def readonly_acl(readers):
+    need(len(readers) == 2 and tuple(sorted(set(readers))) == readers)
+    need(all(type(uid) is int and 0 < uid < 2**32 - 1 for uid in readers))
+    tags = [
+        (ACL_USER_OBJ, 4, 2**32 - 1),
+        *((ACL_USER, 4, uid) for uid in readers),
+        (ACL_GROUP_OBJ, 0, 2**32 - 1),
+        (ACL_MASK, 4, 2**32 - 1),
+        (ACL_OTHER, 0, 2**32 - 1),
+    ]
+    return b"\x02\x00\x00\x00" + b"".join(struct.pack("<HHI", *entry) for entry in tags)
+
+
 def read_file(
     path,
     owner,
@@ -95,6 +109,8 @@ def read_file(
     allow_empty=False,
     private=False,
     credential=False,
+    artifact_acl=None,
+    artifact_identity=None,
 ):
     """Descriptor-walk every component; no symlinks/hardlinks/writable ancestors.
 
@@ -103,6 +119,10 @@ def read_file(
     remain root-owned and not group/other writable.
     """
     need(not credential or not (writable_parent or allow_empty or private))
+    if artifact_acl is not None:
+        need(
+            owner == 0 and not (credential or writable_parent or allow_empty or private)
+        )
     p = Path(path)
     need(p.is_absolute() and ".." not in p.parts)
     need(not credential or len(p.parts) >= 3)
@@ -118,6 +138,8 @@ def read_file(
                 continue
             need(m.st_uid == 0 or writable_parent and m.st_uid == owner)
             need(not m.st_mode & 0o022)
+            if artifact_acl is not None and i == len(p.parts[1:-1]) - 1:
+                need(m.st_uid == m.st_gid == 0 and stat.S_IMODE(m.st_mode) == 0o755)
             if private and i == len(p.parts[1:-1]) - 1:
                 need(not m.st_mode & 0o077)
         leaf = os.open(p.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
@@ -130,6 +152,11 @@ def read_file(
                 need(before.st_uid == owner and not before.st_mode & 0o6022)
             if private:
                 need(not before.st_mode & 0o077)
+            if artifact_acl is not None:
+                need(before.st_uid == before.st_gid == 0)
+                need(stat.S_IMODE(before.st_mode) == 0o440)
+                need(os.getxattr(leaf, ACL_XATTR) == artifact_acl)
+                need([before.st_dev, before.st_ino] == artifact_identity)
             need((0 if allow_empty else 1) <= before.st_size <= limit)
             data = bytearray()
             while len(data) <= limit:
@@ -153,6 +180,10 @@ def read_file(
                 )
 
             need(len(data) == before.st_size and pin(after) == pin(before))
+            if artifact_acl is not None:
+                named = os.stat(p.name, dir_fd=fd, follow_symlinks=False)
+                need(pin(named) == pin(before))
+                need(os.getxattr(leaf, ACL_XATTR) == artifact_acl)
             return bytes(data)
         finally:
             os.close(leaf)
@@ -296,7 +327,7 @@ class HTTPS:
     The operation facade supplies the only allowed routes and payloads.
     """
 
-    def __init__(self, ipv4, certificate):
+    def __init__(self, ipv4, certificate, *, before_request=None):
         ip = ipaddress.ip_address(ipv4)
         need(
             ip.version == 4
@@ -307,11 +338,12 @@ class HTTPS:
             and len(certificate) == 64
         )
         self.ip, self.certificate = str(ip), certificate
+        self.before_request = before_request
 
     @classmethod
-    def homelab(cls, ipv4):
+    def homelab(cls, ipv4, *, before_request=None):
         """Keep the selected egress IP for this job; authenticate via system CA/SNI."""
-        wire = cls(ipv4, "0" * 64)
+        wire = cls(ipv4, "0" * 64, before_request=before_request)
         wire.certificate = None
         return wire
 
@@ -335,9 +367,11 @@ class HTTPS:
         response = None
         reason = FailureReason.TRANSPORT
         try:
-            raw = socket.create_connection((self.ip, 443), timeout=remaining())
+            raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             try:
-                need(raw.getpeername()[0] == self.ip)
+                raw.settimeout(remaining())
+                raw.connect((self.ip, 443))
+                need(raw.getpeername() == (self.ip, 443))
                 # getresponse() can close the TLS socket while its response file
                 # still reads from it. A separate descriptor keeps shutdown
                 # usable through that handoff without touching the response file.
@@ -380,6 +414,9 @@ class HTTPS:
                 headers["Authorization"] = "Bearer " + secret
             if body is not None:
                 headers["Content-Type"] = "application/json"
+            # Cleanup must remain possible after expiry or controller loss.
+            if self.before_request is not None and method != "DELETE":
+                self.before_request()
             connection.sock.settimeout(remaining())
             connection.request(method, path, body=body, headers=headers)
             connection.sock.settimeout(remaining())
