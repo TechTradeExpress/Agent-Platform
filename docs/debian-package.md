@@ -27,9 +27,53 @@ are quiescent only with zero process IDs, no queued job, no restart policy
 and no populated service cgroup. A failed historical Publisher can satisfy
 the same requirements. The guard leaves failed state and historical data
 untouched. Uncertain manager results block unpack. This is a point-in-time
-check and the separately authorized host upgrade must exclude concurrent
-operator activation. Release authorization under PKG-18, host checks in
-#183, and explicit permission to install are still required.
+check. A separately authorized installation must maintain enforced exclusion
+of concurrent activation throughout the transaction and its verification.
+
+## PKG-20 Development Candidate Deployment on worker01
+
+On 2026-11-25 the human maintainer approved this policy for experimental
+installation of the source-qualified `agent-platform-worker` development
+candidate on the homelab **worker01** only. The policy requires fresh, explicit
+approval from the authenticated human operator for each installation, binding
+the target host, exact archive digest, installed predecessor and maintenance
+window. A source flag, Issue comment, CI result or agent identity carries no
+installation authority.
+
+An eligible archive is `0.1.0-9~git<FULL_SHA>` for amd64 with **CANDIDATE /
+NOT_RELEASED** status. Require independently reviewed, human-merged `main`
+source, green hosted CI, exact full source and tree pins, and an independently
+reproduced archive retained in operator custody. Independently review the exact
+package contents, maintainer scripts and conffile decisions. The install input
+must be the reviewed bytes in protected operator custody, with a known
+predecessor, enforced maintenance exclusion and retained pre/post evidence.
+Follow the [worker01 procedure](worker01-recovery-host-rehearsal.md#worker01-development-candidate-installation)
+and STOP on any mismatch or uncertainty.
+
+The per-install authorization covers only that experimental package transaction.
+Final artifact generation, custody admission, promotion and distribution remain
+subject to [PKG-18 #168](https://github.com/TechTradeExpress/Agent-Platform/issues/168)
+and remain **BLOCKED**. Exact-unit synthetic rehearsal under #183 is separately
+gated. Gate #73, PUB-02 #108 and #169 remain independent and **LIVE NO-GO**.
+
+### First pinned candidate evidence
+
+PR #192 merged source `7b5f0506998341bd3b2bf8524d6240a78033fa23` with tree
+`fdb1218e0bc15fbfe0b63656c9bf42eaabeb0cc4` and green hosted CI. The independently
+reproduced Worker archive is amd64 version
+`0.1.0-9~git7b5f0506998341bd3b2bf8524d6240a78033fa23` with SHA256
+`13477bf9782aa4899440b9c98dedfbfda6f64f06b650315685c346d157e8f292`.
+The recorded installed predecessor is
+`0.1.0-8~git73bb2d521347ec87fb2c584ada8ee86a0ab3eaba`. Evidence for devops'
+independent reproduction on worker01 is retained in #183.
+[Source and build](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163515312),
+[reproduction](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163592150),
+[verification](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163622259),
+[handoff](https://github.com/TechTradeExpress/Agent-Platform/issues/183#issuecomment-7163648336).
+
+This evidence pins the candidate for a later approval decision. Verify the
+predecessor again before an installation. A documentation-only merge does not
+invalidate the pinned source or select a replacement binary.
 
 # Inert Debian role candidates (PKG-02)
 
