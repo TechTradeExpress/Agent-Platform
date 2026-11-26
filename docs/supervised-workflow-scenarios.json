@@ -23,7 +23,13 @@
     "action": "local_commit",
     "user_level_claude_md": false,
     "agents_load_confirmed": false,
-    "issue_ref": "refs"
+    "issue_ref": "refs",
+    "integration_authorization": "operator_prompt",
+    "integration_identity": "canonical_same_repo",
+    "integration_protection": "operator_verified",
+    "integration_ci": "success",
+    "integration_head_unchanged": true,
+    "scope_approved": true
   },
   "scenarios": [
     {
@@ -733,6 +739,1429 @@
         "publish_authority_source": "operator_prompt",
         "publisher_available": true,
         "issue_ref": "refs"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "W-60",
+      "title": "Mode D task from the exact published integration HEAD, local commit",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "W-61",
+      "title": "Mode D inferred from Issue text, not named by the operator prompt",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_authorization": "issue_text"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "MODE_D_NOT_AUTHORIZED"
+      }
+    },
+    {
+      "id": "W-62",
+      "title": "Mode D inferred from the branch name",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_authorization": "branch_name"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "MODE_D_NOT_AUTHORIZED"
+      }
+    },
+    {
+      "id": "W-63",
+      "title": "Mode D inferred from an earlier task's authorization",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_authorization": "prior_task"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "MODE_D_NOT_AUTHORIZED"
+      }
+    },
+    {
+      "id": "W-64",
+      "title": "Mode D task based on main instead of the integration HEAD",
+      "facts": {
+        "mode": "D",
+        "base_ref": "verified_origin_main",
+        "pr_base": "integration_branch"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "BASE_INVALID"
+      }
+    },
+    {
+      "id": "W-65",
+      "title": "Mode D task based on a parent Draft PR head",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_upstream_head",
+        "pr_base": "integration_branch"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "BASE_INVALID"
+      }
+    },
+    {
+      "id": "W-66",
+      "title": "Integration branch is not a verified same-repository branch",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_identity": "other_repo"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "INTEGRATION_BRANCH_INVALID"
+      }
+    },
+    {
+      "id": "W-67",
+      "title": "Integration branch HEAD moved after assignment (stale base)",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_head_unchanged": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "INTEGRATION_HEAD_CHANGED"
+      }
+    },
+    {
+      "id": "W-68",
+      "title": "Integration branch protection evidence not verified by the operator",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_protection": "unverified"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "PROTECTION_UNVERIFIED"
+      }
+    },
+    {
+      "id": "W-69",
+      "title": "Integration branch protection evidence missing",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_protection": "missing"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "PROTECTION_UNVERIFIED"
+      }
+    },
+    {
+      "id": "W-70",
+      "title": "Baseline CI missing at the integration base",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_ci": "missing"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "INTEGRATION_CI_NOT_GREEN"
+      }
+    },
+    {
+      "id": "W-71",
+      "title": "Baseline CI failed at the integration base",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "integration_ci": "failed"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "INTEGRATION_CI_NOT_GREEN"
+      }
+    },
+    {
+      "id": "W-72",
+      "title": "Approved feature scope not stated",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "scope_approved": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "SCOPE_NOT_APPROVED"
+      }
+    },
+    {
+      "id": "W-73",
+      "title": "Mode D default is local-only: push without separate publication authorization",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "LOCAL_ONLY"
+      }
+    },
+    {
+      "id": "W-74",
+      "title": "Mode D push on authority of Issue text",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push",
+        "publish_authorized": true,
+        "publish_authority_source": "issue_text",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PUBLICATION_NOT_AUTHORIZED"
+      }
+    },
+    {
+      "id": "W-75",
+      "title": "Mode D push authorized but no Publisher or credential",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "PUBLISHER_UNAVAILABLE"
+      }
+    },
+    {
+      "id": "W-76",
+      "title": "Mode D task branch push, operator-authorized, Publisher available",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "W-77",
+      "title": "Mode D Draft PR to the exact integration branch, operator-authorized",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "create_pr",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "W-78",
+      "title": "Mode D PR opened against main",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "main",
+        "action": "create_pr",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PR_BASE_MISMATCH"
+      }
+    },
+    {
+      "id": "W-79",
+      "title": "Mode D PR body uses a closing keyword",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "create_pr",
+        "issue_ref": "closes",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "CLOSING_KEYWORD_NON_DEFAULT"
+      }
+    },
+    {
+      "id": "W-80",
+      "title": "Agent pushes directly to the integration branch",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push_integration_branch",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PROTECTED_BRANCH_WRITE_DENIED"
+      }
+    },
+    {
+      "id": "W-81",
+      "title": "Agent pushes directly to main",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "push_main",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PROTECTED_BRANCH_WRITE_DENIED"
+      }
+    },
+    {
+      "id": "W-82",
+      "title": "Agent force-pushes",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "force_push",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "HISTORY_REWRITE_DENIED"
+      }
+    },
+    {
+      "id": "W-83",
+      "title": "Agent rebases shared history",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "rebase_shared_history",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "HISTORY_REWRITE_DENIED"
+      }
+    },
+    {
+      "id": "W-84",
+      "title": "Agent changes branch protection or other GitHub settings",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "change_github_settings",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "GITHUB_SETTINGS_DENIED"
+      }
+    },
+    {
+      "id": "W-85",
+      "title": "Agent synchronizes main into the integration branch",
+      "facts": {
+        "mode": "D",
+        "base_ref": "published_integration_head",
+        "pr_base": "integration_branch",
+        "action": "sync_integration_branch",
+        "publish_authorized": true,
+        "publish_authority_source": "operator_prompt",
+        "publisher_available": true
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_OPERATOR_ONLY"
+      }
+    },
+    {
+      "id": "W-86",
+      "title": "Mode B local-only task taking a mode D integration base (bypass attempt)",
+      "facts": {
+        "pr_base": "integration_branch",
+        "mode": "B",
+        "base_ref": "published_integration_head"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "BASE_INVALID"
+      }
+    },
+    {
+      "id": "W-87",
+      "title": "Omitted mode (default B) taking a mode D integration base",
+      "facts": {
+        "pr_base": "integration_branch",
+        "mode": null,
+        "base_ref": "published_integration_head"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "BASE_INVALID"
+      }
+    }
+  ],
+  "lifecycle_defaults": {
+    "action": "comment",
+    "pr_base": "integration_branch",
+    "head_unchanged": true,
+    "integration_advance": "none",
+    "review": "pass",
+    "delegation": true,
+    "protection": "operator_verified",
+    "issue_binding": "single_refs",
+    "ci_head": "success",
+    "ci_merge": "success",
+    "comment_published": true,
+    "ready": true,
+    "acceptance_record": "complete",
+    "merge_state": "not_merged",
+    "merge_method": "squash",
+    "merge_pr": "match",
+    "merge_target": "integration_branch",
+    "merge_parents": "match",
+    "merge_content": "match",
+    "merge_reachable": true,
+    "head_in_ancestry": true,
+    "merge_commits_enabled": "operator_enabled",
+    "sync_method": "operator_reviewed_pr",
+    "sync_strategy": "merge_commit",
+    "sync_conflict": false,
+    "sync_first_parent": "accepted_base",
+    "sync_second_parent": "verified_main",
+    "sync_main_ancestry": "present",
+    "sync_tree": "match",
+    "final_authorization": "operator_prompt",
+    "final_source": "integration_branch",
+    "final_issue_binding": "dedicated_single",
+    "inventory_verified": true,
+    "histories_reconciled": true,
+    "release_boundary": "selected",
+    "final_pr_state": "draft_open",
+    "ci_merge_after_open": "success",
+    "post_merge_advance": "none"
+  },
+  "lifecycle_scenarios": [
+    {
+      "id": "L-01",
+      "title": "COMMENT on a mode D task PR with every gate satisfied",
+      "facts": {},
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-02",
+      "title": "Ready after the published COMMENT",
+      "facts": {
+        "action": "ready"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-03",
+      "title": "Ready without a published COMMENT",
+      "facts": {
+        "action": "ready",
+        "comment_published": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "SEQUENCE_VIOLATION"
+      }
+    },
+    {
+      "id": "L-04",
+      "title": "Close the single Issue after a verified squash merge bound to the acceptance record",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-05",
+      "title": "Close after a squash merge although the original HEAD is not an ancestor (not required)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "head_in_ancestry": false
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-06",
+      "title": "Close the Issue before the human merge (premature closure)",
+      "facts": {
+        "action": "close_issue"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "ISSUE_CLOSE_PREMATURE"
+      }
+    },
+    {
+      "id": "L-07",
+      "title": "Close after an uncertain merge outcome",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "uncertain"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-08",
+      "title": "Close after a failed merge",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "failed"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-09",
+      "title": "Merged state alone with no acceptance record",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "acceptance_record": "absent"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-10",
+      "title": "Merged state with a stale acceptance record (HEAD or base changed after acceptance)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "acceptance_record": "stale"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-11",
+      "title": "Merged state with a contradictory acceptance record",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "acceptance_record": "contradictory"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-12",
+      "title": "Merged state although technical review was not a PASS",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "review": "fail"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-13",
+      "title": "Merged state although a required CI revision was not successful",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "ci_merge": "head_checkout_only"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-14",
+      "title": "Merged state although the PR was never published or Ready",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "ready": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-15",
+      "title": "Merged a different PR than the accepted one",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_pr": "mismatch"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-16",
+      "title": "Merge landed on a branch other than the integration branch",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_target": "main"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-17",
+      "title": "Merge result parent is not the accepted base (unrelated drift before the merge)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_parents": "mismatch"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-18",
+      "title": "Merge result content differs from the expected merge-result tree",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_content": "mismatch"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-19",
+      "title": "Merge result content not verified",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_content": "unverified"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-20",
+      "title": "Merge commit not reachable from the integration head",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_reachable": false
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-21",
+      "title": "Task PR merged with a merge commit instead of squash (strategy mismatch)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_STRATEGY_MISMATCH"
+      }
+    },
+    {
+      "id": "L-22",
+      "title": "Task PR targets main instead of the integration branch",
+      "facts": {
+        "pr_base": "main"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PR_TARGET_MISMATCH"
+      }
+    },
+    {
+      "id": "L-23",
+      "title": "Task PR body uses a closing keyword",
+      "facts": {
+        "issue_binding": "closing_keyword"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "CLOSING_KEYWORD_NON_DEFAULT"
+      }
+    },
+    {
+      "id": "L-24",
+      "title": "Task PR references more than one Issue",
+      "facts": {
+        "issue_binding": "multiple"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ISSUE_BINDING_INVALID"
+      }
+    },
+    {
+      "id": "L-25",
+      "title": "Task PR references an Issue of another repository",
+      "facts": {
+        "issue_binding": "foreign_repo"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ISSUE_BINDING_INVALID"
+      }
+    },
+    {
+      "id": "L-26",
+      "title": "Task PR has no unambiguous Issue reference",
+      "facts": {
+        "issue_binding": "none"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ISSUE_BINDING_INVALID"
+      }
+    },
+    {
+      "id": "L-27",
+      "title": "PASS without traceable human delegation",
+      "facts": {
+        "delegation": false
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "DELEGATION_MISSING"
+      }
+    },
+    {
+      "id": "L-28",
+      "title": "Integration branch protection not verified by the operator",
+      "facts": {
+        "protection": "unverified"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "PROTECTION_UNVERIFIED"
+      }
+    },
+    {
+      "id": "L-29",
+      "title": "Integration branch protection evidence missing",
+      "facts": {
+        "protection": "missing"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "PROTECTION_UNVERIFIED"
+      }
+    },
+    {
+      "id": "L-30",
+      "title": "PR HEAD changed after the reviewed SHA (stale evidence)",
+      "facts": {
+        "head_unchanged": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "STALE_EVIDENCE"
+      }
+    },
+    {
+      "id": "L-31",
+      "title": "Integration HEAD advanced by unrelated drift before acceptance",
+      "facts": {
+        "integration_advance": "unrelated_drift"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "STALE_EVIDENCE"
+      }
+    },
+    {
+      "id": "L-32",
+      "title": "Technical review is not a PASS",
+      "facts": {
+        "review": "fail"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "REVIEW_NOT_PASS"
+      }
+    },
+    {
+      "id": "L-33",
+      "title": "Required checks for the PR HEAD still pending",
+      "facts": {
+        "ci_head": "pending"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_NOT_GREEN"
+      }
+    },
+    {
+      "id": "L-34",
+      "title": "Debian package ran only on the feature HEAD, no verified merge-result run",
+      "facts": {
+        "ci_merge": "head_checkout_only"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-35",
+      "title": "Tree equality offered in place of merge-result CI evidence",
+      "facts": {
+        "ci_merge": "tree_equality_only"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-36",
+      "title": "Merge-result CI evidence missing",
+      "facts": {
+        "ci_merge": "missing"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-37",
+      "title": "Merge-result CI failed",
+      "facts": {
+        "ci_merge": "failed"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-38",
+      "title": "Synchronization by operator-reviewed PR with a merge commit, prerequisite enabled",
+      "facts": {
+        "action": "sync_main"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-39",
+      "title": "Synchronization while merge commits are not enabled (separate operator-gated prerequisite)",
+      "facts": {
+        "action": "sync_main",
+        "merge_commits_enabled": "not_enabled"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "MERGE_COMMIT_PREREQUISITE_MISSING"
+      }
+    },
+    {
+      "id": "L-40",
+      "title": "Synchronization by squash merge (does not preserve main ancestry)",
+      "facts": {
+        "action": "sync_main",
+        "sync_strategy": "squash"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_STRATEGY_INVALID"
+      }
+    },
+    {
+      "id": "L-41",
+      "title": "Synchronization by rebase merge",
+      "facts": {
+        "action": "sync_main",
+        "sync_strategy": "rebase"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_STRATEGY_INVALID"
+      }
+    },
+    {
+      "id": "L-42",
+      "title": "Synchronization by direct push",
+      "facts": {
+        "action": "sync_main",
+        "sync_method": "direct_push"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_METHOD_DENIED"
+      }
+    },
+    {
+      "id": "L-43",
+      "title": "Synchronization by reset, rebase or force",
+      "facts": {
+        "action": "sync_main",
+        "sync_method": "rebase"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_METHOD_DENIED"
+      }
+    },
+    {
+      "id": "L-44",
+      "title": "Synchronization by an automated process",
+      "facts": {
+        "action": "sync_main",
+        "sync_method": "automated"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "SYNC_METHOD_DENIED"
+      }
+    },
+    {
+      "id": "L-45",
+      "title": "Synchronization conflict",
+      "facts": {
+        "action": "sync_main",
+        "sync_conflict": true
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_CONFLICT"
+      }
+    },
+    {
+      "id": "L-46",
+      "title": "Synchronization result verified: two parents, main in ancestry, tree reconciled",
+      "facts": {
+        "action": "accept_sync",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-47",
+      "title": "Synchronization result is a single-parent commit (squash)",
+      "facts": {
+        "action": "accept_sync",
+        "merge_method": "squash"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-48",
+      "title": "Synchronization first parent is not the accepted integration base",
+      "facts": {
+        "action": "accept_sync",
+        "sync_first_parent": "other",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-49",
+      "title": "Synchronization second parent is not the verified main SHA",
+      "facts": {
+        "action": "accept_sync",
+        "sync_second_parent": "other",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-50",
+      "title": "Synchronization result does not contain main in its ancestry",
+      "facts": {
+        "action": "accept_sync",
+        "sync_main_ancestry": "missing",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-51",
+      "title": "Synchronization tree not reconciled",
+      "facts": {
+        "action": "accept_sync",
+        "sync_tree": "mismatch",
+        "merge_method": "merge_commit"
+      },
+      "expected": {
+        "decision": "BLOCKED",
+        "code": "SYNC_NOT_VERIFIED"
+      }
+    },
+    {
+      "id": "L-52",
+      "title": "Final Draft PR creation, authorized, correct source/target, one dedicated Issue, reconciled",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-53",
+      "title": "Final Draft PR creation does not require checks that cannot exist before opening",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "ci_merge": "missing",
+        "ci_head": "pending"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-54",
+      "title": "Final PR creation without its own operator authorization",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "final_authorization": "prior_task"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "FINAL_PR_NOT_AUTHORIZED"
+      }
+    },
+    {
+      "id": "L-55",
+      "title": "Final PR creation with a source other than the integration branch",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "final_source": "other"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PR_SOURCE_MISMATCH"
+      }
+    },
+    {
+      "id": "L-56",
+      "title": "Final PR creation targeting the integration branch",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "integration_branch"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PR_TARGET_MISMATCH"
+      }
+    },
+    {
+      "id": "L-57",
+      "title": "Final PR creation closing every constituent Issue by keyword",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "final_issue_binding": "closes_all_constituents"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "CLOSING_KEYWORD_CONSTITUENTS"
+      }
+    },
+    {
+      "id": "L-58",
+      "title": "Final PR creation without a dedicated final Issue",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "final_issue_binding": "none"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ISSUE_BINDING_INVALID"
+      }
+    },
+    {
+      "id": "L-59",
+      "title": "Final PR creation without a verified inventory of merged task PRs and Issues",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "inventory_verified": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "INVENTORY_UNVERIFIED"
+      }
+    },
+    {
+      "id": "L-60",
+      "title": "Final PR creation before both branch histories are reconciled",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "histories_reconciled": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "HISTORY_NOT_RECONCILED"
+      }
+    },
+    {
+      "id": "L-61",
+      "title": "Final PR creation without an operator-selected release boundary",
+      "facts": {
+        "action": "create_final_pr",
+        "pr_base": "main",
+        "release_boundary": "unselected"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "RELEASE_BOUNDARY_UNSELECTED"
+      }
+    },
+    {
+      "id": "L-62",
+      "title": "Final PR acceptance with exact-HEAD PASS and both CI revisions after opening",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main"
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-63",
+      "title": "Final PR acceptance before the Draft PR exists",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "final_pr_state": "not_created"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "SEQUENCE_VIOLATION"
+      }
+    },
+    {
+      "id": "L-64",
+      "title": "Final PR acceptance with a stale HEAD",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "head_unchanged": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "STALE_EVIDENCE"
+      }
+    },
+    {
+      "id": "L-65",
+      "title": "Final PR acceptance without technical PASS",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "review": "fail"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "REVIEW_NOT_PASS"
+      }
+    },
+    {
+      "id": "L-66",
+      "title": "Final PR acceptance without traceable delegation",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "delegation": false
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "DELEGATION_MISSING"
+      }
+    },
+    {
+      "id": "L-67",
+      "title": "Final PR acceptance with CI only on the feature HEAD",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "ci_merge": "head_checkout_only"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-68",
+      "title": "Final PR acceptance using merge-result CI recorded before the PR was opened",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "ci_merge_after_open": "pre_open_only"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_MERGE_EVIDENCE_MISSING"
+      }
+    },
+    {
+      "id": "L-69",
+      "title": "Final PR acceptance with pending HEAD CI",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "ci_head": "pending"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "CI_NOT_GREEN"
+      }
+    },
+    {
+      "id": "L-70",
+      "title": "Final PR acceptance after the inventory or histories drifted",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "histories_reconciled": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "HISTORY_NOT_RECONCILED"
+      }
+    },
+    {
+      "id": "L-71",
+      "title": "Final PR acceptance closing every constituent Issue by keyword",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "final_issue_binding": "closes_all_constituents"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "CLOSING_KEYWORD_CONSTITUENTS"
+      }
+    },
+    {
+      "id": "L-72",
+      "title": "Close after a merge although the PR HEAD changed after acceptance (contradictory HEAD evidence, record labelled complete)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "head_unchanged": false
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-73",
+      "title": "Close after a merge although the integration branch drifted before acceptance (record labelled complete)",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "integration_advance": "unrelated_drift"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "ACCEPTANCE_EVIDENCE_INVALID"
+      }
+    },
+    {
+      "id": "L-74",
+      "title": "Close after a verified squash merge followed by legitimate later integration advancement",
+      "facts": {
+        "action": "close_issue",
+        "merge_state": "merged",
+        "post_merge_advance": "later_commits",
+        "head_in_ancestry": false
+      },
+      "expected": {
+        "decision": "ALLOW",
+        "code": "OK"
+      }
+    },
+    {
+      "id": "L-75",
+      "title": "Final PR acceptance although the source is no longer the exact integration branch",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "final_source": "other_branch"
+      },
+      "expected": {
+        "decision": "DENY",
+        "code": "PR_SOURCE_MISMATCH"
+      }
+    },
+    {
+      "id": "L-76",
+      "title": "Final PR acceptance although the release boundary is no longer selected",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "release_boundary": "unselected"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "RELEASE_BOUNDARY_UNSELECTED"
+      }
+    },
+    {
+      "id": "L-77",
+      "title": "Final PR acceptance although the integration base drifted after Draft creation",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "integration_advance": "unrelated_drift"
+      },
+      "expected": {
+        "decision": "STOP",
+        "code": "STALE_EVIDENCE"
+      }
+    },
+    {
+      "id": "L-78",
+      "title": "Final PR acceptance revalidated: source, target, boundary, base and both CI revisions hold",
+      "facts": {
+        "action": "accept_final_pr",
+        "pr_base": "main",
+        "final_authorization": "none"
       },
       "expected": {
         "decision": "ALLOW",
