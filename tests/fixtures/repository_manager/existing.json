@@ -1,0 +1,21 @@
+{
+  "admin_scope": [
+    "audit_read"
+  ],
+  "authorization_ref": "fixture-authorization-0002",
+  "origin": null,
+  "provider": "github",
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "visibility": "private"
+  },
+  "schema": "AP-RM-EXISTING/1"
+}

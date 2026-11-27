@@ -1,0 +1,12 @@
+{
+  "actual_sha256": "c176e7744eba7254968e448057f0b2d3e5e2d7a8fd38670f672008e9ccf02c8c",
+  "blocking": true,
+  "control": "branch_protection.required_checks",
+  "desired_sha256": "3edbbaf26c03787b81ab60b67ec6ca276ae267bc443c4b1fa6831650a089d60e",
+  "evidence": {
+    "kind": "unavailable",
+    "reason": "http_403_ambiguous"
+  },
+  "result": "UNVERIFIED",
+  "schema": "AP-RM-RESULT/1"
+}

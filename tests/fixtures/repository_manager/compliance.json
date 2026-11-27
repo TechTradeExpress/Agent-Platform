@@ -1,0 +1,30 @@
+{
+  "actual_sha256": "4f5fbf5ad4e902a2c3e8fd37128c02938ac93e5b0697b9735c96abe7a8bce44b",
+  "desired_sha256": "3edbbaf26c03787b81ab60b67ec6ca276ae267bc443c4b1fa6831650a089d60e",
+  "evidence_ref": "fixture-evidence-0001",
+  "overall": "COMPLIANT",
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "visibility": "private"
+  },
+  "result_digests": [
+    "5b737071cef30b5824508c69febeb45f7b9aea8a9562309f5af7857ee96b2eb6",
+    "798ca1c883d644246333aaad82a0259abc08388773eaf29bfa5454bc3d66b609",
+    "799d39beaeb113b83e1395763bf9b0e9998a79a6e879141ac70348da457dc6d9",
+    "aadf2e896225039ba17a9b3d7cc3ad24cc9cb152429006180aa0c887a2fb8e52",
+    "b7c8dc59b5303fdfb6e8a9d6970225c7b2d028656ee7a3b318b91d491d6b606f",
+    "bf21d731f5c4301d165d7c1a47e112f3c99d6532314c174ab8557bdb43c375df",
+    "d6cba5679b3ce416dd920eba18011d77b7750dbe193657c713230d7dbae3f6e3",
+    "edb069fcef1d8d7f795411386c2f5bfa87a2301ad067699bfb37da5a6ba84e2a",
+    "fb1a324926ecac2692a37ccf252c37b9f2303d383a595977dbf4663c1b399d12"
+  ],
+  "schema": "AP-RM-COMPLIANCE/1"
+}

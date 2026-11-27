@@ -402,6 +402,7 @@ def test_worker_rejects_unimplemented_or_invalid_commands(args):
         "harness_admission",
         "claude_adapter",
         "instruction_sources",
+        "repository_manager",
     ],
 )
 def test_source_only_contracts_in_closed_role_manifests(name):
@@ -420,6 +421,7 @@ def test_source_only_contracts_in_closed_role_manifests(name):
         "harness_admission",
         "claude_adapter",
         "instruction_sources",
+        "repository_manager",
     ],
 )
 def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, name):
@@ -445,6 +447,7 @@ def test_role_import_cannot_pull_source_only_contract(tmp_path, role, module, na
         "harness_admission",
         "claude_adapter",
         "instruction_sources",
+        "repository_manager",
     ],
 )
 def test_source_only_contract_excluded_from_every_role_phase_archive(
@@ -486,6 +489,7 @@ def test_source_only_contract_excluded_from_every_role_phase_archive(
         "harness_admission",
         "claude_adapter",
         "instruction_sources",
+        "repository_manager",
     ],
 )
 def test_p1_publisher_import_cannot_pull_source_only_contract(tmp_path, name):

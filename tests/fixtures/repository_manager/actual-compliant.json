@@ -1,0 +1,88 @@
+{
+  "complete": true,
+  "desired_sha256": "3edbbaf26c03787b81ab60b67ec6ca276ae267bc443c4b1fa6831650a089d60e",
+  "observations": [
+    {
+      "control": "actions.default_token_permissions",
+      "status": "observed",
+      "value": "read"
+    },
+    {
+      "control": "branch_protection.allow_deletions",
+      "status": "observed",
+      "value": false
+    },
+    {
+      "control": "branch_protection.allow_force_pushes",
+      "status": "observed",
+      "value": false
+    },
+    {
+      "control": "branch_protection.require_pull_request",
+      "status": "observed",
+      "value": true
+    },
+    {
+      "control": "branch_protection.required_approvals",
+      "status": "observed",
+      "value": 0
+    },
+    {
+      "control": "branch_protection.required_checks",
+      "status": "observed",
+      "value": [
+        {
+          "app_id": 9200001,
+          "name": "checks"
+        },
+        {
+          "app_id": 9200001,
+          "name": "lifecycle"
+        }
+      ]
+    },
+    {
+      "control": "observe.deploy_key_count",
+      "status": "observed",
+      "value": 0
+    },
+    {
+      "control": "repo.allow_auto_merge",
+      "status": "observed",
+      "value": false
+    },
+    {
+      "control": "repo.allow_squash_merge",
+      "status": "observed",
+      "value": true
+    }
+  ],
+  "observed_at": "2026-01-01T00:00:00Z",
+  "provenance": "synthetic_fixture",
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "unavailable_reason": null,
+    "visibility": "private"
+  },
+  "schema": "AP-RM-ACTUAL/1",
+  "scope": [
+    "actions.default_token_permissions",
+    "branch_protection.allow_deletions",
+    "branch_protection.allow_force_pushes",
+    "branch_protection.require_pull_request",
+    "branch_protection.required_approvals",
+    "branch_protection.required_checks",
+    "observe.deploy_key_count",
+    "repo.allow_auto_merge",
+    "repo.allow_squash_merge"
+  ],
+  "source_ref": "fixture-observation-0002"
+}

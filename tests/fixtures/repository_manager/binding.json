@@ -1,0 +1,23 @@
+{
+  "creation_effect_ref": "fixture-create-effect-0001",
+  "intent_id": "0123456789abcdef0123456789abcdef",
+  "observation": {
+    "kind": "independent_read",
+    "observed_at": "2026-01-01T00:05:00Z",
+    "ref": "fixture-readback-0001"
+  },
+  "precreation_sha256": "dd79238aebb889557d15467c7fb7f0d259dc48201333a394f9cce7ea0ad7217f",
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "visibility": "private"
+  },
+  "schema": "AP-RM-BINDING/1"
+}

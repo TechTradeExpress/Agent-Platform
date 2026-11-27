@@ -1,0 +1,51 @@
+{
+  "controls": [
+    {
+      "blocking": false,
+      "control": "branch_protection.required_approvals",
+      "value": 0
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.required_checks",
+      "value": [
+        {
+          "app_id": 9200001,
+          "name": "checks"
+        },
+        {
+          "app_id": 9200001,
+          "name": "lifecycle"
+        }
+      ]
+    },
+    {
+      "blocking": false,
+      "control": "observe.deploy_key_count",
+      "value": 0
+    },
+    {
+      "blocking": true,
+      "control": "repo.allow_squash_merge",
+      "value": true
+    }
+  ],
+  "manifest_id": "fictional-manifest-creation",
+  "profile_id": "fictional-profile",
+  "schema": "AP-RM-MANIFEST/1",
+  "target": {
+    "intent_id": "0123456789abcdef0123456789abcdef",
+    "mode": "creation",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "precreation_sha256": "dd79238aebb889557d15467c7fb7f0d259dc48201333a394f9cce7ea0ad7217f",
+    "repository": {
+      "default_branch": "main",
+      "name": "example-service",
+      "visibility": "private"
+    }
+  }
+}
