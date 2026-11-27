@@ -9,6 +9,10 @@ denial and packaged AppArmor enforcement on worker01. Its combined probe
 used adapted unit and credential paths. Exact-unit recovery remains
 **NOT_TESTED**.
 
+The [PUB-11 feasibility assessment](worker01-isolated-recovery-rehearsal.md)
+records the worker01 STOP decision and the evidence required for an alternate
+target.
+
 ## Actual PID 1 rehearsal in a disposable VM
 
 1. Use a separately approved disposable Debian 13 amd64 VM running
