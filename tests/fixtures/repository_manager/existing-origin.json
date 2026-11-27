@@ -1,0 +1,25 @@
+{
+  "admin_scope": [
+    "audit_read"
+  ],
+  "authorization_ref": "fixture-authorization-0003",
+  "origin": {
+    "binding_sha256": "de132a75c90b97c4201d22938cb6950e62d3e3b7ae5483a5afc5b368edad8daf",
+    "intent_id": "0123456789abcdef0123456789abcdef",
+    "precreation_sha256": "dd79238aebb889557d15467c7fb7f0d259dc48201333a394f9cce7ea0ad7217f"
+  },
+  "provider": "github",
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "visibility": "private"
+  },
+  "schema": "AP-RM-EXISTING/1"
+}

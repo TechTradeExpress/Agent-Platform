@@ -1,0 +1,23 @@
+{
+  "decision": {
+    "decided_at": "2026-01-02T00:00:00Z",
+    "ref": "fixture-decision-0001"
+  },
+  "evidence": {
+    "ref": "fixture-evidence-0001",
+    "sha256": "622f86570250906aeba058ff24fa3e554665081032d93617a249d804dc2098ae"
+  },
+  "repository": {
+    "default_branch": "main",
+    "full_name": "fictional-owner/example-service",
+    "id": 9100001,
+    "name": "example-service",
+    "owner": {
+      "id": 9000001,
+      "login": "fictional-owner",
+      "type": "Organization"
+    },
+    "visibility": "private"
+  },
+  "schema": "AP-RM-ENROLLMENT/1"
+}

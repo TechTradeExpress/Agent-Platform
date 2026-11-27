@@ -1,0 +1,23 @@
+{
+  "actual_sha256": "c176e7744eba7254968e448057f0b2d3e5e2d7a8fd38670f672008e9ccf02c8c",
+  "blocking": true,
+  "control": "branch_protection.require_pull_request",
+  "desired_sha256": "3edbbaf26c03787b81ab60b67ec6ca276ae267bc443c4b1fa6831650a089d60e",
+  "evidence": {
+    "control": "branch_protection.require_pull_request",
+    "corroboration_refs": [
+      "fixture-corroboration-0001",
+      "fixture-corroboration-0002"
+    ],
+    "documentation_ref": "fixture-doc-0001",
+    "documentation_version": "fixture-doc-version-0001",
+    "endpoint": "GET /repos/{owner}/{repo}/rulesets",
+    "kind": "affirmative_limitation",
+    "observed_at": "2026-01-01T00:10:00Z",
+    "plan_ref": "fixture-plan-read-0001",
+    "repository_id": 9100001,
+    "visibility_ref": "fixture-visibility-read-0001"
+  },
+  "result": "UNSUPPORTED",
+  "schema": "AP-RM-RESULT/1"
+}

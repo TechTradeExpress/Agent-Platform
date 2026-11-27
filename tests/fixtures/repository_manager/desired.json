@@ -1,0 +1,77 @@
+{
+  "controls": [
+    {
+      "blocking": true,
+      "control": "actions.default_token_permissions",
+      "value": "read"
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.allow_deletions",
+      "value": false
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.allow_force_pushes",
+      "value": false
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.require_pull_request",
+      "value": true
+    },
+    {
+      "blocking": false,
+      "control": "branch_protection.required_approvals",
+      "value": 0
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.required_checks",
+      "value": [
+        {
+          "app_id": 9200001,
+          "name": "checks"
+        },
+        {
+          "app_id": 9200001,
+          "name": "lifecycle"
+        }
+      ]
+    },
+    {
+      "blocking": false,
+      "control": "observe.deploy_key_count",
+      "value": 0
+    },
+    {
+      "blocking": true,
+      "control": "repo.allow_auto_merge",
+      "value": false
+    },
+    {
+      "blocking": true,
+      "control": "repo.allow_squash_merge",
+      "value": true
+    }
+  ],
+  "manifest_id": "fictional-manifest",
+  "profile_id": "fictional-profile",
+  "schema": "AP-RM-DESIRED/1",
+  "target": {
+    "mode": "existing",
+    "pins_sha256": "9751bc5914eb3e0357c62c51ed691ebd611c3dc00b19f2181e9122dd28a1c41e",
+    "repository": {
+      "default_branch": "main",
+      "full_name": "fictional-owner/example-service",
+      "id": 9100001,
+      "name": "example-service",
+      "owner": {
+        "id": 9000001,
+        "login": "fictional-owner",
+        "type": "Organization"
+      },
+      "visibility": "private"
+    }
+  }
+}

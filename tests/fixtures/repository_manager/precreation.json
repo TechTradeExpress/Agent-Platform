@@ -1,0 +1,20 @@
+{
+  "admin_scope": [
+    "baseline_settings",
+    "create_repository"
+  ],
+  "authorization_ref": "fixture-authorization-0001",
+  "intent_id": "0123456789abcdef0123456789abcdef",
+  "owner": {
+    "id": 9000001,
+    "login": "fictional-owner",
+    "type": "Organization"
+  },
+  "provider": "github",
+  "repository": {
+    "default_branch": "main",
+    "name": "example-service",
+    "visibility": "private"
+  },
+  "schema": "AP-RM-PRECREATION/1"
+}

@@ -1,0 +1,31 @@
+{
+  "controls": [
+    {
+      "blocking": true,
+      "control": "actions.default_token_permissions",
+      "value": "read"
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.allow_deletions",
+      "value": false
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.allow_force_pushes",
+      "value": false
+    },
+    {
+      "blocking": true,
+      "control": "branch_protection.require_pull_request",
+      "value": true
+    },
+    {
+      "blocking": true,
+      "control": "repo.allow_auto_merge",
+      "value": false
+    }
+  ],
+  "profile_id": "fictional-profile",
+  "schema": "AP-RM-PROFILE/1"
+}
